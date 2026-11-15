@@ -1,0 +1,9 @@
+/* The post card in the feed: the cover, filling the card. The cover itself is in cover.css. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body.cv {
+  overflow-y: auto;
+}

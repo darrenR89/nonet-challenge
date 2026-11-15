@@ -1,0 +1,47 @@
+<svg
+  viewBox="0 0 1000 184"
+  width="1000"
+  height="184"
+  role="img"
+  aria-label="Nonet"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect x="0" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="48" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="144" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="0" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="96" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="144" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="0" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="144" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="240" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="288" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="336" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="240" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="336" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="240" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="288" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="336" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="336" y="144" width="40" height="40" rx="7" fill="#f5c12e" />
+  <rect x="432" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="480" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="576" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="432" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="528" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="576" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="432" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="576" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="672" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="720" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="768" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="672" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="720" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="672" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="720" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="768" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="864" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="912" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="960" y="0" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="912" y="48" width="40" height="40" rx="7" fill="#eceae3" />
+  <rect x="912" y="96" width="40" height="40" rx="7" fill="#eceae3" />
+</svg>

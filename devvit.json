@@ -1,0 +1,80 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "nonet-challenge",
+  "post": {
+    "entrypoints": {
+      "default": {
+        "entry": "splash.html"
+      },
+      "game": {
+        "entry": "game.html"
+      }
+    }
+  },
+  "server": {},
+  "menu": {
+    "items": [
+      {
+        "label": "Nonet: new daily cube post",
+        "description": "Post today's Nonet cube in this subreddit.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/new-post"
+      },
+      {
+        "label": "Nonet: new event",
+        "description": "Set up a themed event with its own board, and teams if you like.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/new-event"
+      },
+      {
+        "label": "Nonet: end an event",
+        "description": "Make today the last day of a running or planned event.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/end-event"
+      },
+      {
+        "label": "Nonet: post this week's board",
+        "description": "Post the week's top nine so far.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/week-post"
+      }
+    ]
+  },
+  "forms": {
+    "newEvent": "/internal/form/new-event",
+    "endEvent": "/internal/form/end-event"
+  },
+  "scheduler": {
+    "tasks": {
+      "daily": {
+        "endpoint": "/internal/cron/daily",
+        "cron": "1 7,8 * * *"
+      }
+    }
+  },
+  "settings": {
+    "subreddit": {
+      "autoPost": {
+        "type": "boolean",
+        "label": "Post the daily cube automatically",
+        "helpText": "Posts today's cube just after midnight Pacific time, the week's top nine on Mondays, and event results the day after an event ends.",
+        "defaultValue": true
+      }
+    }
+  },
+  "triggers": {
+    "onAppInstall": "/internal/on/app/install"
+  },
+  "scripts": {
+    "dev": "npm run watch"
+  },
+  "permissions": {
+    "journeys": true,
+    "reddit": true,
+    "redis": true
+  }
+}

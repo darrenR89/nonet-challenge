@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nonet</title>
+    <link rel="modulepreload" href="splash.js">
+    <link rel="stylesheet" href="splash.css">
+  </head>
+  <body class="cv">
+    <main class="cv-cover">
+      <p class="cv-streak" id="streak" hidden>
+        <svg viewBox="0 0 16 20" aria-hidden="true">
+          <path
+            d="M8 1c.6 3-1.2 4.6-2.6 6.2C4 8.8 3 10.4 3 12.6 3 16 5.3 19 8 19s5-3 5-6.4c0-2.3-1-3.9-2-5-.2 1.5-.9 2.6-2 3.1.4-2.6.2-6.4-1-9.7Z"
+            fill="#23252b"
+          />
+          <path
+            d="M8 18c-1.4 0-2.4-1.2-2.4-2.7 0-1.4.9-2.3 1.7-3.2.1 1 .6 1.6 1.3 1.8.1-.9.5-1.6 1.1-2.1.6.9 1 1.9 1 3.3C10.7 16.7 9.5 18 8 18Z"
+            fill="#f5c12e"
+          />
+        </svg><span id="streak-n"></span>
+      </p>
+      <div class="cv-spine" aria-hidden="true">
+        <div class="cv-vol">
+          <span class="cv-kanji" id="kanji">〇〇〇</span>
+        </div>
+        <span class="cv-imprint"
+          >Daily cube<span class="cv-dot">·</span
+          ><b class="cv-date" id="date"></b></span
+        >
+      </div>
+      <div class="cv-body">
+        <div class="cv-upper">
+          <div class="cv-mark">
+            <img
+              src="/brand/nonet-wordmark-vertical.svg"
+              alt="Nonet"
+              width="184"
+              height="952"
+            >
+          </div>
+          <div class="cv-col">
+            <div class="cv-issue" id="issue">
+              <div class="cv-row" aria-hidden="true">
+                <span class="cv-daily" lang="ja">日刊</span
+                ><span class="cv-no">No.<b id="no">–</b></span>
+              </div>
+              <div class="cv-meta">
+                <span class="cv-max"
+                  ><span>Max score</span><b id="max"></b></span
+                >
+                <span class="cv-level"
+                  ><span class="cv-pips" id="pips" aria-hidden="true"
+                    ><i></i><i></i><i></i></span
+                  ><span class="cv-tag" id="level"></span></span
+                >
+              </div>
+            </div>
+            <h1 class="cv-head">
+              A sudoku cube, one a day, the same for everyone on Reddit.
+            </h1>
+            <dl class="cv-stats" id="stats" hidden></dl>
+          </div>
+        </div>
+        <div class="cv-go">
+          <div class="cv-scr">
+            <p class="cv-cap">Rotation multiplier</p>
+            <ol
+              class="cv-twists"
+              id="mults"
+              aria-label="More rotations, bigger multiplier"
+            ></ol>
+          </div>
+          <p class="cv-sub" id="live" aria-live="polite"></p>
+          <button class="cv-play" id="start-btn" type="button">
+            Play today's cube
+          </button>
+        </div>
+      </div>
+    </main>
+    <script src="splash.js" type="module"></script>
+  </body>
+</html>
