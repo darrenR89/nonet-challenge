@@ -43,7 +43,7 @@ function el(tag: string, cls: string, text: string): HTMLElement {
   return e
 }
 
-/** The spine's date: "Sun", then "15 Nov" in yellow, the day number upright. */
+/** The spine's date: "Sun", then "15 Nov" in yellow, the day number upright, then the year. */
 function showDate(day: string): void {
   const d = new Date(`${day}T12:00:00Z`)
   const dm = el('span', 'cv-dm', '')
@@ -51,7 +51,12 @@ function showDate(day: string): void {
     el('span', 'cv-tcy', String(d.getUTCDate())),
     ` ${MONTHS[d.getUTCMonth()]}`,
   )
-  $('date')?.replaceChildren(`${WDAYS[d.getUTCDay()]} `, dm)
+  $('date')?.replaceChildren(
+    `${WDAYS[d.getUTCDay()]} `,
+    dm,
+    ' ',
+    el('span', 'cv-yr', String(d.getUTCFullYear())),
+  )
 }
 
 function showDay(day: string, no: number | undefined): void {

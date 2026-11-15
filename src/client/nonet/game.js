@@ -99,7 +99,7 @@ const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov',
 const maxScore=lv=>{const t=maxTurns(lv);return scoreRun(lv,t,{turns:t,t1:0,t2:0,blanks:1,wrong:0,hintsUsed:0,starsWon:3}).total};
 function splashTwist(){
   const d=new Date(today+'T12:00:00Z');
-  $('spDate').innerHTML=`${WDAYS[d.getUTCDay()]} <span class="cv-dm"><span class="cv-tcy">${d.getUTCDate()}</span> ${MONTHS[d.getUTCMonth()]}</span>`;
+  $('spDate').innerHTML=`${WDAYS[d.getUTCDay()]} <span class="cv-dm"><span class="cv-tcy">${d.getUTCDate()}</span> ${MONTHS[d.getUTCMonth()]}</span> <span class="cv-yr">${d.getUTCFullYear()}</span>`;
   $('spNo').textContent=D?String(D.cubeNo):'–';
   $('spKanji').textContent=D?kanjiNo(D.cubeNo):'〇〇〇';
   $('spLevel').textContent=LEVEL_NAMES[level];

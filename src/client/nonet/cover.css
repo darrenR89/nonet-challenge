@@ -37,6 +37,8 @@
 .cv-dot{display:inline-block;margin:.6em 0}
 .cv-date{font-weight:700;font-size:13px;letter-spacing:.18em;color:#fff}
 .cv-date .cv-dm{color:var(--c-yellow)}
+/* the year: quieter than the date, so "15 Nov" still leads */
+.cv-date .cv-yr{font-weight:400;color:rgb(243 242 236 / .62)}
 .cv-tcy{text-combine-upright:all}
 
 /* the streak: a solid yellow sticker, tilted, clipped by the left edge */
