@@ -156,7 +156,7 @@ document.querySelectorAll('#spTwists button').forEach(b=>b.onclick=()=>{if(twist
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));journey.interaction('pick_turns',String(tier))});
 function hideSplash(){splashUp=false;$('splash').classList.add('out');setTimeout(()=>{if(!splashUp)$('splash').hidden=true},400)}
 function hideSplashNow(){splashUp=false;const sp=$('splash');sp.classList.add('out');sp.hidden=true}
-function showSplash(){splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
+function showSplash(){if(stage===3)music.leave();splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
 // Play and Resume: cells cover the screen, become the cube and fold together; the clock starts after
 $('spPlay').onclick=()=>{
   if(tx.busy)return;music.unlock();

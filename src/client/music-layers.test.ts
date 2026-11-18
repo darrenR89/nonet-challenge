@@ -32,8 +32,20 @@ test('filling in starts fuller and builds to every layer but the bells', () => {
   ])
 })
 
-test('a solved cube, or progress out of range, never adds stray layers', () => {
-  assert.deepEqual(layersFor({stage: 3, progress: 1}), [])
+test('a solved cube loops the finale; giving up goes quiet', () => {
+  assert.deepEqual(layersFor({stage: 3, progress: 1}), [
+    'pad',
+    'bass',
+    'beat',
+    'keys',
+    'arp',
+    'finale',
+  ])
+  assert.deepEqual(layersFor({stage: 3, progress: 1, gaveUp: true}), [])
+  assert.deepEqual(layersFor({stage: 0, progress: 0}), [])
+})
+
+test('progress out of range never adds stray layers', () => {
   assert.deepEqual(layersFor({stage: 1, progress: -1}), ['pad', 'pulse'])
   assert.equal(layersFor({stage: 2, progress: 5}).length, 7)
 })
