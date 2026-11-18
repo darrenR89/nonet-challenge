@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {fromStart, layersFor} from './music-layers.ts'
 
-test('lining up adds a layer at each third of the clues home', () => {
-  assert.deepEqual(layersFor({stage: 1, progress: 0}), ['pad'])
+test('lining up starts with two layers and adds bells halfway home', () => {
+  assert.deepEqual(layersFor({stage: 1, progress: 0}), ['pad', 'pulse'])
   assert.deepEqual(layersFor({stage: 1, progress: 0.4}), ['pad', 'pulse'])
-  assert.deepEqual(layersFor({stage: 1, progress: 0.7}), [
+  assert.deepEqual(layersFor({stage: 1, progress: 0.5}), [
     'pad',
     'pulse',
     'bells',
@@ -34,7 +34,7 @@ test('filling in starts fuller and builds to every layer but the bells', () => {
 
 test('a solved cube, or progress out of range, never adds stray layers', () => {
   assert.deepEqual(layersFor({stage: 3, progress: 1}), [])
-  assert.deepEqual(layersFor({stage: 1, progress: -1}), ['pad'])
+  assert.deepEqual(layersFor({stage: 1, progress: -1}), ['pad', 'pulse'])
   assert.equal(layersFor({stage: 2, progress: 5}).length, 7)
 })
 

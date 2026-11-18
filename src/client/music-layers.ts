@@ -20,17 +20,16 @@ export type MusicState = {
 }
 
 /**
- * Line up (stage 1) starts on a held chord and adds a layer at each third of
- * the clues home. Fill in (stage 2) brings in the bass and beat, then adds keys,
+ * Line up (stage 1) starts on a held chord and plucks, and adds bells once
+ * half the clues it needs are home. Fill in (stage 2) brings in the bass and beat, then adds keys,
  * an arpeggio and a melody as the squares fill. A solved cube plays none: the
  * finale takes over.
  */
 export function layersFor({stage, progress}: MusicState): Loop[] {
   const p = Math.max(0, Math.min(1, progress))
   if (stage === 1) {
-    const on: Loop[] = ['pad']
-    if (p >= 1 / 3) on.push('pulse')
-    if (p >= 2 / 3) on.push('bells')
+    const on: Loop[] = ['pad', 'pulse']
+    if (p >= 0.5) on.push('bells')
     return on
   }
   if (stage === 2) {

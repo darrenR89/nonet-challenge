@@ -67,12 +67,27 @@ function shaker(buf, at, vol, seed) {
 }
 
 const layers = {
-  // Line up: a held chord, then plucks, then bells as more clues come home
+  // Line up: a held chord and plucks, then bells once half the clues are home
   pad(b) {
-    for (const n of ['D3', 'A3', 'E4'])
-      note(b, {at: 0, len: 4, freq: midi(N(n)), vol: 0.12, attack: 0.6})
-    for (const n of ['G2', 'D3', 'B3'])
-      note(b, {at: 4, len: 4, freq: midi(N(n)), vol: 0.12, attack: 0.6})
+    // voiced in the middle so phone and laptop speakers can carry it
+    for (const n of ['D4', 'A4', 'E5'])
+      note(b, {
+        at: 0,
+        len: 4,
+        freq: midi(N(n)),
+        vol: 0.1,
+        wave: 'organ',
+        attack: 0.3,
+      })
+    for (const n of ['G3', 'D4', 'B4'])
+      note(b, {
+        at: 4,
+        len: 4,
+        freq: midi(N(n)),
+        vol: 0.1,
+        wave: 'organ',
+        attack: 0.3,
+      })
   },
   pulse(b) {
     const seq = ['D4', 'A4', 'E4', 'A4', 'D4', 'A4', 'E4', 'B4']

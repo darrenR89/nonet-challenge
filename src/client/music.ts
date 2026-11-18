@@ -3,7 +3,7 @@
 // clues line up and the squares fill; see music-layers.ts for which play when.
 // Short sounds for turns and locks are made here with Web Audio.
 // Browsers only start audio after a tap, so nothing loads until Play.
-import {Orchestre} from 'orchestre-js'
+import {BufferLoader, Orchestre} from 'orchestre-js'
 import {fromStart, LOOPS, layersFor, type MusicState} from './music-layers.ts'
 
 const BPM = 100
@@ -38,6 +38,35 @@ function readMuted(): boolean {
   } catch {
     return false
   }
+}
+
+/**
+ * Reads inline data: loops straight from their base64, so the standalone page
+ * plays them even where its host blocks fetch; anything else loads as usual.
+ */
+class InlineLoader extends BufferLoader {
+  readonly #ctx: AudioContext
+  constructor(context: AudioContext) {
+    super(context)
+    this.#ctx = context
+  }
+  override async load(name: string, url: string): Promise<AudioBuffer> {
+    const comma = url.indexOf(',')
+    if (!url.startsWith('data:') || comma < 0) return super.load(name, url)
+    const bin = atob(url.slice(comma + 1))
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    const buffer = await this.#ctx.decodeAudioData(bytes.buffer)
+    this.buffers[name] = buffer
+    return buffer
+  }
+}
+
+/** On iPhone, Web Audio follows the silent switch unless it is marked as playback. */
+function playThroughSilentSwitch(): void {
+  const session = Reflect.get(navigator, 'audioSession')
+  if (session && typeof session === 'object')
+    Reflect.set(session, 'type', 'playback')
 }
 
 const hz = (midi: number): number => 440 * 2 ** ((midi - 69) / 12)
@@ -137,8 +166,11 @@ export const music = {
       return
     }
     try {
+      playThroughSilentSwitch()
       ctx = new AudioContext()
       orch = new Orchestre(BPM, ctx)
+      // the loader is private in Orchestre-JS's types, so it is swapped by name
+      Reflect.set(orch, 'loader', new InlineLoader(ctx))
       setVolume()
     } catch {
       return // no Web Audio here: play on in silence
