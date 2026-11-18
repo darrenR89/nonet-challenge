@@ -30,5 +30,8 @@
   },
   "engines": {
     "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "orchestre-js": "3.1.0"
   }
 }

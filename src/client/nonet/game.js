@@ -4,6 +4,7 @@ import './style.css';
 import {makeTransitions} from './transitions.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
+import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {exitExpandedMode} from '@devvit/web/client';
 import {RETRY_MULT} from '../../shared/api.ts';
@@ -158,7 +159,7 @@ function hideSplashNow(){splashUp=false;const sp=$('splash');sp.classList.add('o
 function showSplash(){splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
 // Play and Resume: cells cover the screen, become the cube and fold together; the clock starts after
 $('spPlay').onclick=()=>{
-  if(tx.busy)return;
+  if(tx.busy)return;music.unlock();
   if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
   journey.start();
   void tx.enter({before:hideSplashNow,ready:playDaily(tier).then(()=>{holdClock();return new Promise(r=>setTimeout(r,60))}),
@@ -166,15 +167,16 @@ $('spPlay').onclick=()=>{
 
 // ---------- pause ----------
 // pausing stops the clock and covers the cube with the start screen, which shows Resume
-function pauseNow(){if(paused||stage===3||!P)return;paused=true;if(hold)hold=false;else pausedAt=performance.now();$('modal').hidden=true;saveRun()}
+function pauseNow(){if(paused||stage===3||!P)return;paused=true;music.hold(true);if(hold)hold=false;else pausedAt=performance.now();$('modal').hidden=true;saveRun()}
 // any move while paused starts the clock again first, so time is never lost or gained
 function ensureRunning(){if(!paused)return;if(splashUp)hideSplash();resume()}
 function pause(){if(paused||stage===3||!P||isPrac()||tx.busy)return;pauseNow();journey.interaction('pause');sel=-1;render();void tx.leave({covered:showSplash})}
-function resume(){if(!paused)return;t0+=performance.now()-pausedAt;paused=false;
+function resume(){if(!paused)return;t0+=performance.now()-pausedAt;paused=false;music.hold(false);
   if(!journey.active)journey.start();else journey.interaction('resume');updateStatus()}
 $('pauseBtn').onclick=pause;
+music.wire($('soundBtn'));
 // Practice sits outside the day: a guided walkthrough, no score, open any time
-$('spPractice').onclick=()=>{if(tx.busy)return;tier=PRACTICE;journey.start();
+$('spPractice').onclick=()=>{if(tx.busy)return;music.unlock();tier=PRACTICE;journey.start();
   void tx.enter({before:hideSplashNow,ready:new Promise(r=>{newGame();setTimeout(r,120)}),done:()=>{if(paused)resume()}})};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!splashUp&&stage<3&&P&&!isPrac()){pauseNow();showSplash()}});
 // leaving mid-cube: the run is saved here to resume later, and this journey ends unfinished
@@ -371,6 +373,7 @@ function render(){
   $('progress').className=`progress ${P.k===0?'solo':stage===1?'s1':'s2'}`;$('views').hidden=stage!==1;
   $('pTurns').textContent=`${turns} turn${turns===1?'':'s'} · fewest ${P.k}`;
   setBar('pAlign',stage===1?home/nClues:1);const tot=blanks||P.start.filter(v=>!v).length;setBar('pFill',stage===1?0:stage===3?1:tot?1-left/tot:0);
+  music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
   $('tools1').hidden=stage!==1;$('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
   $('suggest').disabled=hintsLeft<=0||stage!==1;$('suggest').hidden=P.k===0||isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest a turn (${hintsLeft} left)`;
@@ -425,13 +428,13 @@ cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
-  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;render();return}
+  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
 }
 const pad=$('pad');
 for(let d=1;d<=9;d++){const b=document.createElement('button');b.textContent=d;b.dataset.d=d;b.setAttribute('aria-label','Digit '+d);b.onclick=()=>pressDigit(d);pad.appendChild(b)}
@@ -443,7 +446,7 @@ const sub=(a,b)=>a.map((v,i)=>v-b[i]);
 function moveFor(fi,c,kind,dirSign){const f=F[fi],n=f.map(1,1),rowDir=sub(f.map(2,1),n),colDir=sub(f.map(1,2),n);
   const move=kind==='row'?rowDir:colDir,axisVec=kind==='row'?colDir:rowDir;const a=axisOf(axisVec),v=cells[c].c[a];
   const want=move.map(x=>x*dirSign);return[a,v,k3(rotV(n,a,1))===k3(want)?1:-1]}
-function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);
+function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);music.sfx('turn');
   cells.forEach((x,i)=>{if(x.c[m[0]]===m[1])stickers[i].forEach(el=>{el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')})})}
 function slide(kind,dirSign){
   if(sel<0||stage!==1)return;

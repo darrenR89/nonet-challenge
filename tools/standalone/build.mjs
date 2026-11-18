@@ -1,7 +1,7 @@
 // Builds one self-contained HTML file of the current game, with the stand-in server.
 // node tools/standalone/build.mjs [out.html]
 import {build} from 'esbuild'
-import {readFileSync, writeFileSync} from 'node:fs'
+import {readdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {dirname, join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
@@ -48,6 +48,9 @@ const cardLayer = `<div class="feedcard" id="feedCard">
 <iframe id="feedFrame" title="Nonet post card, as it shows in the feed" srcdoc="${attr(cardHtml)}"></iframe>
 <div class="looks" role="group" aria-label="Prototype: card states"><span>Card</span><button type="button" data-look="" aria-pressed="true">Live</button><button type="button" data-look="first" aria-pressed="false">Quiet day</button><button type="button" data-look="played" aria-pressed="false">Played</button><button type="button" data-look="cycled" aria-pressed="false">Day 366</button></div>
 </div>`
+// the music loops, inlined so the page plays them without a server
+const music = Object.fromEntries(readdirSync(join(root, 'public/music')).filter(f => f.endsWith('.wav'))
+  .map(f => [f.slice(0, -4), `data:audio/wav;base64,${b64(`public/music/${f}`)}`]))
 let html = brand(readFileSync(join(root, 'public/game.html'), 'utf8'))
 html = html
   .replace(/<link rel="modulepreload"[^>]*>\n?/, '')
@@ -66,6 +69,7 @@ html = html
   .replace('/brand/nonet-wordmark.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark.svg')}`)
   .replace('<script src="game.js" type="module"></script>', () => `${cardLayer}
 <button class="demo" id="resetDemo" type="button" title="Prototype: start today over in this browser">Reset demo</button>
+<script>window.nonetMusic=${JSON.stringify(music)}</script>
 <script type="module">${js.replaceAll('</script', '<\\/script')}</script>`)
 writeFileSync(out, html)
 console.log(`${out} ${(html.length / 1024).toFixed(1)} KB`)
