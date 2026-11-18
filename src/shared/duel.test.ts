@@ -23,7 +23,7 @@ test('usernames lose u/ and @, and junk is refused', () => {
 test('the comment tags the player and gives the score to beat', () => {
   assert.equal(
     challengeText('ann', 'bob', 1234, 322),
-    "u/bob, u/ann scored 1,234 on Nonet #322 and challenges you to beat it. Today's cube is in this post.",
+    "u/bob, u/ann scored 1,234 on Nonet #322 and challenges you to beat it. Open today's cube in this post to accept, before you play.",
   )
 })
 

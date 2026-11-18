@@ -167,6 +167,8 @@ export type JoinRsp = {joined: boolean}
 /** Challenge a player to beat the asker's score on today's cube. */
 export type ChallengeReq = {name: string}
 export type ChallengeRsp = {duels: Duel[]}
+/** The challenged player accepts or declines, before they play. from is the challenger's user id. */
+export type AnswerReq = {from: string; accept: boolean}
 
 export type JoinTeamReq = {eventId: string; team: string}
 export type JoinTeamRsp = {event: EventState}
@@ -186,6 +188,7 @@ export const Endpoint = {
   Notify: 'api/notify',
   JoinSub: 'api/join',
   Challenge: 'api/challenge',
+  Answer: 'api/challenge/answer',
   TelemetryStart: 'api/telemetry/journey/start',
   TelemetryProgress: 'api/telemetry/journey/progress',
   TelemetryInteraction: 'api/telemetry/journey/interaction',
@@ -212,6 +215,7 @@ export const EndpointMethod = {
   [Endpoint.Notify]: 'POST',
   [Endpoint.JoinSub]: 'POST',
   [Endpoint.Challenge]: 'POST',
+  [Endpoint.Answer]: 'POST',
   [Endpoint.TelemetryStart]: 'POST',
   [Endpoint.TelemetryProgress]: 'POST',
   [Endpoint.TelemetryInteraction]: 'POST',

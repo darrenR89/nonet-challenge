@@ -579,7 +579,7 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
   assert.equal(lapsed.body.solves, 0, 'a new day starts at zero')
 })
 
-test('a challenge tags the player, then settles when both have played', async () => {
+test('a challenge is offered, accepted before playing, then settles', async () => {
   const mine = await playDay(0, run())
   const ann = mine.body.total
   const sent = await post<ChallengeRsp>(Endpoint.Challenge, {name: 'u/Bob'})
@@ -588,15 +588,17 @@ test('a challenge tags the player, then settles when both have played', async ()
   assert.equal(comments[0]?.[0], 't3_123', 'on this post')
   assert.match(
     comments[0]?.[1] ?? '',
-    /^u\/bob, u\/ann scored [\d,]+ on Nonet #318/,
+    /^u\/bob, u\/ann scored [\d,]+ on Nonet #318 .* to accept/,
   )
   assert.deepEqual(sent.body.duels, [
     {
       day: '2026-11-14',
       them: 'bob',
+      themId: 't2_bob',
       sent: true,
       mine: ann,
       // theirs is missing until they play: JSON drops undefined
+      status: 'offered',
       result: 'pending',
       record: {won: 0, lost: 0, tied: 0},
     },
@@ -604,9 +606,21 @@ test('a challenge tags the player, then settles when both have played', async ()
 
   as('t2_bob', 'bob')
   const open = await get<DailyRsp>(Endpoint.Daily)
-  assert.equal(open.body.duels[0]?.them, 'ann')
-  assert.equal(open.body.duels[0]?.sent, false)
-  assert.equal(open.body.duels[0]?.theirs, ann, 'the score to beat')
+  const offer = open.body.duels[0]
+  assert.equal(offer?.them, 'ann')
+  assert.equal(offer?.sent, false)
+  assert.equal(offer?.status, 'offered')
+  assert.equal(offer?.theirs, ann, 'the score to beat')
+  const yes = await post<ChallengeRsp>(Endpoint.Answer, {
+    from: 't2_ann',
+    accept: true,
+  })
+  assert.equal(yes.body.duels[0]?.status, 'accepted')
+  const again = await post<ErrorRsp>(Endpoint.Answer, {
+    from: 't2_ann',
+    accept: false,
+  })
+  assert.equal(again.status, 409, 'one answer')
   const bob = await playDay(0, run({wrong: 4}))
   assert.ok(bob.body.total < ann)
   assert.equal(bob.body.duels[0]?.result, 'lost')
@@ -623,35 +637,60 @@ test('a challenge tags the player, then settles when both have played', async ()
   await playDay(0, run())
   await post<ChallengeRsp>(Endpoint.Challenge, {name: 'ann'})
   as('t2_ann', 'ann')
+  await post<ChallengeRsp>(Endpoint.Answer, {from: 't2_bob', accept: true})
   const two = await playDay(0, run({wrong: 8}))
   assert.equal(two.body.duels[0]?.result, 'lost')
   assert.deepEqual(two.body.duels[0]?.record, {won: 1, lost: 1, tied: 0})
 })
 
-test('a challenge to someone who already played settles at once', async () => {
+test('declined and unanswered challenges never count', async () => {
+  await playDay(0, run({wrong: 8}))
+  await post(Endpoint.Challenge, {name: 'bob'})
+  await post(Endpoint.Challenge, {name: 'cat'})
   as('t2_bob', 'bob')
-  await playDay(0, run({wrong: 4}))
-  as('t2_ann', 'ann')
+  const no = await post<ChallengeRsp>(Endpoint.Answer, {
+    from: 't2_ann',
+    accept: false,
+  })
+  assert.equal(no.body.duels[0]?.status, 'declined')
   await playDay(0, run())
-  const sent = await post<ChallengeRsp>(Endpoint.Challenge, {name: 'bob'})
-  assert.equal(sent.body.duels[0]?.result, 'won')
-  assert.deepEqual(sent.body.duels[0]?.record, {won: 1, lost: 0, tied: 0})
+  as('t2_cat', 'cat')
+  await playDay(0, run())
+  const late = await post<ErrorRsp>(Endpoint.Answer, {
+    from: 't2_ann',
+    accept: true,
+  })
+  assert.equal(late.status, 409, 'too late once you have played')
+  as('t2_ann', 'ann')
+  const daily = await get<DailyRsp>(Endpoint.Daily)
+  const by = Object.fromEntries(daily.body.duels.map(d => [d.them, d]))
+  assert.equal(by.bob?.status, 'declined')
+  assert.equal(by.cat?.status, 'lapsed')
+  for (const d of daily.body.duels) {
+    assert.equal(d.result, 'pending')
+    assert.deepEqual(d.record, {won: 0, lost: 0, tied: 0})
+  }
 })
 
 test('challenges explain what is wrong', async () => {
   const early = await post<ErrorRsp>(Endpoint.Challenge, {name: 'bob'})
   assert.equal(early.status, 409, 'finish first')
+  as('t2_hal', 'hal')
+  await playDay(0, run())
+  as('t2_ann', 'ann')
   await playDay(0, run())
   const cases: [unknown, number][] = [
     ['ann', 400],
     ['no spaces', 400],
     [undefined, 400],
     ['ghost', 404],
+    ['hal', 409],
   ]
   for (const [name, status] of cases)
     assert.equal(
       (await post<ErrorRsp>(Endpoint.Challenge, {name})).status,
       status,
+      String(name),
     )
   assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 200)
   assert.equal(
@@ -664,6 +703,11 @@ test('challenges explain what is wrong', async () => {
   const sixth = await post<ErrorRsp>(Endpoint.Challenge, {name: 'gus'})
   assert.equal(sixth.status, 429)
   assert.equal(comments.length, 5)
+  const notMine = await post<ErrorRsp>(Endpoint.Answer, {
+    from: 't2_bob',
+    accept: true,
+  })
+  assert.equal(notMine.status, 404, 'only the challenged player answers')
 
   as(undefined)
   assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 401)

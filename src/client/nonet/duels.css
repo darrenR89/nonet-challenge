@@ -11,7 +11,14 @@
 .duelForm input:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
 .duels .meta{margin:0;font-size:13px;color:var(--lead)}
 .duelsSplash{width:100%;max-width:calc(100% - 28px);box-sizing:border-box;padding:10px 14px;border:1px solid var(--edge);border-left:3px solid var(--beni);border-radius:var(--r);background:var(--slate);font-size:14px}
+.duelsSplash{display:grid;gap:12px}
 .duelsSplash p{margin:0}
-.duelsSplash p+p{margin-top:4px}
+.duelOffer{display:grid;gap:8px}
+.duelOffer small{font-family:var(--code);font-size:12px;color:var(--lead)}
+.duelActs{display:flex;gap:8px}
+.duelActs button{min-height:40px;padding:0 16px}
 /* on the paper cover, like the event and preview lines */
 .cv .duelsSplash{max-width:none;background:rgba(255,255,255,.55);border:1px solid var(--c-ink);border-left:3px solid var(--beni);color:var(--c-ink);text-align:left}
+.cv .duelActs button{background:transparent;color:var(--c-ink);border-color:var(--c-ink)}
+.cv .duelActs button[data-accept="1"]{background:var(--c-ink);color:var(--c-paper)}
+.cv .duelOffer small{color:var(--c-lead)}

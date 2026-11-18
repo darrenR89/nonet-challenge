@@ -13,6 +13,7 @@ import type {
   UiResponse,
 } from '@devvit/web/shared'
 import {
+  type AnswerReq,
   type Board,
   type BoardReq,
   type BoardRsp,
@@ -71,7 +72,7 @@ import {
   useRetry,
 } from './board.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
-import {addDuel, duelsFor, settleDuels} from './duels.ts'
+import {addDuel, answerDuel, duelsFor, settleDuels} from './duels.ts'
 import {
   activeEvent,
   addToEvent,
@@ -172,6 +173,9 @@ async function route(
         break
       case Endpoint.Challenge:
         rsp = await routeChallenge(await readJson<ChallengeReq>(reqMsg))
+        break
+      case Endpoint.Answer:
+        rsp = await routeAnswer(await readJson<AnswerReq>(reqMsg))
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -487,6 +491,11 @@ async function routeChallenge(req: ChallengeReq): Promise<ChallengeRsp> {
   if (!them) throw new HttpError(404, `There's no u/${name} on Reddit.`)
   if (them.id === uid) throw new HttpError(400, "You can't challenge yourself.")
   await rememberName(them.id, them.username)
+  if ((await getDayRecord(day, them.id)).score !== undefined)
+    throw new HttpError(
+      409,
+      `u/${them.username} has already played today's cube. Challenge them tomorrow.`,
+    )
   const added = await addDuel(day, uid, them.id)
   if (added === 'again')
     throw new HttpError(
@@ -498,8 +507,6 @@ async function routeChallenge(req: ChallengeReq): Promise<ChallengeRsp> {
       429,
       `That's ${MAX_CHALLENGES} challenges today. Try again tomorrow.`,
     )
-  // they may have played already: then it settles now
-  await settleDuels(day, uid)
   const postId = context.postId
   if (postId)
     await reddit
@@ -513,6 +520,19 @@ async function routeChallenge(req: ChallengeReq): Promise<ChallengeRsp> {
         ),
       })
       .catch(err => console.warn(`challenge comment failed: ${err}`))
+  return {duels: await duelsFor(day, uid)}
+}
+
+/** Accepts or declines a challenge. It has to be before playing, so nobody accepts a sure win. */
+async function routeAnswer(req: AnswerReq): Promise<ChallengeRsp> {
+  const uid = await needUser()
+  const day = today()
+  const r = await answerDuel(day, uid, String(req.from), req.accept === true)
+  if (r === 'none') throw new HttpError(404, 'No such challenge today.')
+  if (r === 'played')
+    throw new HttpError(409, 'Challenges are accepted before you play.')
+  if (r === 'answered')
+    throw new HttpError(409, "You've already answered that challenge.")
   return {duels: await duelsFor(day, uid)}
 }
 

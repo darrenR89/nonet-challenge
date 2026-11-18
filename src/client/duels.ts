@@ -2,7 +2,7 @@
 // results, and a line on the start screen when someone has challenged you.
 import './nonet/duels.css'
 import {type Duel, MAX_CHALLENGES, recordText} from '../shared/duel.ts'
-import {challenge, lastError} from './api.ts'
+import {answerChallenge, challenge, lastError} from './api.ts'
 
 const esc = (s: string): string =>
   s.replace(
@@ -14,11 +14,25 @@ const num = (n: number | undefined): string =>
 
 function line(d: Readonly<Duel>): string {
   const who = `u/${esc(d.them)}`
+  switch (d.status) {
+    case 'offered':
+      return d.sent
+        ? `Waiting on ${who} to accept`
+        : `${who} challenged you: <b>${num(d.theirs)}</b> to beat`
+    case 'declined':
+      return d.sent ? `${who} declined` : `You declined ${who}`
+    case 'lapsed':
+      return d.sent
+        ? `${who} played without accepting`
+        : `You played before accepting ${who}`
+    case 'accepted':
+      break
+  }
   switch (d.result) {
     case 'pending':
       return d.sent
-        ? `Waiting on ${who} to beat <b>${num(d.mine)}</b>`
-        : `${who} challenged you: <b>${num(d.theirs)}</b> to beat`
+        ? `${who} accepted: waiting on them to beat <b>${num(d.mine)}</b>`
+        : `You accepted ${who}: <b>${num(d.theirs)}</b> to beat`
     case 'won':
       return `You beat ${who}: <b>${num(d.mine)}</b> v ${num(d.theirs)}`
     case 'lost':
@@ -38,14 +52,14 @@ export function duelsHTML(
     ? `<ul class="duelList">${duels
         .map(
           d =>
-            `<li class="${d.result}"><span>${line(d)}</span><small>${recordText(d.record)}</small></li>`,
+            `<li class="${d.result}"><span>${line(d)}</span>${d.status === 'accepted' ? `<small>${recordText(d.record)}</small>` : ''}</li>`,
         )
         .join('')}</ul>`
     : ''
   const form =
     canChallenge && sent < MAX_CHALLENGES
       ? `<form class="duelForm" id="duelForm"><input id="duelName" name="name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="username" aria-label="Reddit username to challenge" maxlength="23" required><button type="submit">Challenge</button></form>
-    <p class="meta" id="duelMsg" aria-live="polite">They're tagged in a comment here with your score to beat.</p>`
+    <p class="meta" id="duelMsg" aria-live="polite">They're tagged in a comment here, and accept before they play.</p>`
       : ''
   if (!list && !form) return ''
   return `<div class="duels"><h3>Challenge someone</h3>${list}${form}</div>`
@@ -71,9 +85,42 @@ export function wireDuels(
   }
 }
 
-/** The start screen's line for challenges you've received and not yet answered. */
+/** The start screen's lines for challenges you've received: Accept or Decline, before you play. */
 export function splashDuelsHTML(duels: readonly Duel[]): string {
-  const open = duels.filter(d => !d.sent && d.result === 'pending')
+  const open = duels.filter(
+    d => !d.sent && (d.status === 'offered' || d.status === 'accepted'),
+  )
   if (!open.length) return ''
-  return open.map(d => `<p>${line(d)}</p>`).join('')
+  return open
+    .map(
+      d =>
+        `<div class="duelOffer"><p>${line(d)}</p>${
+          d.status === 'offered'
+            ? `<div class="duelActs"><button type="button" data-from="${esc(d.themId)}" data-accept="1">Accept</button><button type="button" data-from="${esc(d.themId)}" data-accept="0">Decline</button></div>`
+            : `<small>${recordText(d.record)} · play to settle it</small>`
+        }</div>`,
+    )
+    .join('')
+}
+
+/** Wires the start screen's Accept and Decline buttons. */
+export function wireAnswers(
+  root: HTMLElement,
+  onChange: (duels: Duel[]) => void,
+): void {
+  for (const b of root.querySelectorAll<HTMLButtonElement>('[data-from]'))
+    b.onclick = async () => {
+      for (const x of root.querySelectorAll<HTMLButtonElement>('[data-from]'))
+        x.disabled = true
+      const r = await answerChallenge({
+        from: b.dataset.from ?? '',
+        accept: b.dataset.accept === '1',
+      })
+      if (r) onChange(r.duels)
+      else {
+        b.textContent = lastError || 'Try again'
+        for (const x of root.querySelectorAll<HTMLButtonElement>('[data-from]'))
+          x.disabled = false
+      }
+    }
 }

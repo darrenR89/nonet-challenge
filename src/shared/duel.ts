@@ -6,19 +6,29 @@ export const MAX_CHALLENGES = 5
 
 export type DuelResult = 'pending' | 'won' | 'lost' | 'tied'
 
+/**
+ * offered: waiting for the challenged player to accept. accepted: on, and settles when
+ * both have played. declined: turned down. lapsed: they played today's cube without
+ * accepting, so it can't be taken up any more.
+ */
+export type DuelStatus = 'offered' | 'accepted' | 'declined' | 'lapsed'
+
 /** Wins, losses and ties between two players, from one side. */
 export type Record3 = {won: number; lost: number; tied: number}
 
 /** A head-to-head on one day's cube, seen from the asker's side. */
 export type Duel = {
   day: string
-  /** The other player's Reddit username. */
+  /** The other player's Reddit username and user id. */
   them: string
+  themId: string
   /** True if the asker sent the challenge, false if they received it. */
   sent: boolean
   /** Each side's score today, once they've finished. */
   mine: number | undefined
   theirs: number | undefined
+  status: DuelStatus
+  /** Pending unless accepted and both have finished. */
   result: DuelResult
   /** Every settled challenge between the two, from the asker's side. */
   record: Record3
@@ -52,7 +62,7 @@ export function challengeText(
   score: number,
   cubeNo: number,
 ): string {
-  return `u/${to}, u/${from} scored ${score.toLocaleString('en-GB')} on Nonet #${cubeNo} and challenges you to beat it. Today's cube is in this post.`
+  return `u/${to}, u/${from} scored ${score.toLocaleString('en-GB')} on Nonet #${cubeNo} and challenges you to beat it. Open today's cube in this post to accept, before you play.`
 }
 
 /** A record line such as "You lead 3–2" or "Level at 1–1, 1 tie". */

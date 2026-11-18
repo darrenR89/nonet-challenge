@@ -31,6 +31,8 @@ type Store = {
   notify: boolean
   /** Challenges sent, by day. */
   sent?: Record<string, string[]>
+  /** Your answer to the day's sample challenge. */
+  answered?: Record<string, boolean>
 }
 const load = (): Store => {
   try {
@@ -162,12 +164,17 @@ function duels(day: string, s: Store): Duel[] {
   const mine = s.days[day]?.score
   const one = (them: string, sent: boolean): Duel => {
     const theirs = field.get(them)
-    const result = duelResult(mine, theirs)
-    const past = theirs === undefined ? {won: 0, lost: 0, tied: 0} : {won: them.length % 3, lost: 1, tied: 0}
+    // rivals you challenge accept at once; the sample challenge waits for your answer
+    const ans = s.answered?.[day]
+    const status: Duel['status'] = sent
+      ? theirs === undefined ? 'offered' : 'accepted'
+      : ans === undefined ? (mine === undefined ? 'offered' : 'lapsed') : ans ? 'accepted' : 'declined'
+    const result = status === 'accepted' ? duelResult(mine, theirs) : 'pending'
+    const past = {won: them.length % 3, lost: 1, tied: 0}
     if (result === 'won') past.won++
     if (result === 'lost') past.lost++
     if (result === 'tied') past.tied++
-    return {day, them, sent, mine, theirs, result, record: past}
+    return {day, them, themId: `t2_${them}`, sent, mine, theirs, status, result, record: past}
   }
   return [one(CHALLENGER, false), ...(s.sent?.[day] ?? []).map(n => one(n, true))]
 }
@@ -269,6 +276,14 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         preview: preview(day, s),
         duels: duels(day, s),
       })
+    }
+    case 'api/challenge/answer': {
+      if (body.from !== `t2_${CHALLENGER}`) return err(404, 'No such challenge today.')
+      if (rec.score !== undefined) return err(409, 'Challenges are accepted before you play.')
+      if (s.answered?.[day] !== undefined) return err(409, "You've already answered that challenge.")
+      ;(s.answered ??= {})[day] = body.accept === true
+      save(s)
+      return json({duels: duels(day, s)})
     }
     case 'api/challenge': {
       if (rec.score === undefined) return err(409, "Finish today's cube first.")
