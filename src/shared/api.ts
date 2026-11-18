@@ -1,3 +1,4 @@
+import type {Duel} from './duel.ts'
 import type {Puzzle} from './model.js'
 import type {RunStats, ScoreBreakdown} from './scoring.ts'
 
@@ -105,6 +106,8 @@ export type DailyRsp = {
   subreddit: string
   /** Whether the asker gets a push notification when each new cube is out. */
   notify: boolean
+  /** Today's challenges the asker sent or received. */
+  duels: Duel[]
 }
 
 /** What the feed card shows. Light: a few reads, so it's fine on every scroll past. */
@@ -150,6 +153,8 @@ export type ScoreRsp = {
   /** Share of today's other ranked players this run beat, 0 to 100. */
   beatPct: number
   stats: DayStats
+  /** Today's challenges, settled where both players have finished. */
+  duels: Duel[]
 }
 
 /** Uses today's one retry. */
@@ -158,6 +163,12 @@ export type RetryRsp = {retries: number; penalty: number}
 export type NotifyReq = {on: boolean}
 export type NotifyRsp = {notify: boolean}
 export type JoinRsp = {joined: boolean}
+
+/** Challenge a player to beat the asker's score on today's cube. */
+export type ChallengeReq = {name: string}
+export type ChallengeRsp = {duels: Duel[]}
+/** The challenged player accepts or declines, before they play. from is the challenger's user id. */
+export type AnswerReq = {from: string; accept: boolean}
 
 export type JoinTeamReq = {eventId: string; team: string}
 export type JoinTeamRsp = {event: EventState}
@@ -176,6 +187,8 @@ export const Endpoint = {
   Retry: 'api/daily/retry',
   Notify: 'api/notify',
   JoinSub: 'api/join',
+  Challenge: 'api/challenge',
+  Answer: 'api/challenge/answer',
   TelemetryStart: 'api/telemetry/journey/start',
   TelemetryProgress: 'api/telemetry/journey/progress',
   TelemetryInteraction: 'api/telemetry/journey/interaction',
@@ -201,6 +214,8 @@ export const EndpointMethod = {
   [Endpoint.Retry]: 'POST',
   [Endpoint.Notify]: 'POST',
   [Endpoint.JoinSub]: 'POST',
+  [Endpoint.Challenge]: 'POST',
+  [Endpoint.Answer]: 'POST',
   [Endpoint.TelemetryStart]: 'POST',
   [Endpoint.TelemetryProgress]: 'POST',
   [Endpoint.TelemetryInteraction]: 'POST',

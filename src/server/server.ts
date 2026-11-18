@@ -13,10 +13,13 @@ import type {
   UiResponse,
 } from '@devvit/web/shared'
 import {
+  type AnswerReq,
   type Board,
   type BoardReq,
   type BoardRsp,
   type CardRsp,
+  type ChallengeReq,
+  type ChallengeRsp,
   type DailyRsp,
   type DayStats,
   Endpoint,
@@ -38,6 +41,7 @@ import {
   type StartRsp,
   type Streak,
 } from '../shared/api.ts'
+import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {
   addDays,
   dayKey,
@@ -68,6 +72,7 @@ import {
   useRetry,
 } from './board.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
+import {addDuel, answerDuel, duelsFor, settleDuels} from './duels.ts'
 import {
   activeEvent,
   addToEvent,
@@ -103,6 +108,7 @@ type AnyRsp =
   | RetryRsp
   | NotifyRsp
   | JoinRsp
+  | ChallengeRsp
   | Record<string, unknown>
   | UiResponse
   | TriggerResponse
@@ -164,6 +170,12 @@ async function route(
         break
       case Endpoint.JoinSub:
         rsp = await routeJoinSub()
+        break
+      case Endpoint.Challenge:
+        rsp = await routeChallenge(await readJson<ChallengeReq>(reqMsg))
+        break
+      case Endpoint.Answer:
+        rsp = await routeAnswer(await readJson<AnswerReq>(reqMsg))
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -313,6 +325,7 @@ async function routeDaily(): Promise<DailyRsp> {
     notify: uid
       ? await notifications.isOptedIn(uid as `t2_${string}`).catch(() => false)
       : false,
+    duels: uid ? await duelsFor(day, uid) : [],
   }
 }
 
@@ -400,6 +413,7 @@ async function routeScore(
   if (req.forfeit) {
     // giving up uses today's run: nothing on the boards, and no later run counts
     await markScored(day, uid, 0, 0)
+    await settleDuels(day, uid)
     await journey.end(journeyId, false, {win: false, score: 0})
     const fresh = await getDayRecord(day, uid)
     const boards = await dayBoards(day, uid)
@@ -415,6 +429,7 @@ async function routeScore(
       boards,
       event: await eventFor(day, uid),
       preview: undefined,
+      duels: await duelsFor(day, uid),
     }
   }
   const puzzle = await dayPuzzle(day, tier)
@@ -432,6 +447,7 @@ async function routeScore(
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
     dayStats = await addSolve(day, stats.t1 + stats.t2)
+    await settleDuels(day, uid)
     // the journey ends here, with the total the server worked out, not the browser's
     await journey.end(journeyId, true, {win: true, score: total})
   } else {
@@ -453,7 +469,71 @@ async function routeScore(
     boards,
     event: event ? await eventState(event, day, uid) : undefined,
     preview: await previewFor(day, uid),
+    duels: await duelsFor(day, uid),
   }
+}
+
+/**
+ * Challenges a player to beat the asker's score on today's cube, and tags them in a
+ * comment on this post. The asker must have finished today; the score is the server's.
+ */
+async function routeChallenge(req: ChallengeReq): Promise<ChallengeRsp> {
+  const uid = await needUser()
+  const day = today()
+  const score = (await getDayRecord(day, uid)).score
+  if (score === undefined)
+    throw new HttpError(409, "Finish today's cube first.")
+  const name = cleanName(req.name)
+  if (!name) throw new HttpError(400, "That isn't a Reddit username.")
+  if (name.toLowerCase() === (context.username ?? '').toLowerCase())
+    throw new HttpError(400, "You can't challenge yourself.")
+  const them = await reddit.getUserByUsername(name).catch(() => undefined)
+  if (!them) throw new HttpError(404, `There's no u/${name} on Reddit.`)
+  if (them.id === uid) throw new HttpError(400, "You can't challenge yourself.")
+  await rememberName(them.id, them.username)
+  if ((await getDayRecord(day, them.id)).score !== undefined)
+    throw new HttpError(
+      409,
+      `u/${them.username} has already played today's cube. Challenge them tomorrow.`,
+    )
+  const added = await addDuel(day, uid, them.id)
+  if (added === 'again')
+    throw new HttpError(
+      409,
+      `You and u/${them.username} already have a challenge today.`,
+    )
+  if (added === 'full')
+    throw new HttpError(
+      429,
+      `That's ${MAX_CHALLENGES} challenges today. Try again tomorrow.`,
+    )
+  const postId = context.postId
+  if (postId)
+    await reddit
+      .submitComment({
+        id: postId as `t3_${string}`,
+        text: challengeText(
+          context.username ?? 'someone',
+          them.username,
+          Number(score),
+          cubeNumber(day),
+        ),
+      })
+      .catch(err => console.warn(`challenge comment failed: ${err}`))
+  return {duels: await duelsFor(day, uid)}
+}
+
+/** Accepts or declines a challenge. It has to be before playing, so nobody accepts a sure win. */
+async function routeAnswer(req: AnswerReq): Promise<ChallengeRsp> {
+  const uid = await needUser()
+  const day = today()
+  const r = await answerDuel(day, uid, String(req.from), req.accept === true)
+  if (r === 'none') throw new HttpError(404, 'No such challenge today.')
+  if (r === 'played')
+    throw new HttpError(409, 'Challenges are accepted before you play.')
+  if (r === 'answered')
+    throw new HttpError(409, "You've already answered that challenge.")
+  return {duels: await duelsFor(day, uid)}
 }
 
 /** Uses today's one retry. The run restarts on the same cube and tier. */

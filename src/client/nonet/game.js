@@ -4,6 +4,7 @@ import './style.css';
 import {makeTransitions} from './transitions.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
+import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {exitExpandedMode} from '@devvit/web/client';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
@@ -145,6 +146,7 @@ function renderSplashExtras(){
   if(online&&s&&s.current)$('spStreak').innerHTML=`<svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1c.6 3-1.2 4.6-2.6 6.2C4 8.8 3 10.4 3 12.6 3 16 5.3 19 8 19s5-3 5-6.4c0-2.3-1-3.9-2-5-.2 1.5-.9 2.6-2 3.1.4-2.6.2-6.4-1-9.7Z" fill="#23252b"/><path d="M8 18c-1.4 0-2.4-1.2-2.4-2.7 0-1.4.9-2.3 1.7-3.2.1 1 .6 1.6 1.3 1.8.1-.9.5-1.6 1.1-2.1.6.9 1 1.9 1 3.3C10.7 16.7 9.5 18 8 18Z" fill="#f5c12e"/></svg><span>${s.current}-day streak</span>`,$('spStreak').title=`${s.current} day${s.current===1?'':'s'} in a row · best ${s.best}`;
   const ev=D&&D.event;$('spEvent').hidden=!ev;
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
+  {const h=online&&D?splashDuelsHTML(D.duels||[]):'';let el=$('spDuels');if(!el&&h){el=document.createElement('section');el.id='spDuels';el.className='duelsSplash';$('spPeek').after(el)}if(el){el.hidden=!h;el.innerHTML=h;wireAnswers(el,d=>{if(D)D.duels=d;journey.interaction('answer_challenge',String(d.length));renderSplashExtras()})}}
   $('spPeek').hidden=!(D&&D.preview);
   if(D&&D.preview){$('spPeek').innerHTML=`<button class="chip" type="button" aria-expanded="false"><b>Tomorrow's clues</b><span>unlocked with all three ★</span></button><div class="more" hidden>${cluesNet(D.preview.given)}</div>`;wireChip($('spPeek'))}
 }
@@ -287,11 +289,12 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
   el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
   <h2>Solved in ${fmt(t1+t2)}</h2><div class="total">${num(total)} pts<small>${s.name}${pen<1?` · retry ×${pen}`:''}</small></div>
-  ${rank}${streak}${more}${pv}
+  ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
+  wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false};
   $('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the comments';try{exitExpandedMode(ev)}catch(e){}};
@@ -323,7 +326,7 @@ async function submitRun(){
   journey.endedByServer();
   if(!r){const m=$('srvMsg');if(m)m.textContent=`Not counted: ${lastError||'could not reach the server'}`;return}
   lastScore=r;
-  if(D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:starWon.size};D.streak=r.streak;D.boards=r.boards;D.event=r.event;D.preview=r.preview;D.stats=r.stats;renderSplashExtras();splashTwist()}
+  if(D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:starWon.size};D.streak=r.streak;D.boards=r.boards;D.event=r.event;D.preview=r.preview;D.stats=r.stats;D.duels=r.duels;renderSplashExtras();splashTwist()}
   renderEndCard();
 }
 

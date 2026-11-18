@@ -3,6 +3,7 @@
 // a field of made-up rival players, a sample team event, scoring with the same
 // code as the real server, the one retry, streaks and tomorrow's preview.
 // State lives in localStorage, so it's per viewer and per browser.
+import {type Duel, duelResult, MAX_CHALLENGES, cleanName} from '../../src/shared/duel.ts'
 import {makeDay} from '../../src/shared/model.js'
 import {
   addDays,
@@ -28,6 +29,10 @@ type Store = {
   last: string
   team?: string
   notify: boolean
+  /** Challenges sent, by day. */
+  sent?: Record<string, string[]>
+  /** Your answer to the day's sample challenge. */
+  answered?: Record<string, boolean>
 }
 const load = (): Store => {
   try {
@@ -151,6 +156,29 @@ const preview = (day: string, s: Store) =>
 
 const cubeNo = dayOfYear
 
+// challenges: one rival has challenged you today; rivals you challenge answer at once
+// with their score from the field, and anyone else stays pending
+const CHALLENGER = 'quietfox'
+function duels(day: string, s: Store): Duel[] {
+  const field = new Map(rivalsOn(day).map(x => [x.name, x.score]))
+  const mine = s.days[day]?.score
+  const one = (them: string, sent: boolean): Duel => {
+    const theirs = field.get(them)
+    // rivals you challenge accept at once; the sample challenge waits for your answer
+    const ans = s.answered?.[day]
+    const status: Duel['status'] = sent
+      ? theirs === undefined ? 'offered' : 'accepted'
+      : ans === undefined ? (mine === undefined ? 'offered' : 'lapsed') : ans ? 'accepted' : 'declined'
+    const result = status === 'accepted' ? duelResult(mine, theirs) : 'pending'
+    const past = {won: them.length % 3, lost: 1, tied: 0}
+    if (result === 'won') past.won++
+    if (result === 'lost') past.lost++
+    if (result === 'tied') past.tied++
+    return {day, them, themId: `t2_${them}`, sent, mine, theirs, status, result, record: past}
+  }
+  return [one(CHALLENGER, false), ...(s.sent?.[day] ?? []).map(n => one(n, true))]
+}
+
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}})
 const err = (status: number, error: string): Response => json({error, status}, status)
@@ -177,6 +205,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         stats: stats(day, s),
         subreddit: 'nonet_challenge_dev',
         notify: s.notify,
+        duels: duels(day, s),
       })
     case 'api/card': {
       // the prototype's card-state switcher can stand in for a quiet day or a finished one
@@ -245,7 +274,30 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         boards: b,
         event: eventState(day, s),
         preview: preview(day, s),
+        duels: duels(day, s),
       })
+    }
+    case 'api/challenge/answer': {
+      if (body.from !== `t2_${CHALLENGER}`) return err(404, 'No such challenge today.')
+      if (rec.score !== undefined) return err(409, 'Challenges are accepted before you play.')
+      if (s.answered?.[day] !== undefined) return err(409, "You've already answered that challenge.")
+      ;(s.answered ??= {})[day] = body.accept === true
+      save(s)
+      return json({duels: duels(day, s)})
+    }
+    case 'api/challenge': {
+      if (rec.score === undefined) return err(409, "Finish today's cube first.")
+      const name = cleanName(body.name)?.toLowerCase()
+      if (!name) return err(400, "That isn't a Reddit username.")
+      if (name === ME) return err(400, "You can't challenge yourself.")
+      const list = ((s.sent ??= {})[day] ??= [])
+      if (name === CHALLENGER || list.includes(name))
+        return err(409, `You and u/${name} already have a challenge today.`)
+      if (list.length >= MAX_CHALLENGES)
+        return err(429, `That's ${MAX_CHALLENGES} challenges today. Try again tomorrow.`)
+      list.push(name)
+      save(s)
+      return json({duels: duels(day, s)})
     }
     case 'api/event/join':
       s.team ??= String(body.team)

@@ -1,9 +1,12 @@
 // Calls to the Nonet server. Each returns undefined on any failure, so the
 // game keeps working offline (unscored) when the server can't be reached.
 import {
+  type AnswerReq,
   type BoardReq,
   type BoardRsp,
   type CardRsp,
+  type ChallengeReq,
+  type ChallengeRsp,
   type DailyRsp,
   Endpoint,
   type JoinRsp,
@@ -81,3 +84,12 @@ export const joinTeam = (req: JoinTeamReq): Promise<JoinTeamRsp | undefined> =>
   call<JoinTeamRsp>(Endpoint.JoinTeam, req)
 export const getBoard = (req: BoardReq): Promise<BoardRsp | undefined> =>
   call<BoardRsp>(Endpoint.Board, req)
+/** Challenges a player to beat today's score; they're tagged in a comment. */
+export const challenge = (
+  req: ChallengeReq,
+): Promise<ChallengeRsp | undefined> =>
+  call<ChallengeRsp>(Endpoint.Challenge, req)
+/** Accepts or declines a challenge, before playing. */
+export const answerChallenge = (
+  req: AnswerReq,
+): Promise<ChallengeRsp | undefined> => call<ChallengeRsp>(Endpoint.Answer, req)
