@@ -12,6 +12,7 @@ import {
 } from '@devvit/web/server'
 import {
   type CardRsp,
+  type ChallengeRsp,
   type DailyRsp,
   Endpoint,
   type ErrorRsp,
@@ -38,12 +39,16 @@ let autoPost: boolean | undefined = true
 const journeys: {kind: string; body: unknown}[] = []
 let optedIn = false
 const pushed: string[] = []
+/** Comments the app made, as [post id, text]. */
+const comments: [string, string][] = []
 
 const r = reddit as unknown as Record<string, unknown>
 const s = settings as unknown as Record<string, unknown>
 const was = {
   submitCustomPost: r.submitCustomPost,
   submitPost: r.submitPost,
+  getUserByUsername: r.getUserByUsername,
+  submitComment: r.submitComment,
   get: s.get,
 }
 
@@ -59,6 +64,15 @@ before(async () => {
     return {id: 't3_text', url: 'https://reddit.com/y'}
   }
   s.get = async () => autoPost
+  // every name is a Reddit user except "ghost"
+  r.getUserByUsername = async (name: string) =>
+    name.toLowerCase() === 'ghost'
+      ? undefined
+      : {id: `t2_${name.toLowerCase()}`, username: name.toLowerCase()}
+  r.submitComment = async (o: {id: string; text: string}) => {
+    comments.push([o.id, o.text])
+    return {id: 't1_c'}
+  }
   const t = telemetry as unknown as Record<string, unknown>
   const log =
     (kind: string, rsp: Record<string, unknown> = {}) =>
@@ -109,6 +123,8 @@ after(async () => {
   Object.assign(r, {
     submitCustomPost: was.submitCustomPost,
     submitPost: was.submitPost,
+    getUserByUsername: was.getUserByUsername,
+    submitComment: was.submitComment,
   })
   s.get = was.get
   if (!server.listening) return
@@ -122,6 +138,7 @@ beforeEach(() => {
   posts.length = 0
   journeys.length = 0
   pushed.length = 0
+  comments.length = 0
   optedIn = false
   autoPost = true
   now = new Date('2026-11-14T12:00:00Z')
@@ -560,4 +577,94 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
   assert.equal(lapsed.body.streak, 0, 'a missed day ends the streak')
   assert.equal(lapsed.body.no, 320)
   assert.equal(lapsed.body.solves, 0, 'a new day starts at zero')
+})
+
+test('a challenge tags the player, then settles when both have played', async () => {
+  const mine = await playDay(0, run())
+  const ann = mine.body.total
+  const sent = await post<ChallengeRsp>(Endpoint.Challenge, {name: 'u/Bob'})
+  assert.equal(sent.status, 200)
+  assert.equal(comments.length, 1)
+  assert.equal(comments[0]?.[0], 't3_123', 'on this post')
+  assert.match(
+    comments[0]?.[1] ?? '',
+    /^u\/bob, u\/ann scored [\d,]+ on Nonet #318/,
+  )
+  assert.deepEqual(sent.body.duels, [
+    {
+      day: '2026-11-14',
+      them: 'bob',
+      sent: true,
+      mine: ann,
+      // theirs is missing until they play: JSON drops undefined
+      result: 'pending',
+      record: {won: 0, lost: 0, tied: 0},
+    },
+  ])
+
+  as('t2_bob', 'bob')
+  const open = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(open.body.duels[0]?.them, 'ann')
+  assert.equal(open.body.duels[0]?.sent, false)
+  assert.equal(open.body.duels[0]?.theirs, ann, 'the score to beat')
+  const bob = await playDay(0, run({wrong: 4}))
+  assert.ok(bob.body.total < ann)
+  assert.equal(bob.body.duels[0]?.result, 'lost')
+  assert.deepEqual(bob.body.duels[0]?.record, {won: 0, lost: 1, tied: 0})
+
+  as('t2_ann', 'ann')
+  const back = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(back.body.duels[0]?.result, 'won')
+  assert.deepEqual(back.body.duels[0]?.record, {won: 1, lost: 0, tied: 0})
+
+  // the next day they meet again, and the record carries on
+  now = new Date('2026-11-15T12:00:00Z')
+  as('t2_bob', 'bob')
+  await playDay(0, run())
+  await post<ChallengeRsp>(Endpoint.Challenge, {name: 'ann'})
+  as('t2_ann', 'ann')
+  const two = await playDay(0, run({wrong: 8}))
+  assert.equal(two.body.duels[0]?.result, 'lost')
+  assert.deepEqual(two.body.duels[0]?.record, {won: 1, lost: 1, tied: 0})
+})
+
+test('a challenge to someone who already played settles at once', async () => {
+  as('t2_bob', 'bob')
+  await playDay(0, run({wrong: 4}))
+  as('t2_ann', 'ann')
+  await playDay(0, run())
+  const sent = await post<ChallengeRsp>(Endpoint.Challenge, {name: 'bob'})
+  assert.equal(sent.body.duels[0]?.result, 'won')
+  assert.deepEqual(sent.body.duels[0]?.record, {won: 1, lost: 0, tied: 0})
+})
+
+test('challenges explain what is wrong', async () => {
+  const early = await post<ErrorRsp>(Endpoint.Challenge, {name: 'bob'})
+  assert.equal(early.status, 409, 'finish first')
+  await playDay(0, run())
+  const cases: [unknown, number][] = [
+    ['ann', 400],
+    ['no spaces', 400],
+    [undefined, 400],
+    ['ghost', 404],
+  ]
+  for (const [name, status] of cases)
+    assert.equal(
+      (await post<ErrorRsp>(Endpoint.Challenge, {name})).status,
+      status,
+    )
+  assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 200)
+  assert.equal(
+    (await post<ErrorRsp>(Endpoint.Challenge, {name: 'BOB'})).status,
+    409,
+    'once a day per pair',
+  )
+  for (const name of ['cat', 'dan', 'eve', 'fay'])
+    assert.equal((await post(Endpoint.Challenge, {name})).status, 200)
+  const sixth = await post<ErrorRsp>(Endpoint.Challenge, {name: 'gus'})
+  assert.equal(sixth.status, 429)
+  assert.equal(comments.length, 5)
+
+  as(undefined)
+  assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 401)
 })

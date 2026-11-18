@@ -1,0 +1,17 @@
+/* challenges: the end card box and the start screen line */
+.results .duels{display:grid;gap:10px;padding:14px;border:1px solid var(--edge);border-left:3px solid var(--yellow);border-radius:var(--r)}
+.results .duels h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
+.duelList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.duelList li{display:grid;gap:2px;font-size:15px;line-height:1.4}
+.duelList li small{font-family:var(--code);font-size:12px;color:var(--lead)}
+.duelList li.won b{color:var(--yellow)}
+.duelList li.lost b{color:var(--beni)}
+.duelForm{display:flex;gap:8px}
+.duelForm input{flex:1;min-width:0;min-height:40px;box-sizing:border-box;padding:0 10px;font:inherit;font-family:var(--code);font-size:14px;color:var(--washi);background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r)}
+.duelForm input:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+.duels .meta{margin:0;font-size:13px;color:var(--lead)}
+.duelsSplash{width:100%;max-width:calc(100% - 28px);box-sizing:border-box;padding:10px 14px;border:1px solid var(--edge);border-left:3px solid var(--beni);border-radius:var(--r);background:var(--slate);font-size:14px}
+.duelsSplash p{margin:0}
+.duelsSplash p+p{margin-top:4px}
+/* on the paper cover, like the event and preview lines */
+.cv .duelsSplash{max-width:none;background:rgba(255,255,255,.55);border:1px solid var(--c-ink);border-left:3px solid var(--beni);color:var(--c-ink);text-align:left}

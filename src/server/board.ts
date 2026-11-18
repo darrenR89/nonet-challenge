@@ -15,10 +15,16 @@ const namesKey = 'names'
 const userKey = (uid: string): string => `u:${uid}`
 const userDayKey = (day: string, uid: string): string => `ud:${day}:${uid}`
 /** Per-day records expire after this long; boards and streaks stay. */
-const DAY_TTL = 60 * 60 * 24 * 21
+export const DAY_TTL = 60 * 60 * 24 * 21
 
 export async function rememberName(uid: string, name: string): Promise<void> {
   await redis.hSet(namesKey, {[uid]: name})
+}
+
+/** Usernames for user ids, in order; undefined for anyone never seen. */
+export async function namesOf(ids: string[]): Promise<(string | undefined)[]> {
+  if (!ids.length) return []
+  return (await redis.hMGet(namesKey, ids)).map(n => n ?? undefined)
 }
 
 export async function getMyDay(day: string, uid: string): Promise<MyDay> {
