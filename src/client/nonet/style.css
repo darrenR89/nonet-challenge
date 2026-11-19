@@ -347,3 +347,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .st.hintme{animation:hintme 1.2s ease 2}
 @keyframes hintme{0%,100%{box-shadow:0 0 0 0 transparent}40%{box-shadow:0 0 0 4px var(--yellow)}}
 @media (prefers-reduced-motion:reduce){.st.hintme{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+
+/* number pad layouts, switched from the test panel */
+.pad.lay-B{grid-template-columns:repeat(3,68px);justify-content:end}
+.pad.lay-B button,.pad.lay-C button{min-height:60px}
+.pad.lay-C{grid-template-columns:repeat(3,1fr)}

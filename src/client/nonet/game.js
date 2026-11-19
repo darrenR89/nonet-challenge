@@ -544,6 +544,13 @@ $('vd').onclick=()=>{rx=Math.max(-62,rx-45);apply()};
 window.addEventListener('resize',setH);setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
+// number pad layouts to compare for speed: A a row of five under the cube, B a phone keypad in the
+// right thumb's reach, C a full-width keypad with tall keys. Kept per browser.
+const PADS={A:'row of five',B:'keypad, right thumb',C:'keypad, full width'};
+function setPad(k){pad.classList.remove('lay-A','lay-B','lay-C');pad.classList.add('lay-'+k);$('tkPad').textContent='Pad: '+k;try{localStorage.setItem('nonet-pad',k)}catch(e){}}
+let padK='A';try{const v=localStorage.getItem('nonet-pad');if(v&&PADS[v])padK=v}catch(e){}
+setPad(padK);
+$('tkPad').onclick=()=>{const ks=Object.keys(PADS);padK=ks[(ks.indexOf(padK)+1)%ks.length];setPad(padK);tkMsg(`Pad ${padK}: ${PADS[padK]}.`)};
 // keep the cube from turning when the panel is used, and remember whether it was open
 const tk=$('testkit');['pointerdown','click'].forEach(ev=>tk.addEventListener(ev,e=>e.stopPropagation()));
 try{if(localStorage.getItem('nonet-tk')==='1')tk.open=true}catch(e){}
