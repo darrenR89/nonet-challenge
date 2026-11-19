@@ -32,7 +32,11 @@
         <div class="cv-go">
           <p class="cv-sub" id="spSub" aria-live="polite"></p>
           <button class="cv-play" id="spPlay" type="button" disabled>Play today's cube</button>
-          <ul class="cv-links">
+          <ul class="cv-links cv-pause">
+            <li><button type="button" id="spRetry">Retry</button></li>
+            <li><button type="button" id="spGiveUp">Give up</button></li>
+          </ul>
+          <ul class="cv-links cv-home">
             <li><button type="button" id="spHelp">How to play</button></li>
             <li><button type="button" id="spPractice">Practice cube</button></li>
           </ul>
@@ -73,6 +77,7 @@
   <header>
     <h1><img src="/brand/nonet-wordmark.svg" alt="Nonet" width="141" height="26"></h1>
     <span class="hdr">
+      <button class="icon sugg" id="suggest" type="button">Suggest 3/3</button>
       <button class="icon" id="helpBtn" type="button" aria-label="How to play">?</button>
       <button class="icon" id="soundBtn" type="button" aria-label="Music and sound" aria-pressed="true">♪</button>
     </span>
@@ -89,15 +94,8 @@
     </div>
     <div class="prow" id="progress">
       <span class="pbar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="pAll"><i></i></span>
-      <span class="misses" id="misses" role="img" aria-label="No wrong locks" hidden><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg><b id="missN">00</b></span>
       <span class="timer" id="timer" aria-label="Time">0:00</span>
       <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
-    </div>
-  </div>
-  <div class="penrow" id="tools2" hidden>
-    <div class="seg seg-icon" role="group" aria-label="Entry mode">
-      <button id="mPencil" aria-pressed="true" aria-label="Pencil" title="Pencil"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3z"/><path d="M11.5 5.5l3 3"/></svg></button>
-      <button id="mPen" aria-pressed="false" aria-label="Lock in" title="Lock in"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5l4 4 8-9" stroke-width="2.2"/></svg></button>
     </div>
   </div>
   <span class="status" id="status" aria-live="polite"></span>
@@ -130,13 +128,20 @@
 
   <div class="banner" id="banner" hidden></div>
 
-  <div class="pad" id="pad"></div>
+  <div class="padbox" id="padbox" hidden>
+  <div class="padtabs" id="tools2">
+      <div class="seg seg-icon" role="group" aria-label="Entry mode">
+        <button id="mPencil" aria-pressed="true" aria-label="Pencil" title="Pencil"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3z"/><path d="M11.5 5.5l3 3"/></svg></button>
+        <button id="mPen" aria-pressed="false" aria-label="Lock in" title="Lock in"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5l4 4 8-9" stroke-width="2.2"/></svg></button>
+      </div>
+    </div>
+    <div class="pad" id="pad"></div>
+  </div>
 
   <section class="results" id="results" hidden></section>
   <button class="showres" id="showRes" type="button" hidden>Show result</button>
 
   <div class="row runbar" id="runbar">
-    <button id="suggest" type="button">Suggest</button>
     <button id="restart" type="button">Restart</button>
     <button id="reveal" type="button">Give up</button>
   </div>

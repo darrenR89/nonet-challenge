@@ -270,6 +270,7 @@ function askGiveUp(){if(!P||stage===3)return;
   ask('Give up today\'s cube?',`<p>Giving up shows the answer and ends today at 0 points.${canRetry()?` Or use today's one retry: start over, and the total is ×${RETRY_MULT}.`:''}</p>`,b)}
 function updateRunButtons(){const r=$('restart');
   if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
+  const sr=$('spRetry');sr.textContent=r.textContent;sr.disabled=r.disabled;
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
@@ -479,11 +480,12 @@ function render(){
   // one thin bar for the whole run: Dial in is the first half when there are turns, Fill in the rest
   const tot=blanks||P.start.filter(v=>!v).length,fill=stage===1?0:stage===3?1:tot?1-left/tot:0;
   setBar('pAll',P.k===0?fill:stage===1?home/nClues/2:.5+fill/2);$('views').hidden=stage!==1;
-  $('runbar').hidden=stage===3;
+  // retry and give up live on the pause screen; practice has no pause, so it keeps them here
+  $('runbar').hidden=stage===3||!isPrac();
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
-  $('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('suggest').textContent=`Suggest · ${hintsLeft}`;
+  $('padbox').hidden=stage!==2;
+  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;$('suggest').textContent=`Suggest ${hintsLeft}/3`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
@@ -509,9 +511,7 @@ function moments(home){
   const newFaces=[...faceSet].filter(k=>!was.faceSet.has(k)),newLines=[...lineSet].filter(k=>!was.lineSet.has(k));
   newLines.forEach(k=>lines[k].forEach((c,n)=>stickers[c].forEach(x=>{x.classList.remove('sweep');void x.offsetWidth;x.style.animationDelay=`${n*40}ms`;x.classList.add('sweep')})));
   newFaces.forEach(k=>groups[k].forEach(c=>stickers[c].forEach(x=>{x.classList.remove('facedone');void x.offsetWidth;x.classList.add('facedone')})));
-  // just the moment, no tallies: the progress bar already shows how far along you are
-  if(newFaces.length)callout('Face done','');
-  else if(newLines.length)callout(newLines.length>1?'Lines':'Line','');
+  // a finished line sweeps and a finished face glows on the cube itself, with no popup
 }
 let calloutT=0;
 function callout(big,small){let el=$('moment');if(!el){el=document.createElement('div');el.id='moment';el.className='moment';el.setAttribute('role','status');stageEl.appendChild(el)}
@@ -543,12 +543,8 @@ let tipN=0,tipStage=0;
 function showTip(){const h=$('hint'),list=isPrac()&&stage<3?TIPS[stage]:null;h.hidden=!list;if(!list)return;
   if(tipStage!==stage){tipStage=stage;tipN=0}h.textContent=`Tip · ${list[tipN%list.length]}`}
 setInterval(()=>{if(!isPrac()||stage===3||$('hint').hidden)return;tipN++;const h=$('hint');h.classList.remove('tipin');void h.offsetWidth;h.classList.add('tipin');showTip()},7000);
-function showMisses(bump=false){const m=$('misses');m.hidden=stage===1||gaveUp;
-  m.classList.toggle('used',wrong>0);
-  m.setAttribute('aria-label',`${wrong} wrong lock${wrong===1?'':'s'}`);
-  const n=$('missN'),x=m.querySelector('svg');
-  if(!bump){n.textContent=String(wrong).padStart(2,'0');return}
-  setTimeout(()=>{n.textContent=String(wrong).padStart(2,'0');for(const e of [x,n]){e.classList.remove('bump');void e.getBoundingClientRect();e.classList.add('bump')}},220)}
+// the wrong-lock count is no longer shown during play: a miss still shakes the square and shows its penalty
+function showMisses(){}
 function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=document.createElement('div');
   f.className='penalty';f.setAttribute('aria-hidden','true');f.innerHTML='−25<sub>pts</sub>';
   // beside the square's top corner, not over it: to its right, or to its left near the screen's right edge
@@ -564,7 +560,7 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
   vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
@@ -615,9 +611,9 @@ function showHint(free){
 }
 $('suggest').onclick=()=>showHint(false);
 
-$('restart').onclick=askRetry;
+$('restart').onclick=askRetry;$('spRetry').onclick=askRetry;
 // giving up asks first, and offers today's retry instead when there is one
-$('reveal').onclick=askGiveUp;
+$('reveal').onclick=askGiveUp;$('spGiveUp').onclick=askGiveUp;
 document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;zoom=1;apply();render()});
 document.addEventListener('keydown',e=>{if(sel<0||tx.busy)return;if(/^[1-9]$/.test(e.key))pressDigit(+e.key);else if(e.key==='Backspace'||e.key==='0')pressDigit(0)});
 

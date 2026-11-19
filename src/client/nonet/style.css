@@ -415,3 +415,15 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .prow .misses{display:inline-flex;align-items:center;gap:3px}
 .prow .misses[hidden]{display:none}
 .runbar[hidden]{display:none}
+
+/* Suggest sits with Help and music at the top right */
+.hdr .sugg{width:auto;padding:0 12px;font:500 13px var(--code);letter-spacing:.02em;white-space:nowrap}
+.hdr .sugg[hidden]{display:none}
+.hdr .sugg:disabled{opacity:.4}
+/* the number pad in a frame, with pencil and lock-in as tabs on its top edge */
+.padbox{border:1px solid var(--edge);border-radius:0 var(--r) var(--r) var(--r);padding:8px;background:var(--slate);position:relative;margin-top:36px}
+.padbox[hidden]{display:none}
+.padtabs{position:absolute;left:-1px;bottom:100%;display:flex}
+.padtabs .seg{display:flex;gap:0;border:0;background:none;padding:0}
+.padtabs .seg button{min-height:36px;width:52px;border:1px solid var(--edge);border-bottom:0;border-radius:var(--r) var(--r) 0 0;background:var(--sumi);color:var(--lead);margin-right:-1px}
+.padtabs .seg button[aria-pressed="true"]{background:var(--slate);color:var(--washi);position:relative;z-index:1;box-shadow:0 1px 0 var(--slate)}
