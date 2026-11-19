@@ -321,7 +321,7 @@ async function claimPending(r){const p=readPending();if(!p)return;
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
-  ask('Your run is saved',`<p><b>${num(s.total)} points</b>${me?`, #${me.rank} today`:''}. ${s.streak.current>1?`Your streak is ${s.streak.current} days.`:'Your streak has started.'}</p><p>Come back tomorrow for the next cube${s.preview?', or look at tomorrow\'s clues now':''}.</p>`,[['Great',null,'primary']])}
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let teamAsk=false;
 function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
