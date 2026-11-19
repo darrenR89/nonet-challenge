@@ -71,6 +71,37 @@ export async function lockTier(
   return Number(await redis.hGet(key, 'tier'))
 }
 
+// A run started while logged out: its tier and start time, kept two days under a random id, so
+// the player's run can be claimed once they sign up and the server still knows when it began.
+const guestKey = (day: string, id: string): string => `guest:${day}:${id}`
+
+/** Notes a logged-out start and returns its id. */
+export async function startGuest(
+  day: string,
+  tier: number,
+  nowMs: number,
+): Promise<string> {
+  const id = crypto.randomUUID()
+  await redis.hSet(guestKey(day, id), {
+    tier: String(tier),
+    started: String(nowMs),
+  })
+  await redis.expire(guestKey(day, id), DAY_TTL)
+  return id
+}
+
+/** The logged-out run with this id, removed so it's claimed once. */
+export async function takeGuest(
+  day: string,
+  id: string,
+): Promise<{tier: number; started: number} | undefined> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return
+  const h = await redis.hGetAll(guestKey(day, id))
+  if (h.tier === undefined) return
+  await redis.del(guestKey(day, id))
+  return {tier: Number(h.tier), started: Number(h.started)}
+}
+
 /** Marks today's run done. False if it was already done (only one counts). */
 export async function markScored(
   day: string,

@@ -375,3 +375,10 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the completed page's share line and next steps */
 .results .more .sharetxt{margin:0;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap}
 .results .more button small{font-size:11px;opacity:.7;margin-left:4px}
+/* the guest's end card: what signing up saves */
+.results .signup{background:var(--yellow);color:var(--sumi);border-radius:var(--r);padding:14px;display:grid;gap:10px;margin-top:4px}
+.results .signup h3{margin:0;font-family:var(--display);font-weight:400;font-size:24px}
+.results .signup p{margin:0;font-size:14px;line-height:1.45}
+.results .signup ul{margin:0;padding-left:18px;display:grid;gap:5px;font-size:14px;line-height:1.4}
+.results .signup button{background:var(--sumi);color:var(--washi);border-color:var(--sumi);min-height:48px;font-weight:600}
+.results .signup .meta{font-family:var(--code);font-size:12px;color:var(--sumi)}

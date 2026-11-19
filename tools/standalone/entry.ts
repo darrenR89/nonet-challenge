@@ -1,6 +1,6 @@
 // The standalone page: the stand-in server first, then the game itself.
 import './fresh.ts'
-import {resetDemo} from './mock.ts'
+import {isGuest, resetDemo} from './mock.ts'
 import '../../src/client/game.ts'
 
 document.getElementById('resetDemo')?.addEventListener('click', resetDemo)
@@ -29,3 +29,13 @@ for (const b of looks)
     showLook(v)
     frame?.contentWindow?.location.reload()
   })
+
+// Logged out: the page plays as a visitor with no Reddit account, to try the sign-up flow
+const guestBtn = document.getElementById('guestBtn')
+guestBtn?.setAttribute('aria-pressed', String(isGuest()))
+guestBtn?.addEventListener('click', () => {
+  try {
+    sessionStorage.setItem('nonet-guest', isGuest() ? '0' : '1')
+  } catch {}
+  location.reload()
+})

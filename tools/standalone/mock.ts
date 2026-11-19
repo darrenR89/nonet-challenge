@@ -201,10 +201,59 @@ const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}})
 const err = (status: number, error: string): Response => json({error, status}, status)
 
+/** The prototype's Logged out switch: the page plays as a visitor with no Reddit account. */
+export const isGuest = (): boolean => {
+  try {
+    return sessionStorage.getItem('nonet-guest') === '1'
+  } catch {
+    return false
+  }
+}
+
 async function route(path: string, body: Record<string, unknown>): Promise<Response> {
   const day = dayKey()
   const s = load()
   const rec = (s.days[day] ??= {})
+  const guest = isGuest()
+  if (guest && path === 'api/daily')
+    return json({
+      day,
+      weekday: weekday(day),
+      week: weekKey(day),
+      level: levelOf(day),
+      my: {retries: 0},
+      streak: {current: 0, best: 0, played: 0},
+      boards: boards(day, {...s, days: {}}),
+      event: eventState(day, {...s, days: {}, team: undefined}),
+      loggedIn: false,
+      cubeNo: cubeNo(day),
+      stats: stats(day, s),
+      subreddit: 'nonet_challenge_dev',
+      notify: false,
+      duels: [],
+    })
+  if (guest && path === 'api/card')
+    return json({day, no: cubeNo(day), loggedIn: false, solves: stats(day, s).solves, streak: 0})
+  if (guest && path === 'api/daily/start') {
+    const tier = Number(body.tier) || 0
+    try {
+      sessionStorage.setItem('nonet-guest-run', JSON.stringify({tier, started: Date.now()}))
+    } catch {}
+    return json({tier, puzzle: cube(day).tiers[tier], guest: '00000000-0000-4000-8000-000000000000'})
+  }
+  if (guest && path.startsWith('api/') && !path.startsWith('api/telemetry') && path !== 'api/board')
+    return err(401, 'Log in to Reddit to play for points.')
+  // a run played logged out, claimed after signing up
+  if (path === 'api/daily/score' && body.guest && rec.tier === undefined) {
+    try {
+      const g = JSON.parse(sessionStorage.getItem('nonet-guest-run') ?? 'null')
+      if (g) {
+        rec.tier = g.tier
+        rec.started = g.started
+        sessionStorage.removeItem('nonet-guest-run')
+      }
+    } catch {}
+  }
   switch (path) {
     case 'api/daily':
       return json({

@@ -154,3 +154,5 @@
 .su-back{all:unset;box-sizing:border-box;cursor:pointer;padding:0 18px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--c-ink);font:500 15px var(--c-body);display:grid;place-items:center}
 .su-back:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
 .setup .cv-play{width:100%;background:var(--c-ink);color:var(--c-paper)}
+.su-guest{margin:0;font-size:14px;line-height:1.45;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px var(--c-ink)}
+.su-guest[hidden]{display:none}

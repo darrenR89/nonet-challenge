@@ -146,7 +146,12 @@ export type CardRsp = {
 
 /** Lock today's tier (0 to 3 turns, Hard up to 2) and get its cube. Only the first call each day counts. */
 export type StartReq = {tier: number}
-export type StartRsp = {puzzle: Puzzle; tier: number}
+export type StartRsp = {
+  puzzle: Puzzle
+  tier: number
+  /** Logged out: the id to claim this run with after signing up. */
+  guest?: string
+}
 
 /** A finished run. forfeit means the player gave up: today ends at 0, unranked. */
 export type ScoreReq = {
@@ -154,6 +159,8 @@ export type ScoreReq = {
   tier: number
   stats: RunStats
   forfeit?: boolean
+  /** A run played logged out, claimed by the player who just signed up. */
+  guest?: string
 }
 export type ScoreRsp = {
   /** True if this run counted. Only the first finished run each day does. */

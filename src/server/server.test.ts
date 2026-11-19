@@ -432,12 +432,53 @@ test('the daily post waits for midnight Pacific and is dated that day', async ()
   assert.match(posts[1] ?? '', /^Nonet: today's cube · Sun 15 Nov$/)
 })
 
-test('logged-out players can look but not score', async () => {
+test("logged-out players play today's cube, and claim the run after signing up", async () => {
   as(undefined)
   const daily = await get<DailyRsp>(Endpoint.Daily)
   assert.equal(daily.body.loggedIn, false)
-  const start = await post<ErrorRsp>(Endpoint.Start, {tier: 1})
-  assert.equal(start.status, 401)
+  const start = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  assert.equal(start.status, 200)
+  assert.ok(start.body.guest)
+  as('t2_bob', 'bob')
+  const same = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  assert.deepEqual(
+    start.body.puzzle,
+    same.body.puzzle,
+    'the same cube as everyone',
+  )
+
+  // a logged-out score is refused; the player signs up and claims it
+  as(undefined)
+  later(200)
+  const day = now.toISOString().slice(0, 10)
+  const req: ScoreReq = {day, tier: 1, stats: run(), guest: start.body.guest}
+  assert.equal((await post<ErrorRsp>(Endpoint.Score, req)).status, 401)
+  as('t2_new', 'newbie')
+  const claim = await post<ScoreRsp>(Endpoint.Score, req)
+  assert.equal(claim.status, 200)
+  assert.equal(claim.body.counted, true)
+  assert.equal(claim.body.streak.current, 1)
+  assert.equal(claim.body.boards.day.me?.score, claim.body.total)
+
+  // claimed once: another account can't take the same run
+  as('t2_cat', 'cat')
+  const again = await post<ErrorRsp>(Endpoint.Score, req)
+  assert.equal(again.status, 409)
+})
+
+test('a claimed run still has to fit the time since its logged-out start', async () => {
+  as(undefined)
+  const start = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  later(30)
+  as('t2_new', 'newbie')
+  const day = now.toISOString().slice(0, 10)
+  const r = await post<ErrorRsp>(Endpoint.Score, {
+    day,
+    tier: 1,
+    stats: run(),
+    guest: start.body.guest,
+  })
+  assert.equal(r.status, 400)
 })
 
 test('wrong method and unknown paths are 404', async () => {

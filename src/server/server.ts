@@ -69,6 +69,8 @@ import {
   rankOn,
   readBoard,
   rememberName,
+  startGuest,
+  takeGuest,
   useRetry,
 } from './board.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
@@ -350,11 +352,16 @@ async function routeCard(): Promise<CardRsp> {
 }
 
 async function routeStart(req: StartReq): Promise<StartRsp> {
-  const uid = await needUser()
+  const uid = await who()
   const day = today()
   const level = levelOf(day)
   if (typeof req.tier !== 'number' || !tierAllowed(level, req.tier))
     throw new HttpError(400, `Pick 0 to ${maxTurns(level)} turns.`)
+  // logged out: today's cube to play, and an id to claim the run with after signing up
+  if (!uid) {
+    const guest = await startGuest(day, req.tier, clock.now().getTime())
+    return {tier: req.tier, puzzle: await dayPuzzle(day, req.tier), guest}
+  }
   const tier = await lockTier(day, uid, req.tier, clock.now().getTime())
   return {tier, puzzle: await dayPuzzle(day, tier)}
 }
@@ -400,7 +407,15 @@ async function routeScore(
   const day = today()
   if (req.day !== day)
     throw new HttpError(409, "That was yesterday's cube. Today's is ready.")
-  const rec = await getDayRecord(day, uid)
+  let rec = await getDayRecord(day, uid)
+  // a run played logged out, claimed after signing up: it takes today's place as if
+  // started at the logged-out start, so the timing checks still hold
+  if (rec.tier === undefined && typeof req.guest === 'string') {
+    const g = await takeGuest(day, req.guest)
+    if (!g) throw new HttpError(409, 'That run has expired.')
+    await lockTier(day, uid, g.tier, g.started)
+    rec = await getDayRecord(day, uid)
+  }
   if (rec.tier === undefined) throw new HttpError(409, 'Press Play first.')
   const tier = Number(rec.tier)
   if (req.tier !== tier)

@@ -6,7 +6,7 @@ import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastErro
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
-import {exitExpandedMode} from '@devvit/web/client';
+import {exitExpandedMode,showLoginPrompt} from '@devvit/web/client';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -51,6 +51,12 @@ const isPrac=()=>!!P&&P.tier===PRACTICE;
 // pressing Play sets it until tomorrow (Practice sits outside the board).
 // With no server or no login the game still plays, unscored, on a cube made here.
 let D=null,online=false,daily=false,sent=false,tkUsed=false;
+// guest: the server answered but there's no Reddit account. Guests play today's cube like everyone,
+// and at the end are asked to sign up to save the run; it's kept here and claimed after the reload.
+let guest=false,guestId=null;
+const PENDING='nonet-pending';
+const readPending=()=>{try{const v=JSON.parse(localStorage.getItem(PENDING)||'null');return v&&v.day===today?v:null}catch(e){return null}};
+const clearPending=()=>{try{localStorage.removeItem(PENDING)}catch(e){}};
 let paused=false,pausedAt=0,retries=0,lastScore=null;
 let today=dayKey();
 let twistDay=null;
@@ -60,17 +66,20 @@ const offlineTwist=()=>{try{const v=JSON.parse(localStorage.getItem('nonet-twist
 function lockTwist(t){twistDay=t;if(!online){try{localStorage.setItem('nonet-twist',JSON.stringify({d:today,t}))}catch(e){}}applyTwistLock()}
 // opens today's cube at tier t: the server locks the tier for the day and sends its cube
 async function playDaily(t){
-  if(!online){lockTwist(t);tier=t;newGame();return}
+  if(!online&&!guest){lockTwist(t);tier=t;newGame();return}
   $('status').textContent='Getting today\'s cube…';
   const r=await startDay({tier:t});
   if(!r){tier=t;newGame();setTimeout(()=>{$('status').textContent=(lastError||'Could not reach the server.')+' This cube is unscored.'},40);return}
-  tier=r.tier;lockTwist(r.tier);P=r.puzzle;daily=true;sent=false;
+  tier=r.tier;lockTwist(r.tier);P=r.puzzle;daily=true;sent=false;guestId=r.guest||null;
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
   restart();
 }
 async function loadDaily(){
   const r=await getDaily();
-  if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}else{online=false;level=levelOf(today);twistDay=offlineTwist()}
+  if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}
+  else if(r){D=r;guest=true;online=false;today=r.day;level=r.level??levelOf(today);twistDay=offlineTwist()}
+  else{online=false;level=levelOf(today);twistDay=offlineTwist()}
+  if(online)void claimPending(r);
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
   if(twistDay!==null)tier=twistDay;
   applyTwistLock();
@@ -108,25 +117,27 @@ function splashTwist(){
   $('spPips').querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
   $('spMax').textContent=num(maxScore(level));
   $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}.`);
+  $('suGuest').hidden=!guest;
   $('suNo').textContent=D?String(D.cubeNo):'–';$('suDate').textContent=longDate(today);
   // what everyone else did with each choice today
   const tiers=(D&&D.stats&&D.stats.tiers)||[];
   document.querySelectorAll('#spTwists button').forEach(x=>{const ts=tiers.find(r=>r.tier===+x.dataset.t);
     let el=x.querySelector('.ts');if(!el){el=document.createElement('span');el.className='ts';x.appendChild(el)}
-    el.textContent=!online?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
+    el.textContent=!D?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
   const lk=twistDay!==null;
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Rotation multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
   $('spPlay').textContent=isPaused?'Resume':done?'See today\'s cube':'Play today\'s cube';
   let sub='';
-  if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
+  if(guest)sub='Play free, no account needed. Sign up at the end to save your score and start a streak.';
+  else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
   else if(done)sub=`Done today: ${num(D.my.score)} points${D.boards.day.me?` · #${D.boards.day.me.rank} today`:''}. Next cube in ${untilNext()}.`;
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
   const st=D&&D.stats;
-  $('spStats').hidden=!online;
-  if(online)$('spStats').innerHTML=`<div><dt>Fastest today</dt><dd>${st&&st.solves?fmt(st.fastest):'–'}</dd></div><div><dt>Solved today</dt><dd>${num(st?st.solves:0)}</dd></div>`;
+  $('spStats').hidden=!D;
+  if(D)$('spStats').innerHTML=`<div><dt>Fastest today</dt><dd>${st&&st.solves?fmt(st.fastest):'–'}</dd></div><div><dt>Solved today</dt><dd>${num(st?st.solves:0)}</dd></div>`;
   document.querySelectorAll('#spTwists button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
 }
 // time until midnight Pacific, when the next cube comes
@@ -217,24 +228,24 @@ function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=
     b.onclick=()=>{m.hidden=true;if(fn)fn()};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden)$('modal').hidden=true});
-const canRetry=()=>daily&&!sent&&retries===0&&stage<3;
+const canRetry=()=>online&&daily&&!sent&&retries===0&&stage<3;
 async function doRetry(){const r=await useRetry();if(!r){ask('Retry not available',`<p>${esc(lastError||'Could not reach the server.')}</p>`,[['OK']]);return}
   retries=r.retries;if(D)D.my.retries=retries;journey.interaction('retry');clearRun();restart();if(splashUp)hideSplash();updateRunButtons()}
 function askRetry(){
-  if(!daily){restart();return}
+  if(!daily||!online){restart();return}
   if(!canRetry()){ask('Retry used',"<p>You've used today's retry. Keep going: the cube is still yours to finish.</p>",[['Keep playing',null,'primary']]);return}
   ask('Retry today\'s cube?',`<p>You start again from the turned cube, with the clock reset. Today's total is <b>×${RETRY_MULT}</b>. You get one retry a day.</p>`,
     [['Keep playing'],[`Retry (×${RETRY_MULT})`,doRetry,'primary']])}
 function giveUp(){gaveUp=true;paused=false;if(splashUp)hideSplash();journey.interaction('give_up');
-  if(daily&&!sent){sent=true;clearRun();void sendScore({day:today,tier:P.tier,forfeit:true,stats:runStats()},journey.id()).then(r=>{journey.endedByServer();if(r&&D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:0};D.streak=r.streak;D.boards=r.boards;splashTwist();renderSplashExtras()}})}
+  if(online&&daily&&!sent){sent=true;clearRun();void sendScore({day:today,tier:P.tier,forfeit:true,stats:runStats()},journey.id()).then(r=>{journey.endedByServer();if(r&&D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:0};D.streak=r.streak;D.boards=r.boards;splashTwist();renderSplashExtras()}})}
   else journey.end(false,false,0);
   vals=P.sol.slice();locked=P.given.map(Boolean);sel=-1;stage=3;$('banner').hidden=true;$('results').hidden=true;render();updateStatus();updateRunButtons()}
 function askGiveUp(){if(!P||stage===3)return;
-  if(!daily){ask('Give up?','<p>The answer is shown and this cube ends. It was unscored.</p>',[['Keep playing'],['Show the answer',giveUp,'danger']]);return}
+  if(!daily||!online){ask('Give up?',`<p>The answer is shown and this cube ends.${guest?' Nothing is saved.':' It was unscored.'}</p>`,[['Keep playing'],['Show the answer',giveUp,'danger']]);return}
   const b=[['Keep playing']];if(canRetry())b.push([`Retry instead (×${RETRY_MULT})`,doRetry,'primary']);b.push(['Give up for today',giveUp,'danger']);
   ask('Give up today\'s cube?',`<p>Giving up shows the answer and ends today at 0 points.${canRetry()?` Or use today's one retry: start over, and the total is ×${RETRY_MULT}.`:''}</p>`,b)}
 function updateRunButtons(){const r=$('restart');
-  if(daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
+  if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
@@ -291,12 +302,36 @@ function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d
   const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
   return ` · <b>${ord(above+1)}</b> of ${of} in your challenges`}
 // the end card: one card with the time and points, how you did today, your streak, then what next
+// what signing up gets a guest, on the end card: where this run would place, and what it unlocks
+function signupHTML(total){
+  const b=D&&D.boards&&D.boards.day,above=b?b.top.filter(x=>x.score>total).length:0,inTop=b&&above<b.top.length;
+  const place=b&&b.players?(inTop?`It would be <b>#${above+1}</b> of ${num(b.players+1)} on today's board.`:`It would join ${num(b.players)} players on today's board.`):'It would be the first score on today\'s board.';
+  const items=[`<b>${num(total)} points</b> on today's board and this week's, where the top nine are the Nine`,
+    '<b>Day 1 of your streak.</b> Play tomorrow to keep it going',
+    '<b>Challenge friends</b> to beat your score, and see who wins',
+    starWon.size===3?'<b>Tomorrow\'s clues tonight:</b> you locked all three ★ first':'<b>Tomorrow\'s clues early</b> when you lock all three ★ first',
+    'A ping when the next cube is out'];
+  return `<div class="signup"><h3>Save this run</h3><p>${place} You're not logged in, so it isn't saved yet.</p>
+    <ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <button id="eSignup" class="primary">Sign up or log in to save it</button>
+    <p class="meta">A free Reddit account. This device keeps your run until the next cube at midnight Pacific.</p></div>`}
+// after signing up the page reloads logged in: a run finished as a guest today is sent as this player's
+async function claimPending(r){const p=readPending();if(!p)return;
+  if(r.my.tier!==undefined||r.my.score!==undefined){clearPending();return}
+  const s=await sendScore({day:p.day,tier:p.tier,stats:p.stats,guest:p.guest},journey.id());clearPending();
+  if(!s){ask('Run not saved',`<p>${esc(lastError||'Could not reach the server.')} Today's cube is still yours to play.</p>`,[['OK',null,'primary']]);return}
+  journey.interaction('guest_claimed');
+  D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;twistDay=p.tier;applyTwistLock();
+  renderSplashExtras();splashTwist();
+  const me=s.boards.day.me;
+  ask('Your run is saved',`<p><b>${num(s.total)} points</b>${me?`, #${me.rank} today`:''}. ${s.streak.current>1?`Your streak is ${s.streak.current} days.`:'Your streak has started.'}</p><p>Come back tomorrow for the next cube${s.preview?', or look at tomorrow\'s clues now':''}.</p>`,[['Great',null,'primary']])}
 let teamAsk=false;
 function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
-  const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=daily&&!tkUsed;
+  const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
   let rank='';
-  if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
+  if(guest&&daily&&!tkUsed)rank=signupHTML(total);
+  else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
   else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${duelRank()}${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
@@ -323,6 +358,7 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
   // team play isn't built yet: the button counts who would use it
   $('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
+  if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
@@ -344,6 +380,8 @@ function boardsHTML(r){const row=b=>`<div class="board"><h4>${esc(b.label)} · $
 // sends a finished run of today's cube; only the first finished run each day counts
 async function submitRun(){
   if(!daily||tkUsed)return;
+  if(!online){if(guestId)try{localStorage.setItem(PENDING,JSON.stringify({day:today,tier:P.tier,guest:guestId,stats:runStats(),total:runScore.total,stars:starWon.size}))}catch(e){}
+    journey.interaction('guest_finish');renderEndCard();return}
   if(sent){lastScore=null;if(D&&D.my.score!==undefined)lastScore={counted:false,total:D.my.score,boards:D.boards,beatPct:0};renderEndCard();return}
   sent=true;
   const r=await sendScore({day:today,tier:P.tier,stats:runStats()},journey.id());
