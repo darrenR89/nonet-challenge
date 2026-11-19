@@ -285,3 +285,7 @@
 .dn-res{background:var(--c-yellow);border-bottom:3px solid var(--c-ink)}
 .dn-res+.dn-acts{margin-top:-12px}
 .dn-res .dn-cap,.dn-res .dn-meta{color:var(--c-ink)}
+/* the same space on the left of the column as between it and the spine; the name still runs
+   to 8px from each edge */
+.cv-body{padding-left:var(--gap)}
+.cv-mark{margin:0 calc(8px - var(--gap))}
