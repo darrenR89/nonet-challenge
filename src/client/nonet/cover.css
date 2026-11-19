@@ -176,8 +176,17 @@
 .setup .cv-play{width:100%;background:var(--c-ink);color:var(--c-paper)}
 .su-guest{margin:0;font-size:14px;line-height:1.45;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px var(--c-ink)}
 .su-guest[hidden]{display:none}
-.cv-title .cv-stats{border-top:0;padding-top:0}
-.cv-title .cv-first{border-top:0;padding-top:0}
+/* one ruled panel, as on a manga cover's issue box: a double rule over the number and level, a
+   single rule, today's numbers, a double rule under. The Play panel and the done list share the
+   same rules and the same left and right edges. */
+.cv-title .cv-issue{border-bottom:1px solid var(--c-ink);padding-bottom:8px}
+.cv-title .cv-stats,.cv-title .cv-first{margin-top:calc(-1 * clamp(12px,calc(var(--H) * .022),18px));border-top:0;
+  border-bottom:3px double var(--c-ink);padding:10px 0 12px}
+.cv-title .cv-stats{direction:ltr}
+.cv-title .cv-stats div{text-align:left;padding:0 0 0 12px;border-left:1px solid var(--c-ink)}
+.cv-title .cv-stats div:first-child{padding:0;border-left:0}
+.cv-title .cv-stats div:last-child:not(:first-child){text-align:right}
+.cv-title .cv-first{text-align:left}
 
 /* today done: how you did, then what next, each opening in place */
 .cv-done{width:100%;display:grid;gap:12px;text-align:left}
@@ -188,7 +197,7 @@
 .dn-score b{font-size:44px;line-height:1;font-weight:500;letter-spacing:-.02em;margin-right:6px}
 .dn-meta{font:500 13px var(--c-code)}
 .dn-acts{display:grid;gap:6px}
-.dn-row{border:1px solid var(--c-ink);border-radius:8px;background:rgba(255,255,255,.6)}
+.dn-row{border-bottom:1px solid var(--c-ink)}
 .dn-chip{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:10px 12px;align-items:center}
 .dn-chip b{font-size:15px;font-weight:700}
 .dn-chip span{grid-column:1;font:400 12px var(--c-code);color:var(--c-lead)}
@@ -206,10 +215,43 @@
 .cv-done .board li.mine{font-weight:700}
 .dn-next{font:500 13px var(--c-code);text-align:right}
 /* done: Play steps back to a quiet link-like button */
-.is-done .cv-go{border:0;background:none;padding:0}
+.is-done .cv-go{border-top:0;padding-top:4px}
 .is-done .cv-play{background:transparent;box-shadow:inset 0 0 0 1px var(--c-ink);height:44px}
-.dn-go{border:1px solid var(--c-ink);border-radius:8px;background:rgba(255,255,255,.6)}
+.dn-go{border-bottom:1px solid var(--c-ink)}
 .dn-go::after{content:"→"}
 /* How to play and Practice sit inside the Play box, under the button */
 .cv-go .cv-links{justify-content:space-between;gap:16px;padding:0 4px}
 .cv-go .cv-links button{padding:6px 0 2px}
+
+/* the Play panel: ruled like the issue box, no rounded frame */
+.cv-go{border:0;border-radius:0;background:none;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink);padding:12px 0 6px}
+.cv-play{border-radius:2px}
+.cv-go .cv-links{padding:0}
+/* the done list: a double rule over it, a single rule between rows, square edges */
+.dn-acts{gap:0;border-top:3px double var(--c-ink)}
+.dn-chip{padding:11px 0}
+.dn-row>.more{padding:0 0 12px}
+.dn-res{border-top:3px double var(--c-ink);border-bottom:1px solid var(--c-ink);padding:8px 0 10px;justify-items:start;text-align:left}
+.dn-res+.dn-acts{border-top:0}
+/* the level: the chip, with its three blocks stacked under it at the chip's width */
+.cv-issue .cv-level{display:grid;gap:4px;align-self:center}
+.cv-issue .cv-level .cv-tag{order:-1;text-align:center}
+.cv-issue .cv-pips{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.cv-issue .cv-pips i{width:auto;height:7px}
+
+/* panels, like the boxed blocks on a manga cover: a thick outer frame, a double rule between
+   parts, dotted rules inside a part. The issue box with today's numbers, the Play panel and the
+   done list are all built the same way, on the same edges. */
+.cv-title .cv-issue{border:3px solid var(--c-ink);border-bottom:0;padding:8px 12px}
+.cv-title .cv-stats,.cv-title .cv-first{border:3px solid var(--c-ink);border-top:4px double var(--c-ink);padding:10px 12px 12px;margin-top:calc(-1 * clamp(12px,calc(var(--H) * .022),18px))}
+.cv-title .cv-stats div{border-left:1px dotted var(--c-ink)}
+.cv-title .cv-stats div:first-child{border-left:0}
+.cv-go{border:3px solid var(--c-ink);padding:10px 10px 4px;gap:8px}
+.cv-go .cv-links{border-top:1px dotted var(--c-ink);padding:2px 2px 0}
+.dn-res{border:3px solid var(--c-ink);border-bottom:4px double var(--c-ink);padding:8px 12px 10px}
+.dn-acts{border:3px solid var(--c-ink);border-top:0}
+.dn-res+.dn-acts{border-top:0}
+.dn-row,.dn-go{border-bottom:1px dotted var(--c-ink);padding:0 12px}
+.dn-go{padding:11px 12px}
+.dn-acts>:last-child{border-bottom:0}
+.is-done .cv-go{border-top:3px solid var(--c-ink);margin-top:12px}
