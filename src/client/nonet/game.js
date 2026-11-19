@@ -669,7 +669,9 @@ $('vu').onclick=()=>{rx=Math.min(62,rx+45);apply()};
 $('vd').onclick=()=>{rx=Math.max(-62,rx-45);apply()};
 
 // a cube to show behind the splash while today's loads; Play swaps in today's
-window.addEventListener('resize',setH);setH();apply();applyTwistLock();newGame();void loadDaily();
+window.addEventListener('resize',setH);// the page leaves exactly the pad's height free at the bottom, so the cube centres in what is left
+const padRoom=()=>{const b=$('padbox');document.documentElement.style.setProperty('--padH',`${b.hidden?0:b.offsetHeight}px`)};
+if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
 // number pad layouts to compare for speed: A a row of five under the cube, B a phone keypad in the

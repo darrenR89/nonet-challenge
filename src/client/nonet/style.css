@@ -430,4 +430,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the pad is fixed to the bottom of the screen during Fill in; the page leaves room for it */
 .padbox{position:fixed;z-index:20;left:0;right:0;bottom:0;margin:0 auto;width:min(560px,calc(100% - 24px));box-sizing:border-box;
   border-bottom:0;border-radius:0 var(--r) 0 0;padding-bottom:max(8px,env(safe-area-inset-bottom));box-shadow:0 -12px 24px rgb(0 0 0 / .35)}
-.wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 48px)}
+.wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 44px)}
+/* the cube's area takes all the height left between the top bar and the pad, and the cube sits in
+   its middle, so it stays centred whatever the screen height */
+.wrap{min-height:100svh;box-sizing:border-box}
+.stage{flex:1 1 auto;height:auto;min-height:min(80vw,320px)}
