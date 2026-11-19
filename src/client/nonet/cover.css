@@ -255,3 +255,19 @@
 .dn-go{padding:11px 12px}
 .dn-acts>:last-child{border-bottom:0}
 .is-done .cv-go{border-top:3px solid var(--c-ink);margin-top:12px}
+/* stats sit side by side with their labels: "20 played" on the left, "fastest 1:11" on the right */
+.cv-title .cv-stats div{display:flex;align-items:baseline;gap:8px;min-width:0}
+.cv-title .cv-stats div:first-child dd{order:-1}
+.cv-title .cv-stats div:last-child:not(:first-child){justify-content:flex-end}
+.cv-title .cv-stats dd{margin:0}
+/* a bigger number and level chip */
+.cv-no b{font-size:58px}
+.cv-issue .cv-level .cv-tag{font-size:16px;padding:5px 12px 4px}
+.cv-issue .cv-pips{gap:4px}
+.cv-issue .cv-pips i{height:10px}
+/* the Play block: no frame or rules; the two links are black buttons splitting Play's width */
+.cv-go,.is-done .cv-go{border:0;padding:0;margin-top:0;gap:8px}
+.cv-go .cv-links{border:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cv-go .cv-links button{box-sizing:border-box;width:100%;height:44px;display:grid;place-items:center;padding:0;border-radius:2px;
+  background:var(--c-ink);color:var(--c-paper);text-decoration:none}
+.is-done .cv-go{margin-top:16px}
