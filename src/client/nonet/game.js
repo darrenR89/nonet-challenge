@@ -4,8 +4,9 @@ import './style.css';
 import {makeTransitions} from './transitions.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
+import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
-import {exitExpandedMode} from '@devvit/web/client';
+import {exitExpandedMode,showLoginPrompt} from '@devvit/web/client';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -29,7 +30,7 @@ F.forEach((f,fi)=>{
   }
   cubeEl.appendChild(el);faceEls.push(el);
 });
-let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.5,Math.min(st.clientWidth,st.clientHeight)/320));apply()};
+let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.7,Math.min(st.clientWidth,st.clientHeight)/290));apply()};
 const $=id=>document.getElementById(id);
 
 // ---------- state ----------
@@ -50,6 +51,12 @@ const isPrac=()=>!!P&&P.tier===PRACTICE;
 // pressing Play sets it until tomorrow (Practice sits outside the board).
 // With no server or no login the game still plays, unscored, on a cube made here.
 let D=null,online=false,daily=false,sent=false,tkUsed=false;
+// guest: the server answered but there's no Reddit account. Guests play today's cube like everyone,
+// and at the end are asked to sign up to save the run; it's kept here and claimed after the reload.
+let guest=false,guestId=null;
+const PENDING='nonet-pending';
+const readPending=()=>{try{const v=JSON.parse(localStorage.getItem(PENDING)||'null');return v&&v.day===today?v:null}catch(e){return null}};
+const clearPending=()=>{try{localStorage.removeItem(PENDING)}catch(e){}};
 let paused=false,pausedAt=0,retries=0,lastScore=null;
 let today=dayKey();
 let twistDay=null;
@@ -59,24 +66,27 @@ const offlineTwist=()=>{try{const v=JSON.parse(localStorage.getItem('nonet-twist
 function lockTwist(t){twistDay=t;if(!online){try{localStorage.setItem('nonet-twist',JSON.stringify({d:today,t}))}catch(e){}}applyTwistLock()}
 // opens today's cube at tier t: the server locks the tier for the day and sends its cube
 async function playDaily(t){
-  if(!online){lockTwist(t);tier=t;newGame();return}
+  if(!online&&!guest){lockTwist(t);tier=t;newGame();return}
   $('status').textContent='Getting today\'s cube…';
   const r=await startDay({tier:t});
   if(!r){tier=t;newGame();setTimeout(()=>{$('status').textContent=(lastError||'Could not reach the server.')+' This cube is unscored.'},40);return}
-  tier=r.tier;lockTwist(r.tier);P=r.puzzle;daily=true;sent=false;
+  tier=r.tier;lockTwist(r.tier);P=r.puzzle;daily=true;sent=false;guestId=r.guest||null;
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
   restart();
 }
 async function loadDaily(){
   const r=await getDaily();
-  if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}else{online=false;level=levelOf(today);twistDay=offlineTwist()}
+  if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}
+  else if(r){D=r;guest=true;online=false;today=r.day;level=r.level??levelOf(today);twistDay=offlineTwist()}
+  else{online=false;level=levelOf(today);twistDay=offlineTwist()}
+  if(online)void claimPending(r);
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
   if(twistDay!==null)tier=twistDay;
   applyTwistLock();
   // locked in earlier today: today's cube waits behind the start screen, paused,
   // and picks up where you left it if this device saved a run
   if(online&&r.puzzle){P=r.puzzle;daily=true;sent=r.my.score!==undefined;restart();if(!sent){restoreRun();pauseNow()}}
-  renderSplashExtras();splashTwist();
+  renderSplashExtras();splashTwist();openFromCard();
   $('spPlay').disabled=false;
   journey.ready();
 }
@@ -103,23 +113,32 @@ function splashTwist(){
   $('spDate').innerHTML=`${WDAYS[d.getUTCDay()]} <span class="cv-dm"><span class="cv-tcy">${d.getUTCDate()}</span> ${MONTHS[d.getUTCMonth()]}</span>`;
   $('spNo').textContent=D?String(D.cubeNo):'–';
   $('spKanji').textContent=D?kanjiNo(D.cubeNo):'〇〇〇';
-  $('spLevel').textContent=LEVEL_NAMES[level];
-  $('spPips').querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
+  $('spLevel').textContent=LEVEL_NAMES[level];$('cvLevel').textContent=LEVEL_NAMES[level];
+  for(const id of ['spPips','cvPips'])$(id).querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
   $('spMax').textContent=num(maxScore(level));
-  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}. ${LEVEL_NAMES[level]}. Max score ${num(maxScore(level))}.`);
+  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}. ${LEVEL_NAMES[level]}.`);
+  $('suGuest').hidden=!guest;
+  $('suNo').textContent=D?String(D.cubeNo):'–';$('suDate').textContent=longDate(today);
+  // what everyone else did with each choice today
+  const tiers=(D&&D.stats&&D.stats.tiers)||[];
+  document.querySelectorAll('#spTwists button').forEach(x=>{const ts=tiers.find(r=>r.tier===+x.dataset.t);
+    let el=x.querySelector('.ts');if(!el){el=document.createElement('span');el.className='ts';x.appendChild(el)}
+    el.textContent=!D?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
   const lk=twistDay!==null;
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Rotation multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
-  $('spPlay').textContent=isPaused?'Resume':done?'See today\'s cube':'Play today\'s cube';
+  $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':'Play today\'s cube';
   let sub='';
-  if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
-  else if(done)sub=`Done today: ${num(D.my.score)} points${D.boards.day.me?` · #${D.boards.day.me.rank} today`:''}. Next cube in ${untilNext()}.`;
+  if(guest)sub='Play free, no account needed. Sign up at the end to save your score and start a streak.';
+  else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
   const st=D&&D.stats;
-  $('spStats').hidden=!online;
-  if(online)$('spStats').innerHTML=`<div><dt>Fastest today</dt><dd>${st&&st.solves?fmt(st.fastest):'–'}</dd></div><div><dt>Solved today</dt><dd>${num(st?st.solves:0)}</dd></div>`;
+  // the numbers under today's number, or an invitation before anyone has played
+  const played=st?(st.tiers||[]).reduce((n,t)=>n+t.picks,0)||st.solves:0;
+  $('spStats').hidden=!D||!played;$('spFirst').hidden=!D||!!played;
+  if(D&&played)$('spStats').innerHTML=`<div><dt>Played today</dt><dd>${num(played)}</dd></div>${st.solves?`<div><dt>Fastest</dt><dd>${fmt(st.fastest)}</dd></div>`:''}`;
   document.querySelectorAll('#spTwists button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
 }
 // time until midnight Pacific, when the next cube comes
@@ -148,33 +167,64 @@ function renderSplashExtras(){
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
   {const h=online&&D?splashDuelsHTML(D.duels||[]):'';let el=$('spDuels');if(!el&&h){el=document.createElement('section');el.id='spDuels';el.className='duelsSplash';$('spPeek').after(el)}if(el){el.hidden=!h;el.innerHTML=h;wireAnswers(el,d=>{if(D)D.duels=d;journey.interaction('answer_challenge',String(d.length));renderSplashExtras()})}}
   $('spPeek').hidden=!(D&&D.preview);
+  renderDone();
   if(D&&D.preview){$('spPeek').innerHTML=`<button class="chip" type="button" aria-expanded="false"><b>Tomorrow's clues</b><span>unlocked with all three ★</span></button><div class="more" hidden>${cluesNet(D.preview.given)}</div>`;wireChip($('spPeek'))}
 }
+// once today is done the cover turns to how you did, and what to do next: challenge someone,
+// the team challenge, the boards. Each opens in place; the feed card can ask for one.
+function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="button" class="dn-chip" data-dn="${k}" aria-expanded="false"><b>${label}</b><span>${sub}</span></button><div class="more" hidden>${body}</div></div>`}
+function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined;el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
+  const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
+  const me=D.boards.day.me,st=D.streak,ev=D.event,mine=ev&&ev.teams.find(t=>t.team.id===ev.myTeam);
+  const side=(me?`<span class="dn-rank">#${me.rank} today</span>`:'')+(st&&st.current?`<span class="dn-streak">${st.current}-day streak</span>`:'')+(D.my.starsWon?`<span class="dn-streak">${'★'.repeat(D.my.starsWon)}</span>`:'');
+  const sent=(D.duels||[]).filter(d=>d.sent).length;
+  el.innerHTML=`<div class="dn-res"><div class="dn-main"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p></div>${side?`<div class="dn-side">${side}</div>`:''}</div>
+    <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
+    ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`)
+      :dnRow('team','Team challenge','Coming soon','<p class="meta">Play as a team of three on one cube. We\'ll let you know when it opens.</p>')}
+    ${dnRow('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week',boardsHTML({boards:D.boards}))}</div>
+    <p class="dn-next">Next cube in <b>${untilNext()}</b></p>`;
+  el.querySelectorAll('.dn-chip').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
+    b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
+  wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el)}
+// the feed card's buttons ask for one of those to be open when the game comes up
+function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
+  if(!k)return;if(k==='rules'){showRules();return}if(k==='practice'){$('spPractice').click();return}
+  const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
+addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
 document.querySelectorAll('#spTwists button').forEach(b=>b.onclick=()=>{if(twistDay!==null)return;tier=+b.dataset.t;splashTwist();
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));journey.interaction('pick_turns',String(tier))});
 function hideSplash(){splashUp=false;$('splash').classList.add('out');setTimeout(()=>{if(!splashUp)$('splash').hidden=true},400)}
 function hideSplashNow(){splashUp=false;const sp=$('splash');sp.classList.add('out');sp.hidden=true}
-function showSplash(){splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
+function showSplash(){if(stage===3)music.leave();splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
 // Play and Resume: cells cover the screen, become the cube and fold together; the clock starts after
 $('spPlay').onclick=()=>{
-  if(tx.busy)return;
+  if(tx.busy)return;music.unlock();
   if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
   journey.start();
-  void tx.enter({before:hideSplashNow,ready:playDaily(tier).then(()=>{holdClock();return new Promise(r=>setTimeout(r,60))}),
+  // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
+  const locked=twistDay!==null;
+  void tx.enter({hold:locked?null:showSetup,before:hideSplashNow,ready:()=>playDaily(tier).then(()=>{holdClock();return new Promise(r=>setTimeout(r,60))}),
     done:releaseClock})};
+// the setup screen, over the yellow: true on Start, false on Back
+function showSetup(){const su=$('setup');splashTwist();renderSplashExtras();su.hidden=false;
+  requestAnimationFrame(()=>su.classList.add('in'));$('suStart').focus();
+  return new Promise(res=>{const end=ok=>{su.classList.remove('in');su.hidden=true;$('suStart').onclick=$('suBack').onclick=null;res(ok)};
+    $('suStart').onclick=()=>end(true);$('suBack').onclick=()=>end(false)})}
 
 // ---------- pause ----------
 // pausing stops the clock and covers the cube with the start screen, which shows Resume
-function pauseNow(){if(paused||stage===3||!P)return;paused=true;if(hold)hold=false;else pausedAt=performance.now();$('modal').hidden=true;saveRun()}
+function pauseNow(){if(paused||stage===3||!P)return;paused=true;music.hold(true);if(hold)hold=false;else pausedAt=performance.now();$('modal').hidden=true;saveRun()}
 // any move while paused starts the clock again first, so time is never lost or gained
 function ensureRunning(){if(!paused)return;if(splashUp)hideSplash();resume()}
 function pause(){if(paused||stage===3||!P||isPrac()||tx.busy)return;pauseNow();journey.interaction('pause');sel=-1;render();void tx.leave({covered:showSplash})}
-function resume(){if(!paused)return;t0+=performance.now()-pausedAt;paused=false;
+function resume(){if(!paused)return;t0+=performance.now()-pausedAt;paused=false;music.hold(false);
   if(!journey.active)journey.start();else journey.interaction('resume');updateStatus()}
 $('pauseBtn').onclick=pause;
+music.wire($('soundBtn'));
 // Practice sits outside the day: a guided walkthrough, no score, open any time
-$('spPractice').onclick=()=>{if(tx.busy)return;tier=PRACTICE;journey.start();
+$('spPractice').onclick=()=>{if(tx.busy)return;music.unlock();tier=PRACTICE;journey.start();
   void tx.enter({before:hideSplashNow,ready:new Promise(r=>{newGame();setTimeout(r,120)}),done:()=>{if(paused)resume()}})};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!splashUp&&stage<3&&P&&!isPrac()){pauseNow();showSplash()}});
 // leaving mid-cube: the run is saved here to resume later, and this journey ends unfinished
@@ -202,28 +252,28 @@ function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=
     b.onclick=()=>{m.hidden=true;if(fn)fn()};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden)$('modal').hidden=true});
-const canRetry=()=>daily&&!sent&&retries===0&&stage<3;
+const canRetry=()=>online&&daily&&!sent&&retries===0&&stage<3;
 async function doRetry(){const r=await useRetry();if(!r){ask('Retry not available',`<p>${esc(lastError||'Could not reach the server.')}</p>`,[['OK']]);return}
   retries=r.retries;if(D)D.my.retries=retries;journey.interaction('retry');clearRun();restart();if(splashUp)hideSplash();updateRunButtons()}
 function askRetry(){
-  if(!daily){restart();return}
+  if(!daily||!online){restart();return}
   if(!canRetry()){ask('Retry used',"<p>You've used today's retry. Keep going: the cube is still yours to finish.</p>",[['Keep playing',null,'primary']]);return}
   ask('Retry today\'s cube?',`<p>You start again from the turned cube, with the clock reset. Today's total is <b>×${RETRY_MULT}</b>. You get one retry a day.</p>`,
     [['Keep playing'],[`Retry (×${RETRY_MULT})`,doRetry,'primary']])}
 function giveUp(){gaveUp=true;paused=false;if(splashUp)hideSplash();journey.interaction('give_up');
-  if(daily&&!sent){sent=true;clearRun();void sendScore({day:today,tier:P.tier,forfeit:true,stats:runStats()},journey.id()).then(r=>{journey.endedByServer();if(r&&D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:0};D.streak=r.streak;D.boards=r.boards;splashTwist();renderSplashExtras()}})}
+  if(online&&daily&&!sent){sent=true;clearRun();void sendScore({day:today,tier:P.tier,forfeit:true,stats:runStats()},journey.id()).then(r=>{journey.endedByServer();if(r&&D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:0};D.streak=r.streak;D.boards=r.boards;splashTwist();renderSplashExtras()}})}
   else journey.end(false,false,0);
   vals=P.sol.slice();locked=P.given.map(Boolean);sel=-1;stage=3;$('banner').hidden=true;$('results').hidden=true;render();updateStatus();updateRunButtons()}
 function askGiveUp(){if(!P||stage===3)return;
-  if(!daily){ask('Give up?','<p>The answer is shown and this cube ends. It was unscored.</p>',[['Keep playing'],['Show the answer',giveUp,'danger']]);return}
+  if(!daily||!online){ask('Give up?',`<p>The answer is shown and this cube ends.${guest?' Nothing is saved.':' It was unscored.'}</p>`,[['Keep playing'],['Show the answer',giveUp,'danger']]);return}
   const b=[['Keep playing']];if(canRetry())b.push([`Retry instead (×${RETRY_MULT})`,doRetry,'primary']);b.push(['Give up for today',giveUp,'danger']);
   ask('Give up today\'s cube?',`<p>Giving up shows the answer and ends today at 0 points.${canRetry()?` Or use today's one retry: start over, and the total is ×${RETRY_MULT}.`:''}</p>`,b)}
 function updateRunButtons(){const r=$('restart');
-  if(daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
+  if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
-function restart(){setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
+function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice step 1: the cube is one turn out, and the turn that puts it back pulses
 function coachTurn(){if(!isPrac()||stage!==1)return;$('banner').hidden=false;
@@ -256,7 +306,7 @@ function finishStage1(){
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
   if(P.k>0)journey.progress(.5,'aligned');
   $('banner').hidden=!isPrac(); // a scored run goes straight on: no Stage 1 summary
-  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Pen to lock it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ squares first for +50 each.`:`Stage 1 done in ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) and ${fmt(t1)}. Fill the cube. Lock the three ★ squares first for +50 each.`;
+  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Pen to lock it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ squares first for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ squares first for +50 each.`;
 }
 function finishStage2(){
   t2=nowSec();stage=3;sel=-1;clearRun();
@@ -265,52 +315,102 @@ function finishStage2(){
     $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash()};return}
   runScore=score();lastScore=null;
   if(!daily||tkUsed)journey.end(true,true,daily?0:runScore.total);
-  renderEndCard();void submitRun();
-  requestAnimationFrame(()=>$('results').scrollIntoView({behavior:'smooth',block:'start'}));
+  flying=true;void submitRun();
+  void finale().then(()=>{flying=false;renderEndCard();const el=$('results');el.classList.remove('slidein');void el.offsetWidth;el.classList.add('slidein');
+    scrollTo(0,0)});
 }
+// the finish: the solved cube holds a beat, spins faster and faster as it glows brighter, then
+// shoots up out of frame while the camera stays, and the result card slides in after it
+let flying=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function finale(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){await sleep(900);stageEl.classList.add('flown');return}
+  await sleep(1400);
+  const base=cubeEl.style.transform,SPIN=1900,FLY=550,t0=performance.now();let a=0,last=t0;
+  await new Promise(done=>{const step=now=>{const e=now-t0,dt=(now-last)/1000;last=now;
+    const t=Math.min(1,e/SPIN),f=Math.max(0,Math.min(1,(e-SPIN)/FLY));
+    a+=(60+1500*t*t*t)*dt; // degrees a second, rising fast
+    cubeEl.style.transform=`${base} rotateY(${a}deg)`;
+    const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
+    stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
+  stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
+// the cube comes back when the result card is closed, or a new cube starts
+function landCube(){stageEl.classList.remove('flown');apply()}
 let runScore=null,endTab='';
-const resultText=s=>`Nonet${D?` #${D.cubeNo}`:''} · ${s.name} · solved in ${fmt(t1+t2)}${lastScore?` · ${num(lastScore.total)} pts`:''}\n★${starWon.size}/3 · ${wrong} miss${wrong===1?'':'es'}${hintsUsed?` · ${hintsUsed} hint${hintsUsed===1?'':'s'}`:' · no hints'}${retries?' · 1 retry':''}`;
+// a spoiler-free line for the daily thread: no digits, no squares, just how it went
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
+// where you stand among the people you've challenged today, once any of them has played
+function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
+  const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
+  return ` · <b>${ord(above+1)}</b> of ${of} in your challenges`}
 // the end card: one card with the time and points, how you did today, your streak, then what next
-function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
-  const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=daily&&!tkUsed;
+// what signing up gets a guest, on the end card: where this run would place, and what it unlocks
+function signupHTML(total){
+  const b=D&&D.boards&&D.boards.day,above=b?b.top.filter(x=>x.score>total).length:0,inTop=b&&above<b.top.length;
+  const place=!b||!b.players?'You\'d be first on today\'s board.':inTop?`You'd be <b>#${above+1}</b> today.`:`You'd join ${num(b.players)} players on today's board.`;
+  const items=['A place on today\'s board and the weekly top nine','A streak, starting today','Challenges with friends',
+    starWon.size===3?'Tomorrow\'s clues, unlocked by your three ★':'Tomorrow\'s clues early, when you lock all three ★ first','A ping when the next cube is out'];
+  return `<div class="signup"><h3>Save your score</h3><p>${place} Sign in to keep it, and get:</p>
+    <ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <button id="eSignup" class="primary">Save my score</button>
+    <p class="meta">Sign up or log in with Reddit. It's free, and your score waits on this device until midnight Pacific.</p></div>`}
+// after signing up the page reloads logged in: a run finished as a guest today is sent as this player's
+async function claimPending(r){const p=readPending();if(!p)return;
+  if(r.my.tier!==undefined||r.my.score!==undefined){clearPending();return}
+  const s=await sendScore({day:p.day,tier:p.tier,stats:p.stats,guest:p.guest},journey.id());clearPending();
+  if(!s){ask('Run not saved',`<p>${esc(lastError||'Could not reach the server.')} Today's cube is still yours to play.</p>`,[['OK',null,'primary']]);return}
+  journey.interaction('guest_claimed');
+  D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;twistDay=p.tier;applyTwistLock();
+  renderSplashExtras();splashTwist();
+  const me=s.boards.day.me;
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
+let teamAsk=false;
+function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
+  const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
   let rank='';
-  if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
+  if(guest&&daily&&!tkUsed)rank=signupHTML(total);
+  else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
+  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${duelRank()}${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
-  const more=`<div class="more"><h3>Want more Nonet?</h3><div class="acts"><button id="eComment" class="primary">Comment your time</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+  const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
+    <div class="acts"><button id="eComment" class="primary">Share to the thread</button><button id="eTeam" aria-pressed="${teamAsk?'true':'false'}">${teamAsk?'Thanks: we\'ll tell you when teams open':'Play as a team <small>coming soon</small>'}</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
   el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
   <h2>Solved in ${fmt(t1+t2)}</h2><div class="total">${num(total)} pts<small>${s.name}${pen<1?` · retry ×${pen}`:''}</small></div>
-  ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${more}${pv}
+  ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
-  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false};
-  $('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
-    const done=()=>{$('eComment').textContent='Copied. Paste it in the comments';try{exitExpandedMode(ev)}catch(e){}};
+  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
+  if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
+    const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
+  // team play isn't built yet: the button counts who would use it
+  if($('eTeam'))$('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
+  if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
 $('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
-   ${s.tut?'':`<tr><td>Stage 1 turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
-   <tr><td>Stage 1 speed</td><td>${s.sp1} / 200</td></tr><tr class="sub"><td>${fmt(t1)} vs ${fmt(s.T1)} target</td><td></td></tr>`}
-   <tr><td>Stage 2 speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
-   <tr><td>Stage 2 accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
+   ${s.tut?'':`<tr><td>Dial in turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
+   <tr><td>Dial in speed</td><td>${s.sp1} / 200</td></tr><tr class="sub"><td>${fmt(t1)} vs ${fmt(s.T1)} target</td><td></td></tr>`}
+   <tr><td>Fill in speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
+   <tr><td>Fill in accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
    <tr><td>Lock-first squares</td><td>${s.starPts} / 150</td></tr><tr class="sub"><td>${starWon.size} of 3 locked before any other square</td><td></td></tr>
-   ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggested turn${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
+   ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggestion${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
    <tr><td>Subtotal × ${s.mult}</td><td>${s.raw} × ${s.mult}</td></tr>
    ${pen<1?`<tr><td>Retry</td><td>× ${pen}</td></tr>`:''}
   </table>`}
@@ -320,6 +420,8 @@ function boardsHTML(r){const row=b=>`<div class="board"><h4>${esc(b.label)} · $
 // sends a finished run of today's cube; only the first finished run each day counts
 async function submitRun(){
   if(!daily||tkUsed)return;
+  if(!online){if(guestId)try{localStorage.setItem(PENDING,JSON.stringify({day:today,tier:P.tier,guest:guestId,stats:runStats(),total:runScore.total,stars:starWon.size}))}catch(e){}
+    journey.interaction('guest_finish');renderEndCard();return}
   if(sent){lastScore=null;if(D&&D.my.score!==undefined)lastScore={counted:false,total:D.my.score,boards:D.boards,beatPct:0};renderEndCard();return}
   sent=true;
   const r=await sendScore({day:today,tier:P.tier,stats:runStats()},journey.id());
@@ -371,16 +473,44 @@ function render(){
   $('progress').className=`progress ${P.k===0?'solo':stage===1?'s1':'s2'}`;$('views').hidden=stage!==1;
   $('pTurns').textContent=`${turns} turn${turns===1?'':'s'} · fewest ${P.k}`;
   setBar('pAlign',stage===1?home/nClues:1);const tot=blanks||P.start.filter(v=>!v).length;setBar('pFill',stage===1?0:stage===3?1:tot?1-left/tot:0);
+  music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
-  $('tools1').hidden=stage!==1;$('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0||stage!==1;$('suggest').hidden=P.k===0||isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest a turn (${hintsLeft} left)`;
+  $('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
+  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest · ${hintsLeft}`;
+  $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
   // the grid flashes yellow once when the cube lines up and once when it is solved; tutorials skip the align flash
   if(stage!==lastStage){if(lastStage>0&&((stage===2&&P.k>0)||stage===3)){stageEl.classList.add('gridflash');clearTimeout(flashT);flashT=setTimeout(()=>stageEl.classList.remove('gridflash'),900)}lastStage=stage}
+  moments(home);
   updateStatus();
   placeArrows();
 }
+// bigger moments as the cube comes together: a clue home pops, a finished line sweeps yellow,
+// a finished face glows, and a word over the cube marks the big steps. A new cube starts quiet.
+let mom=null;
+function moments(home){
+  const lineSet=new Set(),faceSet=new Set(),full=l=>{const vs=l.map(i=>vals[i]);return vs.every(Boolean)&&new Set(vs).size===9};
+  if(stage>=2){lines.forEach((l,k)=>{if(full(l))lineSet.add(k)});groups.slice(0,6).forEach((g,k)=>{if(full(g))faceSet.add(k)})}
+  const tot=blanks||P.start.filter(v=>!v).length,left=vals.filter(v=>!v).length,pct=stage===2&&tot?1-left/tot:0;
+  const now={P,stage,home,lineSet,faceSet,quarter:Math.floor(pct*4)};
+  const was=mom;mom=now;
+  if(!was||was.P!==P||isPrac()&&stage===1)return;
+  if(stage===1&&home>was.home)cells.forEach((_,i)=>{if(locked[i]&&P.given[i]===vals[i])stickers[i].forEach(x=>{if(!x.classList.contains('home'))return;x.classList.remove('pop');void x.offsetWidth;x.classList.add('pop')})});
+  if(was.stage===1&&stage===2&&P.k>0){callout('Dialled in',`${turns} turn${turns===1?'':'s'} · ${fmt(t1)}`);return}
+  if(was.stage===2&&stage===3&&!gaveUp){callout('Solved','');return}
+  if(stage!==2)return;
+  const newFaces=[...faceSet].filter(k=>!was.faceSet.has(k)),newLines=[...lineSet].filter(k=>!was.lineSet.has(k));
+  newLines.forEach(k=>lines[k].forEach((c,n)=>stickers[c].forEach(x=>{x.classList.remove('sweep');void x.offsetWidth;x.style.animationDelay=`${n*40}ms`;x.classList.add('sweep')})));
+  newFaces.forEach(k=>groups[k].forEach(c=>stickers[c].forEach(x=>{x.classList.remove('facedone');void x.offsetWidth;x.classList.add('facedone')})));
+  if(newFaces.length)callout('Face done',`${faceSet.size} of 6`);
+  else if(newLines.length)callout(newLines.length>1?`${newLines.length} lines`:'Line',`${lineSet.size} of ${lines.length}`);
+  else if(now.quarter>was.quarter&&now.quarter<4)callout(['','A quarter in','Halfway','Nearly there'][now.quarter],'');
+}
+let calloutT=0;
+function callout(big,small){let el=$('moment');if(!el){el=document.createElement('div');el.id='moment';el.className='moment';el.setAttribute('role','status');stageEl.appendChild(el)}
+  el.innerHTML=`<b>${esc(big)}</b>${small?`<span>${esc(small)}</span>`:''}`;el.classList.remove('go');void el.offsetWidth;el.classList.add('go');
+  clearTimeout(calloutT);calloutT=setTimeout(()=>el.classList.remove('go'),1500)}
 // stage progress: Align fills with the share of clues home, Fill with the share of blanks filled
 function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p);$(id+'Val').textContent=p+'%'}
 // a nudge, not the answer: a row or column of a face glows once every clue in it is back home.
@@ -421,17 +551,17 @@ function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=docume
 setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
-  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;render()});
+  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render()});
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
-  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;render();return}
+  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
 }
 const pad=$('pad');
 for(let d=1;d<=9;d++){const b=document.createElement('button');b.textContent=d;b.dataset.d=d;b.setAttribute('aria-label','Digit '+d);b.onclick=()=>pressDigit(d);pad.appendChild(b)}
@@ -443,7 +573,7 @@ const sub=(a,b)=>a.map((v,i)=>v-b[i]);
 function moveFor(fi,c,kind,dirSign){const f=F[fi],n=f.map(1,1),rowDir=sub(f.map(2,1),n),colDir=sub(f.map(1,2),n);
   const move=kind==='row'?rowDir:colDir,axisVec=kind==='row'?colDir:rowDir;const a=axisOf(axisVec),v=cells[c].c[a];
   const want=move.map(x=>x*dirSign);return[a,v,k3(rotV(n,a,1))===k3(want)?1:-1]}
-function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);
+function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);music.sfx('turn');
   cells.forEach((x,i)=>{if(x.c[m[0]]===m[1])stickers[i].forEach(el=>{el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')})})}
 function slide(kind,dirSign){
   if(sel<0||stage!==1)return;
@@ -461,7 +591,16 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
+// a Fill in suggestion points at a square where only one digit fits, without filling it in
+function hintSquare(){const order=singlesOrder(vals);let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+  if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
+  const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
+  sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
+  stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
+  $('status').textContent='Only one digit fits in this square.'}
 function showHint(free){
+  if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
   const faces=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a));
   for(const fi of faces)for(const st of document.querySelectorAll(`#cube .face:nth-child(${fi+1}) .st`)){const c=+st.dataset.c;
@@ -471,10 +610,9 @@ function showHint(free){
 $('suggest').onclick=()=>showHint(false);
 
 $('restart').onclick=askRetry;
-$('newp').onclick=()=>{journey.start();newGame()};
 // giving up asks first, and offers today's retry instead when there is one
 $('reveal').onclick=askGiveUp;
-document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;render()});
+document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;zoom=1;apply();render()});
 document.addEventListener('keydown',e=>{if(sel<0||tx.busy)return;if(/^[1-9]$/.test(e.key))pressDigit(+e.key);else if(e.key==='Backspace'||e.key==='0')pressDigit(0)});
 
 // ---------- turn arrows drawn on the selected face, in 3D ----------
@@ -506,7 +644,17 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
-const apply=()=>{cubeEl.style.transform=`scale(${scaleK}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+// tap to focus: a square tapped on a steep face turns the view until that face is in front,
+// kept a little off square so the cube still reads as a cube, and the view leans in a touch
+let zoom=1;
+function focusFace(fi){zoom=1.08;
+  if(facing(fi)<.8){const n=F[fi].map(1,1);
+    if(n[1]!==0)rx=n[1]<0?-60:60;
+    else{const base=n[0]===1?-90:n[0]===-1?90:n[2]===1?0:180;
+      // stay on the side of the face we were already looking from, and take the short way round
+      const side=(((ry-base)%360)+540)%360-180>=0?1:-1;let t=base+22*side;t+=Math.round((ry-t)/360)*360;ry=t;rx=-22}}
+  apply()}
 const stageEl=$('stage');let drag=null;
 stageEl.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx,ry};moved=false;cubeEl.classList.add('dragging')});
 window.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
@@ -522,12 +670,19 @@ $('vd').onclick=()=>{rx=Math.max(-62,rx-45);apply()};
 window.addEventListener('resize',setH);setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
+// number pad layouts to compare for speed: A a row of five under the cube, B a phone keypad in the
+// right thumb's reach, C a full-width keypad with tall keys. Kept per browser.
+const PADS={A:'row of five',B:'keypad, right thumb',C:'keypad, full width'};
+function setPad(k){pad.classList.remove('lay-A','lay-B','lay-C');pad.classList.add('lay-'+k);$('tkPad').textContent='Pad: '+k;try{localStorage.setItem('nonet-pad',k)}catch(e){}}
+let padK='A';try{const v=localStorage.getItem('nonet-pad');if(v&&PADS[v])padK=v}catch(e){}
+setPad(padK);
+$('tkPad').onclick=()=>{const ks=Object.keys(PADS);padK=ks[(ks.indexOf(padK)+1)%ks.length];setPad(padK);tkMsg(`Pad ${padK}: ${PADS[padK]}.`)};
 // keep the cube from turning when the panel is used, and remember whether it was open
 const tk=$('testkit');['pointerdown','click'].forEach(ev=>tk.addEventListener(ev,e=>e.stopPropagation()));
 try{if(localStorage.getItem('nonet-tk')==='1')tk.open=true}catch(e){}
 tk.addEventListener('toggle',()=>{try{localStorage.setItem('nonet-tk',tk.open?'1':'0')}catch(e){}});
 const answer=()=>{const r=solveCount(vals.map((v,i)=>v),1,200000);return r[0]>0?r[1]:null};
-function lockFill(list){if(stage!==2){tkMsg('Fills work in Stage 2. Use Align now first.');return}
+function lockFill(list){if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}
   const sol=answer();if(!sol){tkMsg('The cube has a wrong digit in it, so there is no answer to fill from.');return}
   let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++}
   tkMsg(n?`Filled ${n} square${n===1?'':'s'}.`:'Nothing left to fill there.');render()}
@@ -538,10 +693,10 @@ $('tkCell').onclick=()=>{if(needSel())lockFill([sel])};
 $('tkLine').onclick=()=>{if(needSel())lockFill(shownLine())};
 $('tkFace').onclick=()=>{if(needSel())lockFill(groups[faceOfNormal.get(k3(cells[sel].n))])};
 $('tkStars').onclick=()=>{if(!stars.size){tkMsg('No opening squares on this cube.');return}lockFill([...stars])};
-$('tkWrong').onclick=()=>{if(!needSel())return;if(stage!==2||vals[sel]){tkMsg('Pick an empty square in Stage 2.');return}const sol=answer();if(!sol)return;
+$('tkWrong').onclick=()=>{if(!needSel())return;if(stage!==2||vals[sel]){tkMsg('Pick an empty square in Fill in.');return}const sol=answer();if(!sol)return;
   const d=sol[sel]%9+1;const was=penMode;penMode=true;pressDigit(d);penMode=was;render();tkMsg(`Tried ${d}. That cost 25 points.`)};
 $('tkPencil').onclick=()=>{if(!needSel()||stage!==2)return;const sol=answer();if(!sol)return;let n=0;for(const c of shownLine())if(!vals[c]){pm[c]=1<<sol[c];n++}render();tkMsg(`Pencilled ${n} square${n===1?'':'s'} with the right digits.`)};
-$('tkAllBut').onclick=()=>{if(stage!==2){tkMsg('Fills work in Stage 2. Use Align now first.');return}const empty=vals.map((v,i)=>v?-1:i).filter(i=>i>=0);
+$('tkAllBut').onclick=()=>{if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}const empty=vals.map((v,i)=>v?-1:i).filter(i=>i>=0);
   const keep=sel>=0&&!vals[sel]?sel:empty[empty.length-1];lockFill(empty.filter(i=>i!==keep));if(keep>=0){sel=keep;selFace=faceOfNormal.get(k3(cells[keep].n));render()}};
 
 $('tkDay').onclick=()=>{if(online){tkMsg('Today is set on the server. A moderator can reset it from Redis; otherwise it resets at midnight Pacific time.');return}

@@ -61,7 +61,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .steps span.done{color:var(--washi);background:var(--done);border-color:var(--done)}
 
 /* the cube: built from cells. The gaps are empty, so it reads as the brand's cell cube. */
-.stage{position:relative;height:min(78vw,340px);touch-action:none;cursor:grab;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+.stage{position:relative;height:min(96vw,440px);touch-action:none;cursor:grab;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
 .cube{--s:180px;--h:90px;width:180px;height:180px;position:relative;transform-style:preserve-3d;transition:transform .35s ease;z-index:1}
 .cube.dragging{transition:none}
 .face{position:absolute;inset:0;transform-style:preserve-3d;background:transparent;border-radius:10px;
@@ -203,6 +203,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .splash .topbar .flame{margin-left:auto;font-family:var(--code);font-size:15px;font-weight:700;color:var(--yellow);display:flex;align-items:center;gap:6px}
 .splash .topbar .flame i,.streakline i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--yellow)}
 .icon{min-width:36px;min-height:36px;padding:0 10px;font-size:15px}
+.icon.muted{opacity:.45;text-decoration:line-through}
 .splash .pitch{margin:-6px 0 0;font-size:16px;line-height:1.45;max-width:34ch}
 .splash .date{font-family:var(--code);font-size:13px;color:var(--lead);margin-top:-6px}
 .splash .sub{margin-top:-4px}
@@ -339,3 +340,50 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .st.settled:not(.la):not(.lb):not(.done):not(.sel){box-shadow:inset 0 0 16px 2px rgb(245 193 46 / .26),inset 0 0 0 1px rgb(245 193 46 / .14);transition:box-shadow .5s}
 .splash .practice{background:transparent;border:0;color:var(--lead);font-family:var(--code);font-size:13px;min-height:44px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .splash .practice:hover{color:var(--washi)}
+
+/* the run bar: help, suggestions, retry and give up, under the cube */
+.runbar button{flex:1 1 0;min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap}
+/* a suggested square pulses yellow */
+.st.hintme{animation:hintme 1.2s ease 2}
+@keyframes hintme{0%,100%{box-shadow:0 0 0 0 transparent}40%{box-shadow:0 0 0 4px var(--yellow)}}
+@media (prefers-reduced-motion:reduce){.st.hintme{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+
+/* number pad layouts, switched from the test panel */
+.pad.lay-B{grid-template-columns:repeat(3,68px);justify-content:end}
+.pad.lay-B button,.pad.lay-C button{min-height:60px}
+.pad.lay-C{grid-template-columns:repeat(3,1fr)}
+/* How to play: the two stages, drawn */
+.rules .diag{display:grid;gap:10px;margin:4px 0 12px}
+.rules .diag figure{margin:0;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px 8px 4px}
+.rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+.rules .diag svg{display:block;width:100%;height:auto;font-family:var(--code)}
+.rules .diag figure:first-child svg{max-width:240px;margin:0 auto}
+/* moments: a clue home pops, a finished line sweeps yellow, a finished face glows, a word over the cube */
+.st.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{scale:1}40%{scale:1.18;box-shadow:0 0 0 3px var(--yellow)}100%{scale:1}}
+.st.sweep{animation:sweep .7s ease both}
+@keyframes sweep{0%{background:var(--tile)}25%{background:var(--yellow);color:var(--sumi)}100%{}}
+.st.facedone{animation:facedone 1.1s ease .25s both}
+@keyframes facedone{0%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 3px var(--yellow),0 0 22px 4px rgba(245,193,46,.55)}100%{box-shadow:0 0 0 0 transparent}}
+.moment{position:absolute;left:50%;top:50%;z-index:6;pointer-events:none;display:grid;justify-items:center;gap:4px;
+  transform:translate(-50%,-50%);opacity:0;text-align:center;white-space:nowrap;background:rgba(18,19,22,.78);padding:12px 18px 10px;border-radius:12px}
+.moment b{font:400 clamp(30px,10vw,48px)/1 var(--display);color:var(--yellow);text-shadow:0 2px 0 var(--sumi),0 0 18px rgba(0,0,0,.6)}
+.moment span{font:500 13px var(--code);letter-spacing:.08em;text-transform:uppercase;color:var(--washi);background:var(--sumi);padding:3px 8px;border-radius:4px}
+.moment.go{animation:moment 1.5s ease both}
+@keyframes moment{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}25%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+@media (prefers-reduced-motion:reduce){.st.pop,.st.sweep,.st.facedone{animation:none}.moment.go{animation:momentfade 1.5s both}@keyframes momentfade{0%,100%{opacity:0}15%,75%{opacity:1}}}
+/* the completed page's share line and next steps */
+.results .more .sharetxt{margin:0;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap}
+.results .more button small{font-size:11px;opacity:.7;margin-left:4px}
+/* the guest's end card: what signing up saves */
+.results .signup{background:var(--yellow);color:var(--sumi);border-radius:var(--r);padding:14px;display:grid;gap:10px;margin-top:4px}
+.results .signup h3{margin:0;font-family:var(--display);font-weight:400;font-size:24px}
+.results .signup p{margin:0;font-size:14px;line-height:1.45}
+.results .signup ul{margin:0;padding-left:18px;display:grid;gap:5px;font-size:14px;line-height:1.4}
+.results .signup button{background:var(--sumi);color:var(--washi);border-color:var(--sumi);min-height:48px;font-weight:600}
+.results .signup .meta{font-family:var(--code);font-size:12px;color:var(--sumi)}
+/* the finish: the cube has flown, and the result card slides up into its place */
+.stage.flown{display:none}
+.results.slidein{animation:slidein .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slidein{from{opacity:0;transform:translateY(70vh)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.results.slidein{animation:fadein .4s both}@keyframes fadein{from{opacity:0}}}

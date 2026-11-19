@@ -76,7 +76,25 @@ export type MyDay = {
 export const RETRY_MULT = 0.8
 
 /** How today's cube is going for everyone: ranked solves, their average time and the fastest, in seconds (0 before any). */
-export type DayStats = {solves: number; avgTime: number; fastest: number}
+/** How one rotation count is going today, to help a player pick theirs. */
+export type TierStats = {
+  tier: number
+  /** Players who set today to this many rotations. */
+  picks: number
+  solves: number
+  /** Seconds, 0 with no solves. */
+  avgTime: number
+  avgScore: number
+  best: number
+}
+
+export type DayStats = {
+  solves: number
+  avgTime: number
+  fastest: number
+  /** Per rotation count, 0 to 3. Missing from older servers. */
+  tiers?: TierStats[]
+}
 
 /** A look at a coming day's cube: its clues on the solved cube, no answers. */
 export type Preview = {day: string; given: number[]}
@@ -118,6 +136,10 @@ export type CardRsp = {
   loggedIn: boolean
   /** Ranked solves of today's cube so far. */
   solves: number
+  /** Players who started today's cube. Missing from older servers. */
+  played?: number
+  /** The fastest solve today, in seconds, 0 before any. Missing from older servers. */
+  fastest?: number
   /** The asker's live streak, 0 when logged out or lapsed. */
   streak: number
   /** The asker's score today, once they've finished. */
@@ -128,7 +150,12 @@ export type CardRsp = {
 
 /** Lock today's tier (0 to 3 turns, Hard up to 2) and get its cube. Only the first call each day counts. */
 export type StartReq = {tier: number}
-export type StartRsp = {puzzle: Puzzle; tier: number}
+export type StartRsp = {
+  puzzle: Puzzle
+  tier: number
+  /** Logged out: the id to claim this run with after signing up. */
+  guest?: string
+}
 
 /** A finished run. forfeit means the player gave up: today ends at 0, unranked. */
 export type ScoreReq = {
@@ -136,6 +163,8 @@ export type ScoreReq = {
   tier: number
   stats: RunStats
   forfeit?: boolean
+  /** A run played logged out, claimed by the player who just signed up. */
+  guest?: string
 }
 export type ScoreRsp = {
   /** True if this run counted. Only the first finished run each day does. */

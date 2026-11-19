@@ -432,12 +432,53 @@ test('the daily post waits for midnight Pacific and is dated that day', async ()
   assert.match(posts[1] ?? '', /^Nonet: today's cube · Sun 15 Nov$/)
 })
 
-test('logged-out players can look but not score', async () => {
+test("logged-out players play today's cube, and claim the run after signing up", async () => {
   as(undefined)
   const daily = await get<DailyRsp>(Endpoint.Daily)
   assert.equal(daily.body.loggedIn, false)
-  const start = await post<ErrorRsp>(Endpoint.Start, {tier: 1})
-  assert.equal(start.status, 401)
+  const start = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  assert.equal(start.status, 200)
+  assert.ok(start.body.guest)
+  as('t2_bob', 'bob')
+  const same = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  assert.deepEqual(
+    start.body.puzzle,
+    same.body.puzzle,
+    'the same cube as everyone',
+  )
+
+  // a logged-out score is refused; the player signs up and claims it
+  as(undefined)
+  later(200)
+  const day = now.toISOString().slice(0, 10)
+  const req: ScoreReq = {day, tier: 1, stats: run(), guest: start.body.guest}
+  assert.equal((await post<ErrorRsp>(Endpoint.Score, req)).status, 401)
+  as('t2_new', 'newbie')
+  const claim = await post<ScoreRsp>(Endpoint.Score, req)
+  assert.equal(claim.status, 200)
+  assert.equal(claim.body.counted, true)
+  assert.equal(claim.body.streak.current, 1)
+  assert.equal(claim.body.boards.day.me?.score, claim.body.total)
+
+  // claimed once: another account can't take the same run
+  as('t2_cat', 'cat')
+  const again = await post<ErrorRsp>(Endpoint.Score, req)
+  assert.equal(again.status, 409)
+})
+
+test('a claimed run still has to fit the time since its logged-out start', async () => {
+  as(undefined)
+  const start = await post<StartRsp>(Endpoint.Start, {tier: 1})
+  later(30)
+  as('t2_new', 'newbie')
+  const day = now.toISOString().slice(0, 10)
+  const r = await post<ErrorRsp>(Endpoint.Score, {
+    day,
+    tier: 1,
+    stats: run(),
+    guest: start.body.guest,
+  })
+  assert.equal(r.status, 400)
 })
 
 test('wrong method and unknown paths are 404', async () => {
@@ -479,10 +520,24 @@ test('today’s solves, average and fastest time, and how many players you beat'
   await playDay(0, run({t1: 30, t2: 90, wrong: 3}))
   as('t2_ann', 'ann')
   const r = await playDay(2, run({t1: 50, t2: 150}))
-  assert.deepEqual(r.body.stats, {solves: 2, avgTime: 160, fastest: 120})
+  const {tiers, ...overall} = r.body.stats
+  assert.deepEqual(overall, {solves: 2, avgTime: 160, fastest: 120})
   assert.equal(r.body.beatPct, 100)
+  // each rotation count keeps its own picks, solves, average time and score, and best
+  assert.equal(tiers?.length, 4)
+  assert.deepEqual(
+    tiers?.map(t => [t.tier, t.picks, t.solves, t.avgTime]),
+    [
+      [0, 1, 1, 120],
+      [1, 0, 0, 0],
+      [2, 1, 1, 200],
+      [3, 0, 0, 0],
+    ],
+  )
+  assert.equal(tiers?.[2]?.best, r.body.total)
+  assert.equal(tiers?.[2]?.avgScore, r.body.total)
   const daily = await get<DailyRsp>(Endpoint.Daily)
-  assert.deepEqual(daily.body.stats, {solves: 2, avgTime: 160, fastest: 120})
+  assert.deepEqual(daily.body.stats, r.body.stats)
   assert.equal(daily.body.cubeNo, 318, 'cube number is the day of the year')
 })
 
@@ -556,6 +611,8 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
     no: 318,
     loggedIn: false,
     solves: 0,
+    played: 0,
+    fastest: 0,
     streak: 0,
   })
 
@@ -568,6 +625,8 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
   await playDay(2, run({t1: 50, t2: 150}))
   const done = await get<CardRsp>(Endpoint.Card)
   assert.equal(done.body.solves, 2)
+  assert.equal(done.body.played, 2)
+  assert.equal(done.body.fastest, 180, "bob's 40 + 140 seconds")
   assert.equal(done.body.streak, 1)
   assert.ok((done.body.score ?? 0) > 0)
   assert.ok(done.body.rank === 1 || done.body.rank === 2)

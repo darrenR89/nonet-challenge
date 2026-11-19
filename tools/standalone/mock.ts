@@ -9,6 +9,7 @@ import {
   addDays,
   dayKey,
   levelOf,
+  maxTurns,
   dayOfYear,
   type RunStats,
   scoreRun,
@@ -73,6 +74,7 @@ const rivalsOn = (day: string) => {
     name,
     score: Math.round(900 + r() * 1700),
     time: Math.round(70 + r() * 260),
+    tier: Math.min(maxTurns(levelOf(day)), Math.floor(r() * 4)),
   }))
 }
 const rivalsWeek = (day: string) => {
@@ -145,10 +147,26 @@ const stats = (day: string, s: Store) => {
   const mine = s.days[day]
   const times = r.map(x => x.time)
   if (mine?.score) times.push(Math.round((mine as {time?: number}).time ?? 120))
+  const runs = r.map(x => ({tier: x.tier, time: x.time, score: x.score}))
+  if (mine?.score && s.days[day]?.tier !== undefined)
+    runs.push({tier: s.days[day]!.tier!, time: (mine as {time?: number}).time ?? 120, score: mine.score})
+  const tiers = [0, 1, 2, 3].map(tier => {
+    const t = runs.filter(x => x.tier === tier)
+    const n = t.length
+    return {
+      tier,
+      picks: n + Math.round(n * 0.3),
+      solves: n,
+      avgTime: n ? Math.round(t.reduce((a, b) => a + b.time, 0) / n) : 0,
+      avgScore: n ? Math.round(t.reduce((a, b) => a + b.score, 0) / n) : 0,
+      best: n ? Math.max(...t.map(x => x.score)) : 0,
+    }
+  })
   return {
     solves: times.length,
     avgTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
     fastest: Math.min(...times),
+    tiers,
   }
 }
 const preview = (day: string, s: Store) =>
@@ -183,10 +201,67 @@ const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}})
 const err = (status: number, error: string): Response => json({error, status}, status)
 
+/** The prototype's Logged out switch: the page plays as a visitor with no Reddit account. */
+export const isGuest = (): boolean => {
+  try {
+    return sessionStorage.getItem('nonet-guest') === '1'
+  } catch {
+    return false
+  }
+}
+
 async function route(path: string, body: Record<string, unknown>): Promise<Response> {
   const day = dayKey()
   const s = load()
   const rec = (s.days[day] ??= {})
+  const guest = isGuest()
+  if (guest && path === 'api/daily')
+    return json({
+      day,
+      weekday: weekday(day),
+      week: weekKey(day),
+      level: levelOf(day),
+      my: {retries: 0},
+      streak: {current: 0, best: 0, played: 0},
+      boards: boards(day, {...s, days: {}}),
+      event: eventState(day, {...s, days: {}, team: undefined}),
+      loggedIn: false,
+      cubeNo: cubeNo(day),
+      stats: stats(day, s),
+      subreddit: 'nonet_challenge_dev',
+      notify: false,
+      duels: [],
+    })
+  if (guest && path === 'api/card')
+    return json({
+      day,
+      no: cubeNo(day),
+      loggedIn: false,
+      solves: stats(day, s).solves,
+      played: stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+      fastest: stats(day, s).fastest,
+      streak: 0,
+    })
+  if (guest && path === 'api/daily/start') {
+    const tier = Number(body.tier) || 0
+    try {
+      sessionStorage.setItem('nonet-guest-run', JSON.stringify({tier, started: Date.now()}))
+    } catch {}
+    return json({tier, puzzle: cube(day).tiers[tier], guest: '00000000-0000-4000-8000-000000000000'})
+  }
+  if (guest && path.startsWith('api/') && !path.startsWith('api/telemetry') && path !== 'api/board')
+    return err(401, 'Log in to Reddit to play for points.')
+  // a run played logged out, claimed after signing up
+  if (path === 'api/daily/score' && body.guest && rec.tier === undefined) {
+    try {
+      const g = JSON.parse(sessionStorage.getItem('nonet-guest-run') ?? 'null')
+      if (g) {
+        rec.tier = g.tier
+        rec.started = g.started
+        sessionStorage.removeItem('nonet-guest-run')
+      }
+    } catch {}
+  }
   switch (path) {
     case 'api/daily':
       return json({
@@ -220,6 +295,8 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         no: look === 'cycled' ? 366 : cubeNo(day),
         loggedIn: true,
         solves: look === 'first' ? 0 : stats(day, s).solves,
+        played: look === 'first' ? 0 : stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+        fastest: look === 'first' ? 0 : stats(day, s).fastest,
         streak: look === 'first' ? 0 : streakNow(day, s).current,
         score: played ? (rec.score ?? 1840) : undefined,
         rank: played ? (b.day.me?.rank ?? 6) : undefined,

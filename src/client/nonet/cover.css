@@ -5,6 +5,7 @@
   --c-ink:#23252b; --c-lead:#5b5f69; --c-yellow:#f5c12e; --c-paper:#f3f2ec; --c-hair:rgba(35,37,43,.25);
   --c-body:"IBM Plex Sans JP",system-ui,sans-serif;
   --c-code:"M PLUS 1 Code",ui-monospace,monospace;
+  --c-print:url(/brand/harunobu-line.jpg);
   --c-kanji:"DotGothic16","M PLUS 1 Code",monospace;
   color-scheme:light;color:var(--c-ink);font-family:var(--c-body);
   background:#e9ece9 url(/brand/paper.jpg) center/cover;
@@ -16,7 +17,7 @@
 .cv-cover{
   --H:100svh;
   position:relative;z-index:1;min-height:var(--H);width:100%;
-  display:flex;flex-direction:row-reverse;align-items:flex-start;gap:clamp(24px,7vw,36px);
+  --gap:clamp(24px,7vw,36px);display:flex;flex-direction:row-reverse;align-items:flex-start;gap:var(--gap);
   text-align:right;overflow:hidden;
 }
 @media (min-width:600px){
@@ -24,13 +25,13 @@
   .cv-cover{--H:clamp(600px,86svh,780px);width:max(calc(var(--H) * .6),440px)}
   /* the traced Harunobu print, big and cut off at the bottom left */
   .cv::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-6vw;bottom:-22vh;height:128vh;aspect-ratio:1000/1342;
-    background:url(/brand/harunobu-line.jpg) center/contain no-repeat;mix-blend-mode:multiply;opacity:.25;
+    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.225;
     -webkit-mask-image:linear-gradient(to right,#000 72%,transparent 96%);mask-image:linear-gradient(to right,#000 72%,transparent 96%)}
 }
 
 /* the spine: number boxed at the top, "Daily cube" and the date down the foot */
-.cv-spine{flex:none;align-self:stretch;width:clamp(44px,11%,64px);background:var(--c-ink);color:var(--c-paper);
-  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 0 20px}
+.cv-spine{flex:none;align-self:stretch;background:var(--c-ink);color:var(--c-paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
 .cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:9px 5px;margin:4px}
 .cv-kanji{font-family:var(--c-kanji);writing-mode:vertical-rl;letter-spacing:.14em;line-height:1;font-size:clamp(20px,4.6vw,26px)}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
@@ -39,22 +40,41 @@
 .cv-date .cv-dm{color:var(--c-yellow)}
 .cv-tcy{text-combine-upright:all}
 
-/* the streak: a solid yellow sticker, tilted, clipped by the left edge */
-.cv-streak{position:absolute;z-index:2;top:16px;left:-4px;margin:0;transform:rotate(-7deg);transform-origin:left center;
-  display:flex;align-items:center;gap:6px;padding:7px 14px 7px 18px;border-radius:999px;background:var(--c-yellow);
+/* the streak: a solid yellow sticker at the far left, tilted, overlapping the name */
+.cv-streak{position:absolute;z-index:2;left:-14px;top:calc(var(--top) - 30px);margin:0;transform:rotate(-6deg);transform-origin:left center;
+  display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;background:var(--c-yellow);
   font:700 13px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-ink);white-space:nowrap}
+.cv-streak[hidden]{display:none}
 .cv-streak svg{width:14px;height:18px;flex:none}
 
-.cv-body{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;
-  gap:clamp(18px,calc(var(--H) * .035),32px);padding:clamp(24px,calc(var(--H) * .05),42px) 0 clamp(24px,calc(var(--H) * .05),42px) 20px}
-.cv-upper{display:flex;flex-direction:row-reverse;gap:clamp(24px,7vw,36px);align-items:stretch}
-.cv-mark{flex:none}
-.cv-mark img{display:block;height:calc(var(--H) * .62);width:auto}
-.cv-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:24px}
+/* the body: the title block at the top (name, number and level, today's numbers), then Play
+   centred in the rest of the page over a faint print */
+.cv-body{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;
+  padding:0 0 clamp(12px,calc(var(--H) * .025),21px) 20px}
+.cv-title{--top:clamp(64px,calc(var(--H) * .11),96px);position:relative;display:flex;flex-direction:column;align-items:center;
+  gap:clamp(12px,calc(var(--H) * .022),18px);text-align:center;padding-top:var(--top)}
+/* the name grows a little past the column, into the padding on both sides, with the same
+   space left of it as between it and the spine */
+.cv-mark{align-self:stretch;margin:0 calc(8px - var(--gap)) 0 -12px}
+.cv-mark img{display:block;width:100%;height:auto}
+.cv-body{position:relative}
+/* the title block holds the top of the page; Play sits on the line two thirds down */
+.cv-mid{position:absolute;left:20px;right:0;top:calc(var(--H) / 3);bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:4px;padding:0 0 4px}
+/* done today: more to show, so the page flows instead */
+.is-done .cv-mid{position:relative;left:auto;top:auto;flex:1;padding-top:24px}
+.cv-mid>*{position:relative;z-index:1}
+@media (max-width:599px){
+  .cv-mid::before{content:"";position:absolute;z-index:0;inset:0 -8px;pointer-events:none;
+    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.16;
+    -webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent);mask-image:radial-gradient(closest-side,#000 55%,transparent)}
+}
+.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%}
+.cv-first[hidden]{display:none}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
 /* the issue box: a magazine's number block, double rules top and bottom */
-.cv-issue{width:100%;display:grid;justify-items:end;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
+.cv-issue{width:100%;display:grid;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
+.cv-issue .cv-row{justify-content:space-between;align-items:center;gap:12px}
 .cv-row{display:flex;gap:10px;align-items:baseline}
 .cv-daily{font-weight:700;font-size:14px;letter-spacing:.2em}
 .cv-no{font:500 14px var(--c-code);letter-spacing:.04em}
@@ -120,3 +140,180 @@
 .cv .event p,.cv .peek p,.cv .compact>.chip span,.cv .compact>.chip::after,.cv .event .teams li span{color:var(--c-lead)}
 .cv .compact>.chip:focus-visible{outline-color:var(--c-ink)}
 .cv .event button{background:transparent;color:var(--c-ink);border-color:var(--c-ink)}
+
+/* read by screen readers, not shown: the feed card keeps only the cover, today's number and Play */
+.cv-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* the setup screen, over the yellow cells after Play: today's details, the rotation choice with how
+   everyone else did, the event and challenges, then Start */
+.cv.setup{position:fixed;inset:0;z-index:90;background:var(--c-yellow);overflow-y:auto;padding:max(20px,env(safe-area-inset-top)) 16px 24px;
+  align-items:safe center;opacity:0;transition:opacity .2s}
+.cv.setup.in{opacity:1}
+.cv.setup[hidden]{display:none}
+.su-in{width:min(440px,100%);display:grid;gap:14px;text-align:left}
+.su-top{display:flex;justify-content:space-between;gap:12px;margin:0;font:500 13px var(--c-code);letter-spacing:.06em;text-transform:uppercase}
+.su-top b{font-size:18px;margin-left:2px}
+.su-lv{display:flex;align-items:center;gap:10px;margin:0;border-top:1px solid var(--c-ink);padding-top:10px}
+.su-lv .cv-max{margin-left:auto}
+.su-lv .cv-max span{color:var(--c-ink)}
+.setup h2{font:700 clamp(26px,7vw,34px)/1.1 var(--c-body);margin:8px 0 0}
+.su-lead{margin:0;font-size:14px;line-height:1.45}
+.setup .cv-cap{display:none}
+.setup .cv-twists{grid-template-columns:1fr;direction:ltr;gap:8px}
+.setup .cv-twists>*{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"m r" "m s";column-gap:14px;row-gap:2px;align-items:center;
+  padding:10px 14px;text-align:left;min-height:62px}
+.setup .cv-twists b{grid-area:m;font-size:22px;min-width:3.2ch}
+.setup .cv-twists small{grid-area:r;font-size:13px;color:var(--c-ink)}
+.setup .cv-twists .ts{grid-area:s;font:400 12px var(--c-code);color:var(--c-lead)}
+.setup .cv-twists .ts:empty{display:none}
+.setup .cv-twists>[aria-pressed="true"] small,.setup .cv-twists>[aria-pressed="true"] .ts{color:var(--c-paper)}
+.su-extra{display:grid;gap:10px}
+.su-extra:not(:has(>:not([hidden]))){display:none}
+.setup .event,.setup .peek,.setup .duelsSplash{background:rgba(255,255,255,.6)}
+.su-go{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:6px}
+.su-back{all:unset;box-sizing:border-box;cursor:pointer;padding:0 18px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--c-ink);font:500 15px var(--c-body);display:grid;place-items:center}
+.su-back:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
+.setup .cv-play{width:100%;background:var(--c-ink);color:var(--c-paper)}
+.su-guest{margin:0;font-size:14px;line-height:1.45;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px var(--c-ink)}
+.su-guest[hidden]{display:none}
+/* one ruled panel, as on a manga cover's issue box: a double rule over the number and level, a
+   single rule, today's numbers, a double rule under. The Play panel and the done list share the
+   same rules and the same left and right edges. */
+.cv-title .cv-issue{border-bottom:1px solid var(--c-ink);padding-bottom:8px}
+.cv-title .cv-stats,.cv-title .cv-first{margin-top:calc(-1 * clamp(12px,calc(var(--H) * .022),18px));border-top:0;
+  border-bottom:3px double var(--c-ink);padding:10px 0 12px}
+.cv-title .cv-stats{direction:ltr}
+.cv-title .cv-stats div{text-align:left;padding:0 0 0 12px;border-left:1px solid var(--c-ink)}
+.cv-title .cv-stats div:first-child{padding:0;border-left:0}
+.cv-title .cv-stats div:last-child:not(:first-child){text-align:right}
+.cv-title .cv-first{text-align:left}
+
+/* today done: how you did, then what next, each opening in place */
+.cv-done{width:100%;display:grid;gap:12px;text-align:left}
+.cv-done[hidden]{display:none}
+.dn-res{display:grid;gap:2px;justify-items:end;text-align:right}
+.dn-cap{font:400 11px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-lead)}
+.dn-score{font:500 15px var(--c-code)}
+.dn-score b{font-size:44px;line-height:1;font-weight:500;letter-spacing:-.02em;margin-right:6px}
+.dn-meta{font:500 13px var(--c-code)}
+.dn-acts{display:grid;gap:6px}
+.dn-row{border-bottom:1px solid var(--c-ink)}
+.dn-chip{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:10px 12px;align-items:center}
+.dn-chip b{font-size:15px;font-weight:700}
+.dn-chip span{grid-column:1;font:400 12px var(--c-code);color:var(--c-lead)}
+.dn-chip::after{content:"▾";grid-column:2;grid-row:1/span 2;color:var(--c-ink)}
+.dn-chip[aria-expanded="true"]::after{content:"▴"}
+.dn-chip:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px;border-radius:8px}
+.dn-row>.more{padding:0 12px 12px;display:grid;gap:8px;font-size:14px}
+.dn-row>.more[hidden]{display:none}
+.cv-done .duels{background:none;border:0;padding:0;color:var(--c-ink)}
+.cv-done .duels h3{display:none}
+.cv-done .event{background:none;border:0;padding:0}
+.cv-done .board h4{margin:6px 0 4px;font:500 12px var(--c-code);letter-spacing:.06em;text-transform:uppercase;color:var(--c-lead)}
+.cv-done .board ol{margin:0;padding:0;list-style:none;display:grid;gap:2px;font:400 13px var(--c-code)}
+.cv-done .board li{display:flex;justify-content:space-between}
+.cv-done .board li.mine{font-weight:700}
+.dn-next{font:500 13px var(--c-code);text-align:right}
+/* done: Play steps back to a quiet link-like button */
+.is-done .cv-go{border-top:0;padding-top:4px}
+.is-done .cv-play{background:transparent;box-shadow:inset 0 0 0 1px var(--c-ink);height:44px}
+.dn-go{border-bottom:1px solid var(--c-ink)}
+.dn-go::after{content:"→"}
+/* How to play and Practice sit inside the Play box, under the button */
+.cv-go .cv-links{justify-content:space-between;gap:16px;padding:0 4px}
+.cv-go .cv-links button{padding:6px 0 2px}
+
+/* the Play panel: ruled like the issue box, no rounded frame */
+.cv-go{border:0;border-radius:0;background:none;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink);padding:12px 0 6px}
+.cv-play{border-radius:2px}
+.cv-go .cv-links{padding:0}
+/* the done list: a double rule over it, a single rule between rows, square edges */
+.dn-acts{gap:0;border-top:3px double var(--c-ink)}
+.dn-chip{padding:11px 0}
+.dn-row>.more{padding:0 0 12px}
+.dn-res{border-top:3px double var(--c-ink);border-bottom:1px solid var(--c-ink);padding:8px 0 10px;justify-items:start;text-align:left}
+.dn-res+.dn-acts{border-top:0}
+/* the level: the chip, with its three blocks stacked under it at the chip's width */
+.cv-issue .cv-level{display:grid;gap:4px;align-self:center}
+.cv-issue .cv-level .cv-tag{order:-1;text-align:center}
+.cv-issue .cv-pips{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.cv-issue .cv-pips i{width:auto;height:7px}
+
+/* panels, like the boxed blocks on a manga cover: a thick outer frame, a double rule between
+   parts, dotted rules inside a part. The issue box with today's numbers, the Play panel and the
+   done list are all built the same way, on the same edges. */
+.cv-title .cv-issue{border:3px solid var(--c-ink);border-bottom:0;padding:8px 12px}
+.cv-title .cv-stats,.cv-title .cv-first{border:3px solid var(--c-ink);border-top:4px double var(--c-ink);padding:10px 12px 12px;margin-top:calc(-1 * clamp(12px,calc(var(--H) * .022),18px))}
+.cv-title .cv-stats div{border-left:1px dotted var(--c-ink)}
+.cv-title .cv-stats div:first-child{border-left:0}
+.cv-go{border:3px solid var(--c-ink);padding:10px 10px 4px;gap:8px}
+.cv-go .cv-links{border-top:1px dotted var(--c-ink);padding:2px 2px 0}
+.dn-res{border:3px solid var(--c-ink);border-bottom:4px double var(--c-ink);padding:8px 12px 10px}
+.dn-acts{border:3px solid var(--c-ink);border-top:0}
+.dn-res+.dn-acts{border-top:0}
+.dn-row,.dn-go{border-bottom:1px dotted var(--c-ink);padding:0 12px}
+.dn-go{padding:11px 12px}
+.dn-acts>:last-child{border-bottom:0}
+.is-done .cv-go{border-top:3px solid var(--c-ink);margin-top:12px}
+/* stats sit side by side with their labels: "20 played" on the left, "fastest 1:11" on the right */
+.cv-title .cv-stats div{display:flex;align-items:baseline;gap:8px;min-width:0}
+.cv-title .cv-stats div:first-child dd{order:-1}
+.cv-title .cv-stats div:last-child:not(:first-child){justify-content:flex-end}
+.cv-title .cv-stats dd{margin:0}
+/* a bigger number and level chip */
+.cv-no b{font-size:58px}
+.cv-issue .cv-level .cv-tag{font-size:16px;padding:5px 12px 4px}
+.cv-issue .cv-pips{gap:4px}
+.cv-issue .cv-pips i{height:10px}
+/* the Play block: no frame or rules; the two links are black buttons splitting Play's width */
+.cv-go,.is-done .cv-go{border:0;padding:0;margin-top:0;gap:8px}
+.cv-go .cv-links{border:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cv-go .cv-links button{box-sizing:border-box;width:100%;height:44px;display:grid;place-items:center;padding:0;border-radius:2px;
+  background:var(--c-ink);color:var(--c-paper);text-decoration:none}
+.is-done .cv-go{margin-top:16px}
+/* the title block and Play sit together as one group, centred down the page, with a wide gap
+   between them; the played state still flows from the top */
+.cv-body{justify-content:center;gap:clamp(48px,calc(var(--H) * .1),88px)}
+.cv-title{--top:36px}
+.cv-mid{position:relative;left:auto;top:auto;bottom:auto;flex:none;padding:0}
+.is-done .cv-title{--top:clamp(64px,calc(var(--H) * .11),96px)}
+@media (max-width:599px){
+  .cv-mid::before{inset:-28vh -8px}
+}
+.is-done .cv-body{justify-content:flex-start;gap:0}
+/* done: the score is a solid yellow block, joined straight onto the list of next steps */
+.dn-res{background:var(--c-yellow);border-bottom:3px solid var(--c-ink)}
+.dn-res+.dn-acts{margin-top:-12px}
+.dn-res .dn-cap,.dn-res .dn-meta{color:var(--c-ink)}
+/* the same space on the left of the column as between it and the spine; the name still runs
+   to 8px from each edge */
+.cv-body{padding-left:var(--gap)}
+.cv-mark{margin:0 calc(8px - var(--gap))}
+/* phone: the print runs the full height of the column, behind everything */
+@media (max-width:599px){
+  .cv-mid::before{content:none}
+  .cv-body::before{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;
+    background:var(--c-print) center/auto 100% no-repeat;mix-blend-mode:multiply;opacity:.144}
+  .cv-title,.cv-mid{z-index:1}
+}
+/* done today: no rules or practice links under the solved-cube button */
+.is-done .cv-links{display:none}
+/* the score on the left; today's rank in a chip and the streak stacked on the right */
+.dn-res{grid-template-columns:1fr auto;align-items:center;gap:12px}
+.dn-main{display:grid;gap:2px}
+.dn-side{display:grid;gap:6px;justify-items:end;text-align:right}
+.dn-rank{font:500 15px var(--c-code);letter-spacing:.04em;background:var(--c-ink);color:var(--c-paper);border-radius:5px;padding:4px 10px 3px;white-space:nowrap}
+.dn-streak{font:500 13px var(--c-code);white-space:nowrap}
+.dn-side [hidden]{display:none}
+/* done: "See your solved cube" sits just under the number block, then the score card */
+.is-done .cv-mid{justify-content:flex-start;padding-top:10px;gap:14px}
+.is-done .cv-go{order:-1;margin-top:0}
+.dn-rank{font-size:13px;padding:3px 8px 2px}
+/* done: three times the space under the solved-cube button, and the whole page centred down */
+.is-done .cv-mid{gap:42px;flex:none}
+.is-done .cv-title{margin-top:auto}
+.is-done .cv-mid{margin-bottom:auto}
+.is-done .cv-title{--top:36px}
+/* "points" bold, tucked up to the number */
+.dn-score{font-weight:700}
+.dn-score b{margin-right:-1px}

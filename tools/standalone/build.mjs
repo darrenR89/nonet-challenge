@@ -12,7 +12,8 @@ const r = await build({
   bundle: true, minify: true, write: false, format: 'esm', target: 'es2022',
   platform: 'browser', conditions: ['browser'], outdir: 'x',
   // the page loads the full fonts from Google Fonts instead of the Reddit subsets
-  plugins: [{name: 'nofonts', setup(b) { b.onLoad({filter: /fonts\.css$/}, () => ({contents: '', loader: 'css'})) }}],
+  plugins: [{name: 'nofonts', setup(b) { b.onLoad({filter: /fonts\.css$/}, () => ({contents: '', loader: 'css'})) }},
+    {name: 'devvit-game', setup(b) { b.onResolve({filter: /^@devvit\/web\/client$/}, () => ({path: join(root, 'tools/standalone/devvit-game.ts')})) }}],
   external: ['/brand/*'],
 })
 // the feed card, built on its own and shown first in an iframe, as Reddit shows it in the feed
@@ -31,6 +32,7 @@ const b64 = p => readFileSync(join(root, p)).toString('base64')
 const brand = t =>
   t
     .replaceAll('/brand/nonet-wordmark-vertical.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark-vertical.svg')}`)
+    .replaceAll('/brand/nonet-wordmark-ink.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark-ink.svg')}`)
     .replaceAll('/brand/paper.jpg', `data:image/jpeg;base64,${b64('public/brand/paper.jpg')}`)
     .replaceAll('/brand/harunobu-line.jpg', `data:image/jpeg;base64,${b64('public/brand/harunobu-line.jpg')}`)
 css = brand(css).replaceAll('/brand/paper-overlay.webp', `data:image/webp;base64,${b64('public/brand/paper-overlay.webp')}`)
@@ -47,6 +49,7 @@ const attr = t => t.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
 const cardLayer = `<div class="feedcard" id="feedCard">
 <iframe id="feedFrame" title="Nonet post card, as it shows in the feed" srcdoc="${attr(cardHtml)}"></iframe>
 <div class="looks" role="group" aria-label="Prototype: card states"><span>Card</span><button type="button" data-look="" aria-pressed="true">Live</button><button type="button" data-look="first" aria-pressed="false">Quiet day</button><button type="button" data-look="played" aria-pressed="false">Played</button><button type="button" data-look="cycled" aria-pressed="false">Day 366</button></div>
+<div class="looks who" role="group" aria-label="Prototype: player"><button type="button" id="guestBtn" aria-pressed="false">Logged out</button></div>
 </div>`
 let html = brand(readFileSync(join(root, 'public/game.html'), 'utf8'))
 html = html
@@ -61,6 +64,12 @@ html = html
 .looks{position:absolute;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 32px);font-family:var(--code);font-size:11px;color:var(--lead)}
 .looks button{font:inherit;color:var(--lead);background:var(--slate);border:1px solid var(--edge);border-radius:6px;padding:4px 8px;min-height:28px;cursor:pointer}
 .looks button[aria-pressed="true"]{color:var(--washi);border-color:var(--lead)}
+.looks.who{left:10px;transform:none;bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 40px)}
+.fake-login{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+.fake-login>div{background:#fff;color:#1a1a1b;border-radius:16px;padding:20px;max-width:360px;display:grid;gap:10px;font-family:system-ui,sans-serif}
+.fake-login h2{margin:0;font-size:20px}.fake-login p{margin:0;font-size:14px;color:#576f76}.fake-login .tag{font:600 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#c0392b}
+.fake-login .acts{display:flex;gap:8px;justify-content:flex-end}.fake-login button{border:1px solid #ccc;background:#fff;border-radius:999px;padding:8px 16px;font:600 14px system-ui;cursor:pointer}
+.fake-login button.primary{background:#0045ac;color:#fff;border-color:#0045ac}
 @media (prefers-reduced-motion:reduce){.feedcard{transition:none}}
 .demo{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:70;font-family:var(--code);font-size:11px;color:var(--lead);background:var(--slate);border:1px solid var(--edge);border-radius:6px;padding:4px 8px;min-height:0;opacity:.85}</style>`)
   .replace('/brand/nonet-wordmark.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark.svg')}`)
