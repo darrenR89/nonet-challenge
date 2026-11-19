@@ -30,7 +30,7 @@ F.forEach((f,fi)=>{
   }
   cubeEl.appendChild(el);faceEls.push(el);
 });
-let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.5,Math.min(st.clientWidth,st.clientHeight)/320));apply()};
+let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.7,Math.min(st.clientWidth,st.clientHeight)/290));apply()};
 const $=id=>document.getElementById(id);
 
 // ---------- state ----------
@@ -312,7 +312,7 @@ function pointsTable(s,pen){return `<table>
    <tr><td>Stage 2 speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
    <tr><td>Stage 2 accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
    <tr><td>Lock-first squares</td><td>${s.starPts} / 150</td></tr><tr class="sub"><td>${starWon.size} of 3 locked before any other square</td><td></td></tr>
-   ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggested turn${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
+   ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggestion${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
    <tr><td>Subtotal × ${s.mult}</td><td>${s.raw} × ${s.mult}</td></tr>
    ${pen<1?`<tr><td>Retry</td><td>× ${pen}</td></tr>`:''}
   </table>`}
@@ -375,8 +375,9 @@ function render(){
   setBar('pAlign',stage===1?home/nClues:1);const tot=blanks||P.start.filter(v=>!v).length;setBar('pFill',stage===1?0:stage===3?1:tot?1-left/tot:0);
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
-  $('tools1').hidden=stage!==1;$('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0||stage!==1;$('suggest').hidden=P.k===0||isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest a turn (${hintsLeft} left)`;
+  $('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
+  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest · ${hintsLeft}`;
+  $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
   // the grid flashes yellow once when the cube lines up and once when it is solved; tutorials skip the align flash
@@ -424,7 +425,7 @@ function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=docume
 setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
-  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;render()});
+  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render()});
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
@@ -464,7 +465,16 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
+// a Fill in suggestion points at a square where only one digit fits, without filling it in
+function hintSquare(){const order=singlesOrder(vals);let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+  if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
+  const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
+  sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
+  stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
+  $('status').textContent='Only one digit fits in this square.'}
 function showHint(free){
+  if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
   const faces=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a));
   for(const fi of faces)for(const st of document.querySelectorAll(`#cube .face:nth-child(${fi+1}) .st`)){const c=+st.dataset.c;
@@ -474,10 +484,9 @@ function showHint(free){
 $('suggest').onclick=()=>showHint(false);
 
 $('restart').onclick=askRetry;
-$('newp').onclick=()=>{journey.start();newGame()};
 // giving up asks first, and offers today's retry instead when there is one
 $('reveal').onclick=askGiveUp;
-document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;render()});
+document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;zoom=1;apply();render()});
 document.addEventListener('keydown',e=>{if(sel<0||tx.busy)return;if(/^[1-9]$/.test(e.key))pressDigit(+e.key);else if(e.key==='Backspace'||e.key==='0')pressDigit(0)});
 
 // ---------- turn arrows drawn on the selected face, in 3D ----------
@@ -509,7 +518,17 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
-const apply=()=>{cubeEl.style.transform=`scale(${scaleK}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+// tap to focus: a square tapped on a steep face turns the view until that face is in front,
+// kept a little off square so the cube still reads as a cube, and the view leans in a touch
+let zoom=1;
+function focusFace(fi){zoom=1.08;
+  if(facing(fi)<.8){const n=F[fi].map(1,1);
+    if(n[1]!==0)rx=n[1]<0?-60:60;
+    else{const base=n[0]===1?-90:n[0]===-1?90:n[2]===1?0:180;
+      // stay on the side of the face we were already looking from, and take the short way round
+      const side=(((ry-base)%360)+540)%360-180>=0?1:-1;let t=base+22*side;t+=Math.round((ry-t)/360)*360;ry=t;rx=-22}}
+  apply()}
 const stageEl=$('stage');let drag=null;
 stageEl.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx,ry};moved=false;cubeEl.classList.add('dragging')});
 window.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;

@@ -57,7 +57,6 @@
     <h1><img src="/brand/nonet-wordmark.svg" alt="Nonet" width="141" height="26"></h1>
     <span class="hdr">
       <button class="icon" id="soundBtn" type="button" aria-label="Music and sound" aria-pressed="true">♪</button>
-      <button class="icon" id="helpBtn" type="button" aria-label="How to play">?</button>
       <span class="timer" id="timer" aria-label="Time">0:00</span>
       <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
     </span>
@@ -113,18 +112,16 @@
 
   <div class="banner" id="banner" hidden></div>
 
-  <div class="tools" id="tools1">
-    <button id="suggest">Suggest a turn (3 left)</button>
-  </div>
   <div class="pad" id="pad"></div>
 
   <section class="results" id="results" hidden></section>
   <button class="showres" id="showRes" type="button" hidden>Show result</button>
 
-  <div class="row">
-    <button id="restart">Restart</button>
-    <button id="newp">Unscored cube</button>
-    <button id="reveal">Give up</button>
+  <div class="row runbar">
+    <button id="helpBtn" type="button" aria-label="How to play">? Help</button>
+    <button id="suggest" type="button">Suggest</button>
+    <button id="restart" type="button">Restart</button>
+    <button id="reveal" type="button">Give up</button>
   </div>
 
   <section class="rules" id="rules" hidden>

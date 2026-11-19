@@ -61,7 +61,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .steps span.done{color:var(--washi);background:var(--done);border-color:var(--done)}
 
 /* the cube: built from cells. The gaps are empty, so it reads as the brand's cell cube. */
-.stage{position:relative;height:min(78vw,340px);touch-action:none;cursor:grab;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
+.stage{position:relative;height:min(96vw,440px);touch-action:none;cursor:grab;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
 .cube{--s:180px;--h:90px;width:180px;height:180px;position:relative;transform-style:preserve-3d;transition:transform .35s ease;z-index:1}
 .cube.dragging{transition:none}
 .face{position:absolute;inset:0;transform-style:preserve-3d;background:transparent;border-radius:10px;
@@ -340,3 +340,10 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .st.settled:not(.la):not(.lb):not(.done):not(.sel){box-shadow:inset 0 0 16px 2px rgb(245 193 46 / .26),inset 0 0 0 1px rgb(245 193 46 / .14);transition:box-shadow .5s}
 .splash .practice{background:transparent;border:0;color:var(--lead);font-family:var(--code);font-size:13px;min-height:44px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .splash .practice:hover{color:var(--washi)}
+
+/* the run bar: help, suggestions, retry and give up, under the cube */
+.runbar button{flex:1 1 0;min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap}
+/* a suggested square pulses yellow */
+.st.hintme{animation:hintme 1.2s ease 2}
+@keyframes hintme{0%,100%{box-shadow:0 0 0 0 transparent}40%{box-shadow:0 0 0 4px var(--yellow)}}
+@media (prefers-reduced-motion:reduce){.st.hintme{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
