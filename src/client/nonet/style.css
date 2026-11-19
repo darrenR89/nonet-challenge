@@ -427,3 +427,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .padtabs .seg{display:flex;gap:0;border:0;background:none;padding:0}
 .padtabs .seg button{min-height:36px;width:52px;border:1px solid var(--edge);border-bottom:0;border-radius:var(--r) var(--r) 0 0;background:var(--sumi);color:var(--lead);margin-right:-1px}
 .padtabs .seg button[aria-pressed="true"]{background:var(--slate);color:var(--washi);position:relative;z-index:1;box-shadow:0 1px 0 var(--slate)}
+/* the pad is fixed to the bottom of the screen during Fill in; the page leaves room for it */
+.padbox{position:fixed;z-index:20;left:0;right:0;bottom:0;margin:0 auto;width:min(560px,calc(100% - 24px));box-sizing:border-box;
+  border-bottom:0;border-radius:0 var(--r) 0 0;padding-bottom:max(8px,env(safe-area-inset-bottom));box-shadow:0 -12px 24px rgb(0 0 0 / .35)}
+.wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 48px)}
