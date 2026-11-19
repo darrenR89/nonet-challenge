@@ -372,3 +372,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .moment.go{animation:moment 1.5s ease both}
 @keyframes moment{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}25%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
 @media (prefers-reduced-motion:reduce){.st.pop,.st.sweep,.st.facedone{animation:none}.moment.go{animation:momentfade 1.5s both}@keyframes momentfade{0%,100%{opacity:0}15%,75%{opacity:1}}}
+/* the completed page's share line and next steps */
+.results .more .sharetxt{margin:0;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap}
+.results .more button small{font-size:11px;opacity:.7;margin-left:4px}

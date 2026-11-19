@@ -284,8 +284,14 @@ function finishStage2(){
   requestAnimationFrame(()=>$('results').scrollIntoView({behavior:'smooth',block:'start'}));
 }
 let runScore=null,endTab='';
-const resultText=s=>`Nonet${D?` #${D.cubeNo}`:''} · ${s.name} · solved in ${fmt(t1+t2)}${lastScore?` · ${num(lastScore.total)} pts`:''}\n★${starWon.size}/3 · ${wrong} miss${wrong===1?'':'es'}${hintsUsed?` · ${hintsUsed} hint${hintsUsed===1?'':'s'}`:' · no hints'}${retries?' · 1 retry':''}`;
+// a spoiler-free line for the daily thread: no digits, no squares, just how it went
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
+// where you stand among the people you've challenged today, once any of them has played
+function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
+  const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
+  return ` · <b>${ord(above+1)}</b> of ${of} in your challenges`}
 // the end card: one card with the time and points, how you did today, your streak, then what next
+let teamAsk=false;
 function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
@@ -293,11 +299,12 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
   if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
+  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${duelRank()}${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
-  const more=`<div class="more"><h3>Want more Nonet?</h3><div class="acts"><button id="eComment" class="primary">Comment your time</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+  const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
+    <div class="acts"><button id="eComment" class="primary">Share to the thread</button><button id="eTeam" aria-pressed="${teamAsk?'true':'false'}">${teamAsk?'Thanks: we\'ll tell you when teams open':'Play as a team <small>coming soon</small>'}</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
@@ -312,8 +319,10 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false};
   $('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
-    const done=()=>{$('eComment').textContent='Copied. Paste it in the comments';try{exitExpandedMode(ev)}catch(e){}};
+    const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
+  // team play isn't built yet: the button counts who would use it
+  $('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
