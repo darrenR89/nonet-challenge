@@ -309,3 +309,8 @@
 .is-done .cv-mid{justify-content:flex-start;padding-top:10px;gap:14px}
 .is-done .cv-go{order:-1;margin-top:0}
 .dn-rank{font-size:13px;padding:3px 8px 2px}
+/* done: three times the space under the solved-cube button, and the whole page centred down */
+.is-done .cv-mid{gap:42px;flex:none}
+.is-done .cv-title{margin-top:auto}
+.is-done .cv-mid{margin-bottom:auto}
+.is-done .cv-title{--top:36px}
