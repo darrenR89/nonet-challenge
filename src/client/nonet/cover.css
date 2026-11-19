@@ -314,3 +314,6 @@
 .is-done .cv-title{margin-top:auto}
 .is-done .cv-mid{margin-bottom:auto}
 .is-done .cv-title{--top:36px}
+/* "points" bold, tucked up to the number */
+.dn-score{font-weight:700}
+.dn-score b{margin-right:-1px}
