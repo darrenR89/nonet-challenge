@@ -109,7 +109,17 @@ void getCard().then(card => {
   }
   const stats = $('stats')
   if (!stats) return
-  const parts = [stat('Solved today', card.solves.toLocaleString('en-GB'))]
+  const mm = (secs: number): string =>
+    `${Math.floor(secs / 60)}:${String(Math.round(secs % 60)).padStart(2, '0')}`
+  // before anyone has played, an invitation in place of the numbers
+  if (!card.solves && !card.played && card.score === undefined) {
+    $('first')?.removeAttribute('hidden')
+    return
+  }
+  const parts = [
+    stat('Played today', (card.played ?? card.solves).toLocaleString('en-GB')),
+  ]
+  if (card.fastest) parts.push(stat('Fastest', mm(card.fastest)))
   if (card.score !== undefined) {
     parts.unshift(
       stat(
@@ -118,8 +128,6 @@ void getCard().then(card => {
       ),
     )
     startBtn.textContent = 'See how you did'
-  } else if (card.solves === 0) {
-    $('live')?.replaceChildren("Be the first to solve today's cube.")
   }
   stats.replaceChildren(...parts)
   stats.removeAttribute('hidden')

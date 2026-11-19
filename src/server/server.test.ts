@@ -611,6 +611,8 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
     no: 318,
     loggedIn: false,
     solves: 0,
+    played: 0,
+    fastest: 0,
     streak: 0,
   })
 
@@ -623,6 +625,8 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
   await playDay(2, run({t1: 50, t2: 150}))
   const done = await get<CardRsp>(Endpoint.Card)
   assert.equal(done.body.solves, 2)
+  assert.equal(done.body.played, 2)
+  assert.equal(done.body.fastest, 180, "bob's 40 + 140 seconds")
   assert.equal(done.body.streak, 1)
   assert.ok((done.body.score ?? 0) > 0)
   assert.ok(done.body.rank === 1 || done.body.rank === 2)

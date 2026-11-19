@@ -233,7 +233,15 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       duels: [],
     })
   if (guest && path === 'api/card')
-    return json({day, no: cubeNo(day), loggedIn: false, solves: stats(day, s).solves, streak: 0})
+    return json({
+      day,
+      no: cubeNo(day),
+      loggedIn: false,
+      solves: stats(day, s).solves,
+      played: stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+      fastest: stats(day, s).fastest,
+      streak: 0,
+    })
   if (guest && path === 'api/daily/start') {
     const tier = Number(body.tier) || 0
     try {
@@ -287,6 +295,8 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         no: look === 'cycled' ? 366 : cubeNo(day),
         loggedIn: true,
         solves: look === 'first' ? 0 : stats(day, s).solves,
+        played: look === 'first' ? 0 : stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+        fastest: look === 'first' ? 0 : stats(day, s).fastest,
         streak: look === 'first' ? 0 : streakNow(day, s).current,
         score: played ? (rec.score ?? 1840) : undefined,
         rank: played ? (b.day.me?.rank ?? 6) : undefined,

@@ -113,10 +113,10 @@ function splashTwist(){
   $('spDate').innerHTML=`${WDAYS[d.getUTCDay()]} <span class="cv-dm"><span class="cv-tcy">${d.getUTCDate()}</span> ${MONTHS[d.getUTCMonth()]}</span>`;
   $('spNo').textContent=D?String(D.cubeNo):'–';
   $('spKanji').textContent=D?kanjiNo(D.cubeNo):'〇〇〇';
-  $('spLevel').textContent=LEVEL_NAMES[level];
-  $('spPips').querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
+  $('spLevel').textContent=LEVEL_NAMES[level];$('cvLevel').textContent=LEVEL_NAMES[level];
+  for(const id of ['spPips','cvPips'])$(id).querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
   $('spMax').textContent=num(maxScore(level));
-  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}.`);
+  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}. ${LEVEL_NAMES[level]}.`);
   $('suGuest').hidden=!guest;
   $('suNo').textContent=D?String(D.cubeNo):'–';$('suDate').textContent=longDate(today);
   // what everyone else did with each choice today
@@ -136,8 +136,10 @@ function splashTwist(){
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
   const st=D&&D.stats;
-  $('spStats').hidden=!D;
-  if(D)$('spStats').innerHTML=`<div><dt>Fastest today</dt><dd>${st&&st.solves?fmt(st.fastest):'–'}</dd></div><div><dt>Solved today</dt><dd>${num(st?st.solves:0)}</dd></div>`;
+  // the numbers under today's number, or an invitation before anyone has played
+  const played=st?(st.tiers||[]).reduce((n,t)=>n+t.picks,0)||st.solves:0;
+  $('spStats').hidden=!D||!played;$('spFirst').hidden=!D||!!played;
+  if(D&&played)$('spStats').innerHTML=`<div><dt>Played today</dt><dd>${num(played)}</dd></div>${st.solves?`<div><dt>Fastest</dt><dd>${fmt(st.fastest)}</dd></div>`:''}`;
   document.querySelectorAll('#spTwists button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
 }
 // time until midnight Pacific, when the next cube comes

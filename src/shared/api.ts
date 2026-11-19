@@ -136,6 +136,10 @@ export type CardRsp = {
   loggedIn: boolean
   /** Ranked solves of today's cube so far. */
   solves: number
+  /** Players who started today's cube. Missing from older servers. */
+  played?: number
+  /** The fastest solve today, in seconds, 0 before any. Missing from older servers. */
+  fastest?: number
   /** The asker's live streak, 0 when logged out or lapsed. */
   streak: number
   /** The asker's score today, once they've finished. */

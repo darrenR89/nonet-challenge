@@ -64,7 +64,7 @@ html = html
 .looks{position:absolute;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;width:max-content;max-width:calc(100% - 32px);font-family:var(--code);font-size:11px;color:var(--lead)}
 .looks button{font:inherit;color:var(--lead);background:var(--slate);border:1px solid var(--edge);border-radius:6px;padding:4px 8px;min-height:28px;cursor:pointer}
 .looks button[aria-pressed="true"]{color:var(--washi);border-color:var(--lead)}
-.looks.who{left:10px;transform:none;top:max(10px,env(safe-area-inset-top,0px));bottom:auto}
+.looks.who{left:10px;transform:none;bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 40px)}
 .fake-login{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
 .fake-login>div{background:#fff;color:#1a1a1b;border-radius:16px;padding:20px;max-width:360px;display:grid;gap:10px;font-family:system-ui,sans-serif}
 .fake-login h2{margin:0;font-size:20px}.fake-login p{margin:0;font-size:14px;color:#576f76}.fake-login .tag{font:600 11px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#c0392b}

@@ -5,6 +5,7 @@
   --c-ink:#23252b; --c-lead:#5b5f69; --c-yellow:#f5c12e; --c-paper:#f3f2ec; --c-hair:rgba(35,37,43,.25);
   --c-body:"IBM Plex Sans JP",system-ui,sans-serif;
   --c-code:"M PLUS 1 Code",ui-monospace,monospace;
+  --c-print:url(/brand/harunobu-line.jpg);
   --c-kanji:"DotGothic16","M PLUS 1 Code",monospace;
   color-scheme:light;color:var(--c-ink);font-family:var(--c-body);
   background:#e9ece9 url(/brand/paper.jpg) center/cover;
@@ -24,7 +25,7 @@
   .cv-cover{--H:clamp(600px,86svh,780px);width:max(calc(var(--H) * .6),440px)}
   /* the traced Harunobu print, big and cut off at the bottom left */
   .cv::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-6vw;bottom:-22vh;height:128vh;aspect-ratio:1000/1342;
-    background:url(/brand/harunobu-line.jpg) center/contain no-repeat;mix-blend-mode:multiply;opacity:.25;
+    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.25;
     -webkit-mask-image:linear-gradient(to right,#000 72%,transparent 96%);mask-image:linear-gradient(to right,#000 72%,transparent 96%)}
 }
 
@@ -39,22 +40,36 @@
 .cv-date .cv-dm{color:var(--c-yellow)}
 .cv-tcy{text-combine-upright:all}
 
-/* the streak: a solid yellow sticker, tilted a little, above the name */
-.cv-streak{margin:0;transform:rotate(-4deg);
+/* the streak: a solid yellow sticker at the far left, tilted, overlapping the name */
+.cv-streak{position:absolute;z-index:2;left:-14px;top:calc(var(--top) - 30px);margin:0;transform:rotate(-6deg);transform-origin:left center;
   display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;background:var(--c-yellow);
   font:700 13px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-ink);white-space:nowrap}
+.cv-streak[hidden]{display:none}
 .cv-streak svg{width:14px;height:18px;flex:none}
 
-/* the body: the title block centred in the space above, the stats and Play held at the foot */
+/* the body: the title block at the top (name, number and level, today's numbers), then Play
+   centred in the rest of the page over a faint print */
 .cv-body{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;
-  padding:clamp(24px,calc(var(--H) * .05),42px) 0 clamp(12px,calc(var(--H) * .025),21px) 20px}
-.cv-title{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,calc(var(--H) * .03),24px);text-align:center;padding:12px 0}
-.cv-mark img{display:block;width:min(100%,300px);height:auto}
-.cv-foot{display:flex;flex-direction:column;align-items:flex-end;gap:clamp(9px,calc(var(--H) * .0175),16px)}
+  padding:0 0 clamp(12px,calc(var(--H) * .025),21px) 20px}
+.cv-title{--top:clamp(64px,calc(var(--H) * .11),96px);position:relative;display:flex;flex-direction:column;align-items:center;
+  gap:clamp(12px,calc(var(--H) * .022),18px);text-align:center;padding-top:var(--top)}
+/* the name grows a little past the column, into the padding on both sides */
+.cv-mark{width:calc(100% + 24px);margin:0 -12px}
+.cv-mark img{display:block;width:100%;height:auto}
+.cv-mid{flex:1;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:10px;padding:20px 0 4px}
+.cv-mid>*{position:relative;z-index:1}
+@media (max-width:599px){
+  .cv-mid::before{content:"";position:absolute;z-index:0;inset:0 -8px;pointer-events:none;
+    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.16;
+    -webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent);mask-image:radial-gradient(closest-side,#000 55%,transparent)}
+}
+.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%}
+.cv-first[hidden]{display:none}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
 /* the issue box: a magazine's number block, double rules top and bottom */
-.cv-issue{width:min(100%,300px);display:grid;justify-items:center;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
+.cv-issue{width:100%;display:grid;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
+.cv-issue .cv-row{justify-content:space-between;align-items:center;gap:12px}
 .cv-row{display:flex;gap:10px;align-items:baseline}
 .cv-daily{font-weight:700;font-size:14px;letter-spacing:.2em}
 .cv-no{font:500 14px var(--c-code);letter-spacing:.04em}
@@ -156,3 +171,5 @@
 .setup .cv-play{width:100%;background:var(--c-ink);color:var(--c-paper)}
 .su-guest{margin:0;font-size:14px;line-height:1.45;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px var(--c-ink)}
 .su-guest[hidden]{display:none}
+.cv-title .cv-stats{border-top:0;padding-top:0}
+.cv-title .cv-first{border-top:0;padding-top:0}

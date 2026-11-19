@@ -337,11 +337,14 @@ async function routeCard(): Promise<CardRsp> {
   // no rememberName here: the card is read on every scroll past
   const uid = context.userId
   const score = uid ? (await getMyDay(day, uid)).score : undefined
+  const st = await getDayStats(day)
   return {
     day,
     no: cubeNumber(day),
     loggedIn: !!uid,
-    solves: (await getDayStats(day)).solves,
+    solves: st.solves,
+    played: (st.tiers ?? []).reduce((n, t) => n + t.picks, 0),
+    fastest: st.fastest,
     streak: uid ? (await getStreak(day, uid)).current : 0,
     score,
     rank:
