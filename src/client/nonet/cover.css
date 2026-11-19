@@ -305,3 +305,7 @@
 .dn-rank{font:500 15px var(--c-code);letter-spacing:.04em;background:var(--c-ink);color:var(--c-paper);border-radius:5px;padding:4px 10px 3px;white-space:nowrap}
 .dn-streak{font:500 13px var(--c-code);white-space:nowrap}
 .dn-side [hidden]{display:none}
+/* done: "See your solved cube" sits just under the number block, then the score card */
+.is-done .cv-mid{justify-content:flex-start;padding-top:10px;gap:14px}
+.is-done .cv-go{order:-1;margin-top:0}
+.dn-rank{font-size:13px;padding:3px 8px 2px}
