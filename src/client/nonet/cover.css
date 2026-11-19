@@ -211,6 +211,5 @@
 .dn-go{border:1px solid var(--c-ink);border-radius:8px;background:rgba(255,255,255,.6)}
 .dn-go::after{content:"→"}
 /* How to play and Practice sit inside the Play box, under the button */
-.cv-go .cv-links{justify-content:center;gap:24px}
+.cv-go .cv-links{justify-content:space-between;gap:16px;padding:0 4px}
 .cv-go .cv-links button{padding:6px 0 2px}
-.is-done .cv-go .cv-links{justify-content:flex-end}
