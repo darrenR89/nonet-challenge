@@ -289,3 +289,10 @@
    to 8px from each edge */
 .cv-body{padding-left:var(--gap)}
 .cv-mark{margin:0 calc(8px - var(--gap))}
+/* phone: the print runs the full height of the column, behind everything */
+@media (max-width:599px){
+  .cv-mid::before{content:none}
+  .cv-body::before{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;
+    background:var(--c-print) center/auto 100% no-repeat;mix-blend-mode:multiply;opacity:.16}
+  .cv-title,.cv-mid{z-index:1}
+}
