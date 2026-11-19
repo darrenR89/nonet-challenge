@@ -25,7 +25,7 @@
   .cv-cover{--H:clamp(600px,86svh,780px);width:max(calc(var(--H) * .6),440px)}
   /* the traced Harunobu print, big and cut off at the bottom left */
   .cv::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-6vw;bottom:-22vh;height:128vh;aspect-ratio:1000/1342;
-    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.25;
+    background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.225;
     -webkit-mask-image:linear-gradient(to right,#000 72%,transparent 96%);mask-image:linear-gradient(to right,#000 72%,transparent 96%)}
 }
 
@@ -293,6 +293,6 @@
 @media (max-width:599px){
   .cv-mid::before{content:none}
   .cv-body::before{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;
-    background:var(--c-print) center/auto 100% no-repeat;mix-blend-mode:multiply;opacity:.16}
+    background:var(--c-print) center/auto 100% no-repeat;mix-blend-mode:multiply;opacity:.144}
   .cv-title,.cv-mid{z-index:1}
 }
