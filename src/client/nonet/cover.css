@@ -281,3 +281,7 @@
   .cv-mid::before{inset:-28vh -8px}
 }
 .is-done .cv-body{justify-content:flex-start;gap:0}
+/* done: the score is a solid yellow block, joined straight onto the list of next steps */
+.dn-res{background:var(--c-yellow);border-bottom:3px solid var(--c-ink)}
+.dn-res+.dn-acts{margin-top:-12px}
+.dn-res .dn-cap,.dn-res .dn-meta{color:var(--c-ink)}
