@@ -15,13 +15,16 @@ import {
 import {fromStart, layersFor, type MusicState} from './music-layers.ts'
 
 const STORE = 'nonet-sound'
-const MUSIC_LEVEL = 1
+// the mix: music sits well under the sound effects
+const MUSIC_LEVEL = 0.45
+const SFX_LEVEL = 1.6
 
 type Track = {src: AudioBufferSourceNode; gain: GainNode; on: boolean}
 
 let ctx: AudioContext | undefined
 let master: GainNode | undefined
-let bus: GainNode | undefined // the music, under the sound effects
+let bus: GainNode | undefined // the music
+let sfx: GainNode | undefined // the sound effects
 let tracks = new Map<LoopName, Track>()
 let t0 = 0 // when beat 0 of the current tune falls, on the audio clock
 let beat = 0.6
@@ -144,7 +147,7 @@ function tone(
     at?: number
   },
 ): void {
-  if (!ctx || !master) return
+  if (!ctx || !sfx) return
   const t = at ?? ctx.currentTime
   const o = ctx.createOscillator()
   const g = ctx.createGain()
@@ -154,7 +157,7 @@ function tone(
   g.gain.setValueAtTime(0, t)
   g.gain.linearRampToValueAtTime(vol, t + 0.005)
   g.gain.exponentialRampToValueAtTime(0.0001, t + len)
-  o.connect(g).connect(master)
+  o.connect(g).connect(sfx)
   o.start(t)
   o.stop(t + len + 0.02)
 }
@@ -167,7 +170,7 @@ function degHz(deg: number): number {
 
 /** A soft swish of filtered noise, for a turn. */
 function swish(): void {
-  if (!ctx || !master) return
+  if (!ctx || !sfx) return
   if (!noise) {
     noise = ctx.createBuffer(1, ctx.sampleRate / 4, ctx.sampleRate)
     const d = noise.getChannelData(0)
@@ -185,7 +188,7 @@ function swish(): void {
   g.gain.setValueAtTime(0, t)
   g.gain.linearRampToValueAtTime(0.25, t + 0.04)
   g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22)
-  src.connect(f).connect(g).connect(master)
+  src.connect(f).connect(g).connect(sfx)
   src.start(t)
   src.stop(t + 0.25)
 }
@@ -224,7 +227,17 @@ export const music = {
           Reflect.set(session, 'type', 'playback')
         ctx = new AudioContext()
         master = ctx.createGain()
-        master.connect(ctx.destination)
+        // a limiter, so loud sound effects over the music never clip
+        const limit = ctx.createDynamicsCompressor()
+        limit.threshold.value = -6
+        limit.knee.value = 6
+        limit.ratio.value = 12
+        limit.attack.value = 0.003
+        limit.release.value = 0.15
+        master.connect(limit).connect(ctx.destination)
+        sfx = ctx.createGain()
+        sfx.gain.value = SFX_LEVEL
+        sfx.connect(master)
         bus = ctx.createGain()
         bus.gain.value = MUSIC_LEVEL
         bus.connect(master)
