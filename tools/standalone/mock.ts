@@ -9,6 +9,7 @@ import {
   addDays,
   dayKey,
   levelOf,
+  maxTurns,
   dayOfYear,
   type RunStats,
   scoreRun,
@@ -73,6 +74,7 @@ const rivalsOn = (day: string) => {
     name,
     score: Math.round(900 + r() * 1700),
     time: Math.round(70 + r() * 260),
+    tier: Math.min(maxTurns(levelOf(day)), Math.floor(r() * 4)),
   }))
 }
 const rivalsWeek = (day: string) => {
@@ -145,10 +147,26 @@ const stats = (day: string, s: Store) => {
   const mine = s.days[day]
   const times = r.map(x => x.time)
   if (mine?.score) times.push(Math.round((mine as {time?: number}).time ?? 120))
+  const runs = r.map(x => ({tier: x.tier, time: x.time, score: x.score}))
+  if (mine?.score && s.days[day]?.tier !== undefined)
+    runs.push({tier: s.days[day]!.tier!, time: (mine as {time?: number}).time ?? 120, score: mine.score})
+  const tiers = [0, 1, 2, 3].map(tier => {
+    const t = runs.filter(x => x.tier === tier)
+    const n = t.length
+    return {
+      tier,
+      picks: n + Math.round(n * 0.3),
+      solves: n,
+      avgTime: n ? Math.round(t.reduce((a, b) => a + b.time, 0) / n) : 0,
+      avgScore: n ? Math.round(t.reduce((a, b) => a + b.score, 0) / n) : 0,
+      best: n ? Math.max(...t.map(x => x.score)) : 0,
+    }
+  })
   return {
     solves: times.length,
     avgTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
     fastest: Math.min(...times),
+    tiers,
   }
 }
 const preview = (day: string, s: Store) =>

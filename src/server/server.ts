@@ -446,7 +446,7 @@ async function routeScore(
     await addToBoards(day, uid, total)
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
-    dayStats = await addSolve(day, stats.t1 + stats.t2)
+    dayStats = await addSolve(day, stats.t1 + stats.t2, tier, total)
     await settleDuels(day, uid)
     // the journey ends here, with the total the server worked out, not the browser's
     await journey.end(journeyId, true, {win: true, score: total})

@@ -479,10 +479,24 @@ test('today’s solves, average and fastest time, and how many players you beat'
   await playDay(0, run({t1: 30, t2: 90, wrong: 3}))
   as('t2_ann', 'ann')
   const r = await playDay(2, run({t1: 50, t2: 150}))
-  assert.deepEqual(r.body.stats, {solves: 2, avgTime: 160, fastest: 120})
+  const {tiers, ...overall} = r.body.stats
+  assert.deepEqual(overall, {solves: 2, avgTime: 160, fastest: 120})
   assert.equal(r.body.beatPct, 100)
+  // each rotation count keeps its own picks, solves, average time and score, and best
+  assert.equal(tiers?.length, 4)
+  assert.deepEqual(
+    tiers?.map(t => [t.tier, t.picks, t.solves, t.avgTime]),
+    [
+      [0, 1, 1, 120],
+      [1, 0, 0, 0],
+      [2, 1, 1, 200],
+      [3, 0, 0, 0],
+    ],
+  )
+  assert.equal(tiers?.[2]?.best, r.body.total)
+  assert.equal(tiers?.[2]?.avgScore, r.body.total)
   const daily = await get<DailyRsp>(Endpoint.Daily)
-  assert.deepEqual(daily.body.stats, {solves: 2, avgTime: 160, fastest: 120})
+  assert.deepEqual(daily.body.stats, r.body.stats)
   assert.equal(daily.body.cubeNo, 318, 'cube number is the day of the year')
 })
 

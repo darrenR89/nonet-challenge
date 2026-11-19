@@ -76,7 +76,25 @@ export type MyDay = {
 export const RETRY_MULT = 0.8
 
 /** How today's cube is going for everyone: ranked solves, their average time and the fastest, in seconds (0 before any). */
-export type DayStats = {solves: number; avgTime: number; fastest: number}
+/** How one rotation count is going today, to help a player pick theirs. */
+export type TierStats = {
+  tier: number
+  /** Players who set today to this many rotations. */
+  picks: number
+  solves: number
+  /** Seconds, 0 with no solves. */
+  avgTime: number
+  avgScore: number
+  best: number
+}
+
+export type DayStats = {
+  solves: number
+  avgTime: number
+  fastest: number
+  /** Per rotation count, 0 to 3. Missing from older servers. */
+  tiers?: TierStats[]
+}
 
 /** A look at a coming day's cube: its clues on the solved cube, no answers. */
 export type Preview = {day: string; given: number[]}
