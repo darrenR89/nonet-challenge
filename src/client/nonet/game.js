@@ -270,6 +270,7 @@ function askGiveUp(){if(!P||stage===3)return;
   ask('Give up today\'s cube?',`<p>Giving up shows the answer and ends today at 0 points.${canRetry()?` Or use today's one retry: start over, and the total is ×${RETRY_MULT}.`:''}</p>`,b)}
 function updateRunButtons(){const r=$('restart');
   if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
+  const sr=$('spRetry');sr.textContent=r.textContent;sr.disabled=r.disabled;
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
@@ -366,6 +367,14 @@ async function claimPending(r){const p=readPending();if(!p)return;
   const me=s.boards.day.me;
   ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let teamAsk=false;
+// the top of the end card, set like the cover: the issue row between double rules, then the
+// numbers in columns, label over value
+function resHead(total,time,rank,name,pen){
+  const pips=[0,1,2].map(k=>`<i${k<=level?' class="on"':''}></i>`).join('');
+  const col=(l,v)=>`<div><dt>${l}</dt><dd>${v}</dd></div>`;
+  return `<h2 class="cv-sr">Solved</h2><div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
+  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}`):''}</dl>
+  <p class="res-sub">${esc(name)}${pen<1?` · retry ×${pen}`:''}</p>`}
 function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
@@ -374,7 +383,8 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${duelRank()}${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
+  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In the Nine this week':''].filter(Boolean);
+    rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
@@ -384,15 +394,14 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
-  el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
-  <h2>Solved in ${fmt(t1+t2)}</h2><div class="total">${num(total)} pts<small>${s.name}${pen<1?` · retry ×${pen}`:''}</small></div>
+  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
   ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
-  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
+  if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
   if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
@@ -468,15 +477,15 @@ function render(){
   if(stage===2&&P.k>0&&blanks&&left<=blanks/2)journey.progress(.75,'half_filled');
   if(stage===2&&left===0&&bad.size===0)finishStage2();
   if(stage<3)saveSoon();
-  // the progress is a switch: the stage you're on takes most of the row, the other shrinks to its name
-  $('step1').className='pstage '+(stage===1?'on':'done');$('step2').className='pstage '+(stage===2?'on':stage===3?'done':'');
-  $('progress').className=`progress ${P.k===0?'solo':stage===1?'s1':'s2'}`;$('views').hidden=stage!==1;
-  $('pTurns').textContent=`${turns} turn${turns===1?'':'s'} · fewest ${P.k}`;
-  setBar('pAlign',stage===1?home/nClues:1);const tot=blanks||P.start.filter(v=>!v).length;setBar('pFill',stage===1?0:stage===3?1:tot?1-left/tot:0);
+  // one thin bar for the whole run: Dial in is the first half when there are turns, Fill in the rest
+  const tot=blanks||P.start.filter(v=>!v).length,fill=stage===1?0:stage===3?1:tot?1-left/tot:0;
+  setBar('pAll',P.k===0?fill:stage===1?home/nClues/2:.5+fill/2);$('views').hidden=stage!==1;
+  // retry and give up live on the pause screen; practice has no pause, so it keeps them here
+  $('runbar').hidden=stage===3||!isPrac();
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
-  $('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest · ${hintsLeft}`;
+  $('padbox').hidden=stage!==2;
+  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;$('suggest').textContent=`Suggest ${hintsLeft}/3`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
@@ -492,8 +501,7 @@ let mom=null;
 function moments(home){
   const lineSet=new Set(),faceSet=new Set(),full=l=>{const vs=l.map(i=>vals[i]);return vs.every(Boolean)&&new Set(vs).size===9};
   if(stage>=2){lines.forEach((l,k)=>{if(full(l))lineSet.add(k)});groups.slice(0,6).forEach((g,k)=>{if(full(g))faceSet.add(k)})}
-  const tot=blanks||P.start.filter(v=>!v).length,left=vals.filter(v=>!v).length,pct=stage===2&&tot?1-left/tot:0;
-  const now={P,stage,home,lineSet,faceSet,quarter:Math.floor(pct*4)};
+  const now={P,stage,home,lineSet,faceSet};
   const was=mom;mom=now;
   if(!was||was.P!==P||isPrac()&&stage===1)return;
   if(stage===1&&home>was.home)cells.forEach((_,i)=>{if(locked[i]&&P.given[i]===vals[i])stickers[i].forEach(x=>{if(!x.classList.contains('home'))return;x.classList.remove('pop');void x.offsetWidth;x.classList.add('pop')})});
@@ -503,16 +511,14 @@ function moments(home){
   const newFaces=[...faceSet].filter(k=>!was.faceSet.has(k)),newLines=[...lineSet].filter(k=>!was.lineSet.has(k));
   newLines.forEach(k=>lines[k].forEach((c,n)=>stickers[c].forEach(x=>{x.classList.remove('sweep');void x.offsetWidth;x.style.animationDelay=`${n*40}ms`;x.classList.add('sweep')})));
   newFaces.forEach(k=>groups[k].forEach(c=>stickers[c].forEach(x=>{x.classList.remove('facedone');void x.offsetWidth;x.classList.add('facedone')})));
-  if(newFaces.length)callout('Face done',`${faceSet.size} of 6`);
-  else if(newLines.length)callout(newLines.length>1?`${newLines.length} lines`:'Line',`${lineSet.size} of ${lines.length}`);
-  else if(now.quarter>was.quarter&&now.quarter<4)callout(['','A quarter in','Halfway','Nearly there'][now.quarter],'');
+  // a finished line sweeps and a finished face glows on the cube itself, with no popup
 }
 let calloutT=0;
 function callout(big,small){let el=$('moment');if(!el){el=document.createElement('div');el.id='moment';el.className='moment';el.setAttribute('role','status');stageEl.appendChild(el)}
   el.innerHTML=`<b>${esc(big)}</b>${small?`<span>${esc(small)}</span>`:''}`;el.classList.remove('go');void el.offsetWidth;el.classList.add('go');
   clearTimeout(calloutT);calloutT=setTimeout(()=>el.classList.remove('go'),1500)}
 // stage progress: Align fills with the share of clues home, Fill with the share of blanks filled
-function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p);$(id+'Val').textContent=p+'%'}
+function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p)}
 // a nudge, not the answer: a row or column of a face glows once every clue in it is back home.
 // It needs two or more clues, so one digit landing by chance doesn't light anything up.
 const faceLines=groups.slice(0,6).flatMap(g=>[0,1,2].flatMap(k=>[[g[3*k],g[3*k+1],g[3*k+2]],[g[k],g[k+3],g[k+6]]]));
@@ -524,7 +530,7 @@ function updateStatus(){
   const nClues=P.given.filter(Boolean).length,home=locked.reduce((n,l,i)=>n+(l&&P.given[i]===vals[i]?1:0),0);
   const t=stage===3?t1+t2:nowSec();
   $('timer').textContent=fmt(t);$('timer').hidden=isPrac();$('reveal').disabled=stage===3;
-  $('status').textContent=gaveUp?'Answer shown · not scored':stage===3?`Total time ${fmt(t1+t2)}`:'';
+  $('status').textContent=gaveUp?'Answer shown · not scored':'';
   $('status').classList.toggle('win',stage===3);
   showMisses();
 }
@@ -537,12 +543,8 @@ let tipN=0,tipStage=0;
 function showTip(){const h=$('hint'),list=isPrac()&&stage<3?TIPS[stage]:null;h.hidden=!list;if(!list)return;
   if(tipStage!==stage){tipStage=stage;tipN=0}h.textContent=`Tip · ${list[tipN%list.length]}`}
 setInterval(()=>{if(!isPrac()||stage===3||$('hint').hidden)return;tipN++;const h=$('hint');h.classList.remove('tipin');void h.offsetWidth;h.classList.add('tipin');showTip()},7000);
-function showMisses(bump=false){const m=$('misses');m.hidden=stage===1||gaveUp;
-  m.classList.toggle('used',wrong>0);
-  m.setAttribute('aria-label',`${wrong} wrong lock${wrong===1?'':'s'}`);
-  const n=$('missN'),x=m.querySelector('svg');
-  if(!bump){n.textContent=String(wrong).padStart(2,'0');return}
-  setTimeout(()=>{n.textContent=String(wrong).padStart(2,'0');for(const e of [x,n]){e.classList.remove('bump');void e.getBoundingClientRect();e.classList.add('bump')}},220)}
+// the wrong-lock count is no longer shown during play: a miss still shakes the square and shows its penalty
+function showMisses(){}
 function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=document.createElement('div');
   f.className='penalty';f.setAttribute('aria-hidden','true');f.innerHTML='−25<sub>pts</sub>';
   // beside the square's top corner, not over it: to its right, or to its left near the screen's right edge
@@ -558,7 +560,7 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);showMisses(true);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
   vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
@@ -609,9 +611,9 @@ function showHint(free){
 }
 $('suggest').onclick=()=>showHint(false);
 
-$('restart').onclick=askRetry;
+$('restart').onclick=askRetry;$('spRetry').onclick=askRetry;
 // giving up asks first, and offers today's retry instead when there is one
-$('reveal').onclick=askGiveUp;
+$('reveal').onclick=askGiveUp;$('spGiveUp').onclick=askGiveUp;
 document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConnected||e.target.closest('.st,button,.seg'))return;sel=-1;hintArrow=null;zoom=1;apply();render()});
 document.addEventListener('keydown',e=>{if(sel<0||tx.busy)return;if(/^[1-9]$/.test(e.key))pressDigit(+e.key);else if(e.key==='Backspace'||e.key==='0')pressDigit(0)});
 
