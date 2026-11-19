@@ -1,6 +1,13 @@
 // Players, streaks and boards. Boards are Redis sorted sets of userId → points.
 import {redis} from '@devvit/web/server'
-import type {Board, BoardRow, DayStats, MyDay, Streak} from '../shared/api.ts'
+import type {
+  Board,
+  BoardRow,
+  DayStats,
+  MyDay,
+  Streak,
+  TierStats,
+} from '../shared/api.ts'
 import {addDays, weekKey} from '../shared/scoring.ts'
 
 export const BOARD_TOP = 9
@@ -15,10 +22,16 @@ const namesKey = 'names'
 const userKey = (uid: string): string => `u:${uid}`
 const userDayKey = (day: string, uid: string): string => `ud:${day}:${uid}`
 /** Per-day records expire after this long; boards and streaks stay. */
-const DAY_TTL = 60 * 60 * 24 * 21
+export const DAY_TTL = 60 * 60 * 24 * 21
 
 export async function rememberName(uid: string, name: string): Promise<void> {
   await redis.hSet(namesKey, {[uid]: name})
+}
+
+/** Usernames for user ids, in order; undefined for anyone never seen. */
+export async function namesOf(ids: string[]): Promise<(string | undefined)[]> {
+  if (!ids.length) return []
+  return (await redis.hMGet(namesKey, ids)).map(n => n ?? undefined)
 }
 
 export async function getMyDay(day: string, uid: string): Promise<MyDay> {
@@ -52,9 +65,41 @@ export async function lockTier(
   if (set) {
     await redis.hSet(key, {started: String(nowMs)})
     await redis.expire(key, DAY_TTL)
+    await addPick(day, tier)
     return tier
   }
   return Number(await redis.hGet(key, 'tier'))
+}
+
+// A run started while logged out: its tier and start time, kept two days under a random id, so
+// the player's run can be claimed once they sign up and the server still knows when it began.
+const guestKey = (day: string, id: string): string => `guest:${day}:${id}`
+
+/** Notes a logged-out start and returns its id. */
+export async function startGuest(
+  day: string,
+  tier: number,
+  nowMs: number,
+): Promise<string> {
+  const id = crypto.randomUUID()
+  await redis.hSet(guestKey(day, id), {
+    tier: String(tier),
+    started: String(nowMs),
+  })
+  await redis.expire(guestKey(day, id), DAY_TTL)
+  return id
+}
+
+/** The logged-out run with this id, removed so it's claimed once. */
+export async function takeGuest(
+  day: string,
+  id: string,
+): Promise<{tier: number; started: number} | undefined> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return
+  const h = await redis.hGetAll(guestKey(day, id))
+  if (h.tier === undefined) return
+  await redis.del(guestKey(day, id))
+  return {tier: Number(h.tier), started: Number(h.started)}
 }
 
 /** Marks today's run done. False if it was already done (only one counts). */
@@ -166,29 +211,57 @@ export async function useRetry(day: string, uid: string): Promise<number> {
 
 const statsKey = (day: string): string => `stats:${day}`
 
-/** Adds a ranked solve to the day's count, total time and fastest time. */
+/** Counts a player setting today to `tier` rotations. Call once, when the tier locks. */
+export async function addPick(day: string, tier: number): Promise<void> {
+  await redis.hIncrBy(statsKey(day), `t${tier}:picks`, 1)
+}
+
+/** Adds a ranked solve to the day's count, total time and fastest time, overall and for its tier. */
 export async function addSolve(
   day: string,
   seconds: number,
+  tier: number,
+  score: number,
 ): Promise<DayStats> {
   const s = Math.round(seconds)
-  const solves = await redis.hIncrBy(statsKey(day), 'solves', 1)
-  const time = await redis.hIncrBy(statsKey(day), 'time', s)
-  const was = Number((await redis.hGet(statsKey(day), 'fastest')) ?? 0)
-  const fastest = was && was <= s ? was : s
-  if (fastest !== was)
-    await redis.hSet(statsKey(day), {fastest: String(fastest)})
-  return {solves, avgTime: Math.round(time / solves), fastest}
+  const k = statsKey(day)
+  await redis.hIncrBy(k, 'solves', 1)
+  await redis.hIncrBy(k, 'time', s)
+  const was = Number((await redis.hGet(k, 'fastest')) ?? 0)
+  if (!was || s < was) await redis.hSet(k, {fastest: String(s)})
+  await redis.hIncrBy(k, `t${tier}:solves`, 1)
+  await redis.hIncrBy(k, `t${tier}:time`, s)
+  await redis.hIncrBy(k, `t${tier}:score`, Math.round(score))
+  const best = Number((await redis.hGet(k, `t${tier}:best`)) ?? 0)
+  if (score > best) await redis.hSet(k, {[`t${tier}:best`]: String(score)})
+  return getDayStats(day)
+}
+
+/** Reads the day's stats as `addPick` and `addSolve` left them. Pure, for tests. */
+export function dayStatsOf(h: Record<string, string>): DayStats {
+  const n = (f: string): number => Number(h[f] ?? 0)
+  const solves = n('solves')
+  const tiers: TierStats[] = [0, 1, 2, 3].map(tier => {
+    const sv = n(`t${tier}:solves`)
+    return {
+      tier,
+      picks: n(`t${tier}:picks`),
+      solves: sv,
+      avgTime: sv ? Math.round(n(`t${tier}:time`) / sv) : 0,
+      avgScore: sv ? Math.round(n(`t${tier}:score`) / sv) : 0,
+      best: n(`t${tier}:best`),
+    }
+  })
+  return {
+    solves,
+    avgTime: solves ? Math.round(n('time') / solves) : 0,
+    fastest: n('fastest'),
+    tiers,
+  }
 }
 
 export async function getDayStats(day: string): Promise<DayStats> {
-  const h = await redis.hGetAll(statsKey(day))
-  const solves = Number(h.solves ?? 0)
-  return {
-    solves,
-    avgTime: solves ? Math.round(Number(h.time ?? 0) / solves) : 0,
-    fastest: Number(h.fastest ?? 0),
-  }
+  return dayStatsOf(await redis.hGetAll(statsKey(day)))
 }
 
 /** Share of the other players on a board that a rank beats, 0 to 100. */

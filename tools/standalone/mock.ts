@@ -3,11 +3,13 @@
 // a field of made-up rival players, a sample team event, scoring with the same
 // code as the real server, the one retry, streaks and tomorrow's preview.
 // State lives in localStorage, so it's per viewer and per browser.
+import {type Duel, duelResult, MAX_CHALLENGES, cleanName} from '../../src/shared/duel.ts'
 import {makeDay} from '../../src/shared/model.js'
 import {
   addDays,
   dayKey,
   levelOf,
+  maxTurns,
   dayOfYear,
   type RunStats,
   scoreRun,
@@ -28,6 +30,10 @@ type Store = {
   last: string
   team?: string
   notify: boolean
+  /** Challenges sent, by day. */
+  sent?: Record<string, string[]>
+  /** Your answer to the day's sample challenge. */
+  answered?: Record<string, boolean>
 }
 const load = (): Store => {
   try {
@@ -68,6 +74,7 @@ const rivalsOn = (day: string) => {
     name,
     score: Math.round(900 + r() * 1700),
     time: Math.round(70 + r() * 260),
+    tier: Math.min(maxTurns(levelOf(day)), Math.floor(r() * 4)),
   }))
 }
 const rivalsWeek = (day: string) => {
@@ -140,10 +147,26 @@ const stats = (day: string, s: Store) => {
   const mine = s.days[day]
   const times = r.map(x => x.time)
   if (mine?.score) times.push(Math.round((mine as {time?: number}).time ?? 120))
+  const runs = r.map(x => ({tier: x.tier, time: x.time, score: x.score}))
+  if (mine?.score && s.days[day]?.tier !== undefined)
+    runs.push({tier: s.days[day]!.tier!, time: (mine as {time?: number}).time ?? 120, score: mine.score})
+  const tiers = [0, 1, 2, 3].map(tier => {
+    const t = runs.filter(x => x.tier === tier)
+    const n = t.length
+    return {
+      tier,
+      picks: n + Math.round(n * 0.3),
+      solves: n,
+      avgTime: n ? Math.round(t.reduce((a, b) => a + b.time, 0) / n) : 0,
+      avgScore: n ? Math.round(t.reduce((a, b) => a + b.score, 0) / n) : 0,
+      best: n ? Math.max(...t.map(x => x.score)) : 0,
+    }
+  })
   return {
     solves: times.length,
     avgTime: Math.round(times.reduce((a, b) => a + b, 0) / times.length),
     fastest: Math.min(...times),
+    tiers,
   }
 }
 const preview = (day: string, s: Store) =>
@@ -151,14 +174,94 @@ const preview = (day: string, s: Store) =>
 
 const cubeNo = dayOfYear
 
+// challenges: one rival has challenged you today; rivals you challenge answer at once
+// with their score from the field, and anyone else stays pending
+const CHALLENGER = 'quietfox'
+function duels(day: string, s: Store): Duel[] {
+  const field = new Map(rivalsOn(day).map(x => [x.name, x.score]))
+  const mine = s.days[day]?.score
+  const one = (them: string, sent: boolean): Duel => {
+    const theirs = field.get(them)
+    // rivals you challenge accept at once; the sample challenge waits for your answer
+    const ans = s.answered?.[day]
+    const status: Duel['status'] = sent
+      ? theirs === undefined ? 'offered' : 'accepted'
+      : ans === undefined ? (mine === undefined ? 'offered' : 'lapsed') : ans ? 'accepted' : 'declined'
+    const result = status === 'accepted' ? duelResult(mine, theirs) : 'pending'
+    const past = {won: them.length % 3, lost: 1, tied: 0}
+    if (result === 'won') past.won++
+    if (result === 'lost') past.lost++
+    if (result === 'tied') past.tied++
+    return {day, them, themId: `t2_${them}`, sent, mine, theirs, status, result, record: past}
+  }
+  return [one(CHALLENGER, false), ...(s.sent?.[day] ?? []).map(n => one(n, true))]
+}
+
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}})
 const err = (status: number, error: string): Response => json({error, status}, status)
+
+/** The prototype's Logged out switch: the page plays as a visitor with no Reddit account. */
+export const isGuest = (): boolean => {
+  try {
+    return sessionStorage.getItem('nonet-guest') === '1'
+  } catch {
+    return false
+  }
+}
 
 async function route(path: string, body: Record<string, unknown>): Promise<Response> {
   const day = dayKey()
   const s = load()
   const rec = (s.days[day] ??= {})
+  const guest = isGuest()
+  if (guest && path === 'api/daily')
+    return json({
+      day,
+      weekday: weekday(day),
+      week: weekKey(day),
+      level: levelOf(day),
+      my: {retries: 0},
+      streak: {current: 0, best: 0, played: 0},
+      boards: boards(day, {...s, days: {}}),
+      event: eventState(day, {...s, days: {}, team: undefined}),
+      loggedIn: false,
+      cubeNo: cubeNo(day),
+      stats: stats(day, s),
+      subreddit: 'nonet_challenge_dev',
+      notify: false,
+      duels: [],
+    })
+  if (guest && path === 'api/card')
+    return json({
+      day,
+      no: cubeNo(day),
+      loggedIn: false,
+      solves: stats(day, s).solves,
+      played: stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+      fastest: stats(day, s).fastest,
+      streak: 0,
+    })
+  if (guest && path === 'api/daily/start') {
+    const tier = Number(body.tier) || 0
+    try {
+      sessionStorage.setItem('nonet-guest-run', JSON.stringify({tier, started: Date.now()}))
+    } catch {}
+    return json({tier, puzzle: cube(day).tiers[tier], guest: '00000000-0000-4000-8000-000000000000'})
+  }
+  if (guest && path.startsWith('api/') && !path.startsWith('api/telemetry') && path !== 'api/board')
+    return err(401, 'Log in to Reddit to play for points.')
+  // a run played logged out, claimed after signing up
+  if (path === 'api/daily/score' && body.guest && rec.tier === undefined) {
+    try {
+      const g = JSON.parse(sessionStorage.getItem('nonet-guest-run') ?? 'null')
+      if (g) {
+        rec.tier = g.tier
+        rec.started = g.started
+        sessionStorage.removeItem('nonet-guest-run')
+      }
+    } catch {}
+  }
   switch (path) {
     case 'api/daily':
       return json({
@@ -177,6 +280,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         stats: stats(day, s),
         subreddit: 'nonet_challenge_dev',
         notify: s.notify,
+        duels: duels(day, s),
       })
     case 'api/card': {
       // the prototype's card-state switcher can stand in for a quiet day or a finished one
@@ -191,6 +295,8 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         no: look === 'cycled' ? 366 : cubeNo(day),
         loggedIn: true,
         solves: look === 'first' ? 0 : stats(day, s).solves,
+        played: look === 'first' ? 0 : stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
+        fastest: look === 'first' ? 0 : stats(day, s).fastest,
         streak: look === 'first' ? 0 : streakNow(day, s).current,
         score: played ? (rec.score ?? 1840) : undefined,
         rank: played ? (b.day.me?.rank ?? 6) : undefined,
@@ -245,7 +351,30 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         boards: b,
         event: eventState(day, s),
         preview: preview(day, s),
+        duels: duels(day, s),
       })
+    }
+    case 'api/challenge/answer': {
+      if (body.from !== `t2_${CHALLENGER}`) return err(404, 'No such challenge today.')
+      if (rec.score !== undefined) return err(409, 'Challenges are accepted before you play.')
+      if (s.answered?.[day] !== undefined) return err(409, "You've already answered that challenge.")
+      ;(s.answered ??= {})[day] = body.accept === true
+      save(s)
+      return json({duels: duels(day, s)})
+    }
+    case 'api/challenge': {
+      if (rec.score === undefined) return err(409, "Finish today's cube first.")
+      const name = cleanName(body.name)?.toLowerCase()
+      if (!name) return err(400, "That isn't a Reddit username.")
+      if (name === ME) return err(400, "You can't challenge yourself.")
+      const list = ((s.sent ??= {})[day] ??= [])
+      if (name === CHALLENGER || list.includes(name))
+        return err(409, `You and u/${name} already have a challenge today.`)
+      if (list.length >= MAX_CHALLENGES)
+        return err(429, `That's ${MAX_CHALLENGES} challenges today. Try again tomorrow.`)
+      list.push(name)
+      save(s)
+      return json({duels: duels(day, s)})
     }
     case 'api/event/join':
       s.team ??= String(body.team)

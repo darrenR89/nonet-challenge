@@ -96,6 +96,14 @@ showDay(dayKey(), undefined)
 
 const startBtn = $('start-btn') as HTMLButtonElement
 startBtn.addEventListener('click', ev => requestExpandedMode(ev, 'game'))
+// the next steps open the game with that one ready, passed through this device's storage
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
+  b.addEventListener('click', ev => {
+    try {
+      localStorage.setItem('nonet-open', b.dataset.open ?? '')
+    } catch {}
+    requestExpandedMode(ev, 'game')
+  })
 
 /** A stat: a small label over a number. */
 function stat(label: string, value: string): HTMLElement {
@@ -114,17 +122,34 @@ void getCard().then(card => {
   }
   const stats = $('stats')
   if (!stats) return
-  const parts = [stat('Solved today', card.solves.toLocaleString('en-GB'))]
+  const mm = (secs: number): string =>
+    `${Math.floor(secs / 60)}:${String(Math.round(secs % 60)).padStart(2, '0')}`
+  // before anyone has played, an invitation in place of the numbers
+  if (!card.solves && !card.played && card.score === undefined) {
+    $('first')?.removeAttribute('hidden')
+    return
+  }
+  const parts = [
+    stat('Played today', (card.played ?? card.solves).toLocaleString('en-GB')),
+  ]
+  if (card.fastest) parts.push(stat('Fastest', mm(card.fastest)))
   if (card.score !== undefined) {
-    parts.unshift(
-      stat(
-        card.rank ? `You · #${card.rank} today` : 'Your score',
-        card.score.toLocaleString('en-GB'),
-      ),
-    )
-    startBtn.textContent = 'See how you did'
-  } else if (card.solves === 0) {
-    $('live')?.replaceChildren("Be the first to solve today's cube.")
+    startBtn.textContent = 'See your solved cube'
+    // done today: the card turns to how you did, and each next step opens the game on it
+    $('dnScore')?.replaceChildren(card.score.toLocaleString('en-GB'))
+    const rank = $('dnRank')
+    if (rank && card.rank) {
+      rank.textContent = `#${card.rank} today`
+      rank.hidden = false
+    }
+    const streak = $('dnStreak')
+    if (streak && card.streak) {
+      streak.textContent = `${card.streak}-day streak`
+      streak.hidden = false
+    }
+    if (card.rank) $('dnBoards')?.replaceChildren(`You're #${card.rank} today`)
+    $('done')?.removeAttribute('hidden')
+    document.body.classList.add('is-done')
   }
   stats.replaceChildren(...parts)
   stats.removeAttribute('hidden')

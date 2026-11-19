@@ -99,10 +99,17 @@ export function makeTransitions({cubeEl, faceEls, stageEl, view, apply}) {
     setTimeout(() => o.remove(), 700);
   }
 
-  // ready: a promise for the cube being in place (today's cube may still be loading)
-  async function enter({before, ready, done} = {}) {
+  // ready: the cube being in place (today's cube may still be loading), a promise or a function
+  // that starts it. hold: shown over the yellow before the cube comes in; it resolves true to go
+  // on, or false to go back, which shrinks the yellow away again.
+  const start = r => (typeof r === 'function' ? r() : r);
+  async function enter({hold, before, ready, done} = {}) {
     if (busy) return;
-    if (reduce()) { busy = true; before?.(); await ready; await countdown(); busy = false; done?.(); return }
+    if (reduce()) {
+      busy = true;
+      if (hold && !(await hold())) { busy = false; return }
+      before?.(); await start(ready); await countdown(); busy = false; done?.(); return;
+    }
     busy = true;
     const L = layer(), S = slots(), Y = yellow();
     const cs = cellsIn(L, S, Y);
@@ -113,8 +120,21 @@ export function makeTransitions({cubeEl, faceEls, stageEl, view, apply}) {
         {duration: 360, delay: d * 220, easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'forwards'});
     });
     await wait(600);
+    if (hold && !(await hold())) {
+      cs.forEach((c, i) => {
+        const r = S[i], d = 1 - Math.hypot(r.x + r.w / 2 - cx, r.y + r.h / 2 - cy) / far;
+        c.getAnimations().forEach(x => x.commitStyles?.());
+        c.getAnimations().forEach(x => x.cancel());
+        c.animate([{transform: 'scale(1)'}, {transform: 'scale(0)', borderRadius: '40%'}],
+          {duration: 320, delay: d * 200, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards'});
+      });
+      await wait(560);
+      L.remove();
+      busy = false;
+      return;
+    }
     before?.();
-    await ready;
+    await start(ready);
     await wait(30);
     // lay the cube flat where the cells will land, digits hidden
     cubeEl.classList.add('tx-run', 'tx-nodigits');
