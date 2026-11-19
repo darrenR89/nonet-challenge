@@ -16,7 +16,7 @@ import {fromStart, layersFor, type MusicState} from './music-layers.ts'
 
 const STORE = 'nonet-sound'
 // the mix: music sits well under the sound effects
-const MUSIC_LEVEL = 1.3
+const MUSIC_LEVEL = 0.9
 const SFX_LEVEL = 2.6
 
 type Track = {src: AudioBufferSourceNode; gain: GainNode; on: boolean}
@@ -209,6 +209,41 @@ function drawButtons(): void {
   }
 }
 
+/**
+ * Older iPhones mute Web Audio with the silent switch and can leave it stuck
+ * until a media element plays from a tap, so a silent loop plays alongside.
+ */
+function keepAwake(): void {
+  const rate = 8000
+  const n = rate / 2
+  const wav = new Uint8Array(44 + n)
+  const v = new DataView(wav.buffer)
+  const text = (at: number, s: string): void => {
+    for (let i = 0; i < s.length; i++) v.setUint8(at + i, s.charCodeAt(i))
+  }
+  text(0, 'RIFF')
+  v.setUint32(4, 36 + n, true)
+  text(8, 'WAVEfmt ')
+  v.setUint32(16, 16, true)
+  v.setUint16(20, 1, true)
+  v.setUint16(22, 1, true)
+  v.setUint32(24, rate, true)
+  v.setUint32(28, rate, true)
+  v.setUint16(32, 1, true)
+  v.setUint16(34, 8, true)
+  text(36, 'data')
+  v.setUint32(40, n, true)
+  wav.fill(128, 44) // 8-bit silence
+  const el = new Audio(
+    URL.createObjectURL(new Blob([wav], {type: 'audio/wav'})),
+  )
+  el.loop = true
+  el.setAttribute('playsinline', '')
+  el.play().catch(() => {
+    // not allowed here: Web Audio may still play
+  })
+}
+
 document.addEventListener('visibilitychange', () => {
   if (!ctx) return
   if (document.hidden) void ctx.suspend()
@@ -225,6 +260,7 @@ export const music = {
         const session = Reflect.get(navigator, 'audioSession')
         if (session && typeof session === 'object')
           Reflect.set(session, 'type', 'playback')
+        keepAwake()
         ctx = new AudioContext()
         master = ctx.createGain()
         // a limiter, so loud sound effects over the music never clip
@@ -301,9 +337,11 @@ export const music = {
       // each lock plays the next note up the tune's scale, on the next 16th
       const at = nextOnGrid(4)
       const d = 5 + (lockN++ % 7)
-      tone(degHz(d), {type: 'triangle', vol: 0.3, len: 0.4, at})
-      tone(degHz(d + 5), {vol: 0.08, len: 0.25, at})
-      duck(0.6, at, 0.15)
+      // a bright bell an octave above the band, so it never hides in the music
+      tone(degHz(d + 5), {vol: 0.35, len: 0.5, at})
+      tone(degHz(d + 5) * 2.76, {vol: 0.1, len: 0.18, at})
+      tone(degHz(d + 10), {type: 'square', vol: 0.04, len: 0.05, at})
+      duck(0.35, at, 0.25)
     } else {
       lockN = 0
       tone(150, {type: 'triangle', vol: 0.35, len: 0.3, to: 80})
