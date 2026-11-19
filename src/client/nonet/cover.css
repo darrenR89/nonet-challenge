@@ -271,3 +271,13 @@
 .cv-go .cv-links button{box-sizing:border-box;width:100%;height:44px;display:grid;place-items:center;padding:0;border-radius:2px;
   background:var(--c-ink);color:var(--c-paper);text-decoration:none}
 .is-done .cv-go{margin-top:16px}
+/* the title block and Play sit together as one group, centred down the page, with a wide gap
+   between them; the played state still flows from the top */
+.cv-body{justify-content:center;gap:clamp(48px,calc(var(--H) * .1),88px)}
+.cv-title{--top:36px}
+.cv-mid{position:relative;left:auto;top:auto;bottom:auto;flex:none;padding:0}
+.is-done .cv-title{--top:clamp(64px,calc(var(--H) * .11),96px)}
+@media (max-width:599px){
+  .cv-mid::before{inset:-28vh -8px}
+}
+.is-done .cv-body{justify-content:flex-start;gap:0}
