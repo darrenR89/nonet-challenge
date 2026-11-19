@@ -176,9 +176,9 @@ function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="butto
 function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined;el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
   const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
   const me=D.boards.day.me,st=D.streak,ev=D.event,mine=ev&&ev.teams.find(t=>t.team.id===ev.myTeam);
-  const meta=[me?`#${me.rank} of ${num(D.boards.day.players)} today`:'',st&&st.current?`${st.current}-day streak`:'',D.my.starsWon?'★'.repeat(D.my.starsWon):''].filter(Boolean).join(' · ');
+  const side=(me?`<span class="dn-rank">#${me.rank} today</span>`:'')+(st&&st.current?`<span class="dn-streak">${st.current}-day streak</span>`:'')+(D.my.starsWon?`<span class="dn-streak">${'★'.repeat(D.my.starsWon)}</span>`:'');
   const sent=(D.duels||[]).filter(d=>d.sent).length;
-  el.innerHTML=`<div class="dn-res"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p>${meta?`<p class="dn-meta">${meta}</p>`:''}</div>
+  el.innerHTML=`<div class="dn-res"><div class="dn-main"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p></div>${side?`<div class="dn-side">${side}</div>`:''}</div>
     <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
     ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`)
       :dnRow('team','Team challenge','Coming soon','<p class="meta">Play as a team of three on one cube. We\'ll let you know when it opens.</p>')}

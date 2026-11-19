@@ -296,3 +296,12 @@
     background:var(--c-print) center/auto 100% no-repeat;mix-blend-mode:multiply;opacity:.144}
   .cv-title,.cv-mid{z-index:1}
 }
+/* done today: no rules or practice links under the solved-cube button */
+.is-done .cv-links{display:none}
+/* the score on the left; today's rank in a chip and the streak stacked on the right */
+.dn-res{grid-template-columns:1fr auto;align-items:center;gap:12px}
+.dn-main{display:grid;gap:2px}
+.dn-side{display:grid;gap:6px;justify-items:end;text-align:right}
+.dn-rank{font:500 15px var(--c-code);letter-spacing:.04em;background:var(--c-ink);color:var(--c-paper);border-radius:5px;padding:4px 10px 3px;white-space:nowrap}
+.dn-streak{font:500 13px var(--c-code);white-space:nowrap}
+.dn-side [hidden]{display:none}

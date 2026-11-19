@@ -132,14 +132,16 @@ void getCard().then(card => {
     startBtn.textContent = 'See your solved cube'
     // done today: the card turns to how you did, and each next step opens the game on it
     $('dnScore')?.replaceChildren(card.score.toLocaleString('en-GB'))
-    $('dnMeta')?.replaceChildren(
-      [
-        card.rank ? `#${card.rank} today` : '',
-        card.streak ? `${card.streak}-day streak` : '',
-      ]
-        .filter(Boolean)
-        .join(' · '),
-    )
+    const rank = $('dnRank')
+    if (rank && card.rank) {
+      rank.textContent = `#${card.rank} today`
+      rank.hidden = false
+    }
+    const streak = $('dnStreak')
+    if (streak && card.streak) {
+      streak.textContent = `${card.streak}-day streak`
+      streak.hidden = false
+    }
     if (card.rank) $('dnBoards')?.replaceChildren(`You're #${card.rank} today`)
     $('done')?.removeAttribute('hidden')
     document.body.classList.add('is-done')

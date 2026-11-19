@@ -69,9 +69,14 @@
             aria-label="How you did today"
           >
             <div class="dn-res">
-              <p class="dn-cap">Your cube today</p>
-              <p class="dn-score"><b id="dnScore"></b> points</p>
-              <p class="dn-meta" id="dnMeta"></p>
+              <div class="dn-main">
+                <p class="dn-cap">Your cube today</p>
+                <p class="dn-score"><b id="dnScore"></b> points</p>
+              </div>
+              <div class="dn-side">
+                <span class="dn-rank" id="dnRank" hidden></span>
+                <span class="dn-streak" id="dnStreak" hidden></span>
+              </div>
             </div>
             <div class="dn-acts">
               <button type="button" class="dn-chip dn-go" data-open="challenge">
