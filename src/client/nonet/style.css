@@ -352,3 +352,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .pad.lay-B{grid-template-columns:repeat(3,68px);justify-content:end}
 .pad.lay-B button,.pad.lay-C button{min-height:60px}
 .pad.lay-C{grid-template-columns:repeat(3,1fr)}
+/* How to play: the two stages, drawn */
+.rules .diag{display:grid;gap:10px;margin:4px 0 12px}
+.rules .diag figure{margin:0;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px 8px 4px}
+.rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+.rules .diag svg{display:block;width:100%;height:auto;font-family:var(--code)}
+.rules .diag figure:first-child svg{max-width:240px;margin:0 auto}

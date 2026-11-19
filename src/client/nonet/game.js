@@ -271,7 +271,7 @@ function finishStage1(){
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
   if(P.k>0)journey.progress(.5,'aligned');
   $('banner').hidden=!isPrac(); // a scored run goes straight on: no Stage 1 summary
-  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Pen to lock it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ squares first for +50 each.`:`Stage 1 done in ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) and ${fmt(t1)}. Fill the cube. Lock the three ★ squares first for +50 each.`;
+  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Pen to lock it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ squares first for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ squares first for +50 each.`;
 }
 function finishStage2(){
   t2=nowSec();stage=3;sel=-1;clearRun();
@@ -320,10 +320,10 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
 $('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
-   ${s.tut?'':`<tr><td>Stage 1 turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
-   <tr><td>Stage 1 speed</td><td>${s.sp1} / 200</td></tr><tr class="sub"><td>${fmt(t1)} vs ${fmt(s.T1)} target</td><td></td></tr>`}
-   <tr><td>Stage 2 speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
-   <tr><td>Stage 2 accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
+   ${s.tut?'':`<tr><td>Dial in turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
+   <tr><td>Dial in speed</td><td>${s.sp1} / 200</td></tr><tr class="sub"><td>${fmt(t1)} vs ${fmt(s.T1)} target</td><td></td></tr>`}
+   <tr><td>Fill in speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
+   <tr><td>Fill in accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
    <tr><td>Lock-first squares</td><td>${s.starPts} / 150</td></tr><tr class="sub"><td>${starWon.size} of 3 locked before any other square</td><td></td></tr>
    ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggestion${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
    <tr><td>Subtotal × ${s.mult}</td><td>${s.raw} × ${s.mult}</td></tr>
@@ -569,7 +569,7 @@ const tk=$('testkit');['pointerdown','click'].forEach(ev=>tk.addEventListener(ev
 try{if(localStorage.getItem('nonet-tk')==='1')tk.open=true}catch(e){}
 tk.addEventListener('toggle',()=>{try{localStorage.setItem('nonet-tk',tk.open?'1':'0')}catch(e){}});
 const answer=()=>{const r=solveCount(vals.map((v,i)=>v),1,200000);return r[0]>0?r[1]:null};
-function lockFill(list){if(stage!==2){tkMsg('Fills work in Stage 2. Use Align now first.');return}
+function lockFill(list){if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}
   const sol=answer();if(!sol){tkMsg('The cube has a wrong digit in it, so there is no answer to fill from.');return}
   let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++}
   tkMsg(n?`Filled ${n} square${n===1?'':'s'}.`:'Nothing left to fill there.');render()}
@@ -580,10 +580,10 @@ $('tkCell').onclick=()=>{if(needSel())lockFill([sel])};
 $('tkLine').onclick=()=>{if(needSel())lockFill(shownLine())};
 $('tkFace').onclick=()=>{if(needSel())lockFill(groups[faceOfNormal.get(k3(cells[sel].n))])};
 $('tkStars').onclick=()=>{if(!stars.size){tkMsg('No opening squares on this cube.');return}lockFill([...stars])};
-$('tkWrong').onclick=()=>{if(!needSel())return;if(stage!==2||vals[sel]){tkMsg('Pick an empty square in Stage 2.');return}const sol=answer();if(!sol)return;
+$('tkWrong').onclick=()=>{if(!needSel())return;if(stage!==2||vals[sel]){tkMsg('Pick an empty square in Fill in.');return}const sol=answer();if(!sol)return;
   const d=sol[sel]%9+1;const was=penMode;penMode=true;pressDigit(d);penMode=was;render();tkMsg(`Tried ${d}. That cost 25 points.`)};
 $('tkPencil').onclick=()=>{if(!needSel()||stage!==2)return;const sol=answer();if(!sol)return;let n=0;for(const c of shownLine())if(!vals[c]){pm[c]=1<<sol[c];n++}render();tkMsg(`Pencilled ${n} square${n===1?'':'s'} with the right digits.`)};
-$('tkAllBut').onclick=()=>{if(stage!==2){tkMsg('Fills work in Stage 2. Use Align now first.');return}const empty=vals.map((v,i)=>v?-1:i).filter(i=>i>=0);
+$('tkAllBut').onclick=()=>{if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}const empty=vals.map((v,i)=>v?-1:i).filter(i=>i>=0);
   const keep=sel>=0&&!vals[sel]?sel:empty[empty.length-1];lockFill(empty.filter(i=>i!==keep));if(keep>=0){sel=keep;selFace=faceOfNormal.get(k3(cells[keep].n));render()}};
 
 $('tkDay').onclick=()=>{if(online){tkMsg('Today is set on the server. A moderator can reset it from Redis; otherwise it resets at midnight Pacific time.');return}
