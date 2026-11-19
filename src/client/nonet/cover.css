@@ -29,8 +29,8 @@
 }
 
 /* the spine: number boxed at the top, "Daily cube" and the date down the foot */
-.cv-spine{flex:none;align-self:stretch;width:clamp(44px,11%,64px);background:var(--c-ink);color:var(--c-paper);
-  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 0 20px}
+.cv-spine{flex:none;align-self:stretch;background:var(--c-ink);color:var(--c-paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
 .cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:9px 5px;margin:4px}
 .cv-kanji{font-family:var(--c-kanji);writing-mode:vertical-rl;letter-spacing:.14em;line-height:1;font-size:clamp(20px,4.6vw,26px)}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
@@ -39,22 +39,22 @@
 .cv-date .cv-dm{color:var(--c-yellow)}
 .cv-tcy{text-combine-upright:all}
 
-/* the streak: a solid yellow sticker, tilted, clipped by the left edge */
-.cv-streak{position:absolute;z-index:2;top:16px;left:-4px;margin:0;transform:rotate(-7deg);transform-origin:left center;
-  display:flex;align-items:center;gap:6px;padding:7px 14px 7px 18px;border-radius:999px;background:var(--c-yellow);
+/* the streak: a solid yellow sticker, tilted a little, above the name */
+.cv-streak{margin:0;transform:rotate(-4deg);
+  display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;background:var(--c-yellow);
   font:700 13px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-ink);white-space:nowrap}
 .cv-streak svg{width:14px;height:18px;flex:none}
 
-.cv-body{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;justify-content:center;
-  gap:clamp(18px,calc(var(--H) * .035),32px);padding:clamp(24px,calc(var(--H) * .05),42px) 0 clamp(24px,calc(var(--H) * .05),42px) 20px}
-.cv-upper{display:flex;flex-direction:row-reverse;gap:clamp(24px,7vw,36px);align-items:stretch}
-.cv-mark{flex:none}
-.cv-mark img{display:block;height:calc(var(--H) * .62);width:auto}
-.cv-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:24px}
+/* the body: the title block centred in the space above, the stats and Play held at the foot */
+.cv-body{flex:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;
+  padding:clamp(24px,calc(var(--H) * .05),42px) 0 clamp(12px,calc(var(--H) * .025),21px) 20px}
+.cv-title{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,calc(var(--H) * .03),24px);text-align:center;padding:12px 0}
+.cv-mark img{display:block;width:min(100%,300px);height:auto}
+.cv-foot{display:flex;flex-direction:column;align-items:flex-end;gap:clamp(9px,calc(var(--H) * .0175),16px)}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
 /* the issue box: a magazine's number block, double rules top and bottom */
-.cv-issue{width:100%;display:grid;justify-items:end;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
+.cv-issue{width:min(100%,300px);display:grid;justify-items:center;gap:2px;padding:8px 0 10px;border-top:3px double var(--c-ink);border-bottom:3px double var(--c-ink)}
 .cv-row{display:flex;gap:10px;align-items:baseline}
 .cv-daily{font-weight:700;font-size:14px;letter-spacing:.2em}
 .cv-no{font:500 14px var(--c-code);letter-spacing:.04em}

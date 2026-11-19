@@ -12,30 +12,30 @@
 
 <div class="splash cv" id="splash">
   <main class="cv-cover">
-    <p class="cv-streak" id="spStreak" hidden></p>
     <div class="cv-spine" aria-hidden="true">
       <div class="cv-vol"><span class="cv-kanji" id="spKanji">〇〇〇</span></div>
       <span class="cv-imprint">Daily cube<span class="cv-dot">·</span><b class="cv-date" id="spDate"></b></span>
     </div>
     <div class="cv-body">
-      <div class="cv-upper">
-        <div class="cv-mark"><img src="/brand/nonet-wordmark-vertical.svg" alt="Nonet" width="184" height="952"></div>
-        <div class="cv-col">
-          <div class="cv-issue" id="spIssue">
-            <div class="cv-row" aria-hidden="true"><span class="cv-daily" lang="ja">日刊</span><span class="cv-no">No.<b id="spNo">–</b></span></div>
-          </div>
-          <h1 class="cv-head cv-sr">A sudoku cube, one a day, the same for everyone on Reddit.</h1>
-          <dl class="cv-stats" id="spStats" hidden></dl>
+      <div class="cv-title">
+        <p class="cv-streak" id="spStreak" hidden></p>
+        <div class="cv-mark"><img src="/brand/nonet-wordmark-ink.svg" alt="Nonet" width="1000" height="184"></div>
+        <div class="cv-issue" id="spIssue">
+          <div class="cv-row" aria-hidden="true"><span class="cv-daily" lang="ja">日刊</span><span class="cv-no">No.<b id="spNo">–</b></span></div>
         </div>
+        <h1 class="cv-head cv-sr">A sudoku cube, one a day, the same for everyone on Reddit.</h1>
       </div>
-      <div class="cv-go">
-        <p class="cv-sub" id="spSub" aria-live="polite"></p>
-        <button class="cv-play" id="spPlay" type="button" disabled>Play today's cube</button>
+      <div class="cv-foot">
+        <dl class="cv-stats" id="spStats" hidden></dl>
+        <div class="cv-go">
+          <p class="cv-sub" id="spSub" aria-live="polite"></p>
+          <button class="cv-play" id="spPlay" type="button" disabled>Play today's cube</button>
+        </div>
+        <ul class="cv-links">
+          <li><button type="button" id="spHelp">How to play</button></li>
+          <li><button type="button" id="spPractice">Practice play</button></li>
+        </ul>
       </div>
-      <ul class="cv-links">
-        <li><button type="button" id="spHelp">How to play</button></li>
-        <li><button type="button" id="spPractice">Practice play</button></li>
-      </ul>
     </div>
   </main>
 </div>
