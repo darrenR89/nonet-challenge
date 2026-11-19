@@ -123,3 +123,34 @@
 
 /* read by screen readers, not shown: the feed card keeps only the cover, today's number and Play */
 .cv-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* the setup screen, over the yellow cells after Play: today's details, the rotation choice with how
+   everyone else did, the event and challenges, then Start */
+.cv.setup{position:fixed;inset:0;z-index:90;background:var(--c-yellow);overflow-y:auto;padding:max(20px,env(safe-area-inset-top)) 16px 24px;
+  align-items:safe center;opacity:0;transition:opacity .2s}
+.cv.setup.in{opacity:1}
+.cv.setup[hidden]{display:none}
+.su-in{width:min(440px,100%);display:grid;gap:14px;text-align:left}
+.su-top{display:flex;justify-content:space-between;gap:12px;margin:0;font:500 13px var(--c-code);letter-spacing:.06em;text-transform:uppercase}
+.su-top b{font-size:18px;margin-left:2px}
+.su-lv{display:flex;align-items:center;gap:10px;margin:0;border-top:1px solid var(--c-ink);padding-top:10px}
+.su-lv .cv-max{margin-left:auto}
+.su-lv .cv-max span{color:var(--c-ink)}
+.setup h2{font:700 clamp(26px,7vw,34px)/1.1 var(--c-body);margin:8px 0 0}
+.su-lead{margin:0;font-size:14px;line-height:1.45}
+.setup .cv-cap{display:none}
+.setup .cv-twists{grid-template-columns:1fr;direction:ltr;gap:8px}
+.setup .cv-twists>*{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"m r" "m s";column-gap:14px;row-gap:2px;align-items:center;
+  padding:10px 14px;text-align:left;min-height:62px}
+.setup .cv-twists b{grid-area:m;font-size:22px;min-width:3.2ch}
+.setup .cv-twists small{grid-area:r;font-size:13px;color:var(--c-ink)}
+.setup .cv-twists .ts{grid-area:s;font:400 12px var(--c-code);color:var(--c-lead)}
+.setup .cv-twists .ts:empty{display:none}
+.setup .cv-twists>[aria-pressed="true"] small,.setup .cv-twists>[aria-pressed="true"] .ts{color:var(--c-paper)}
+.su-extra{display:grid;gap:10px}
+.su-extra:not(:has(>:not([hidden]))){display:none}
+.setup .event,.setup .peek,.setup .duelsSplash{background:rgba(255,255,255,.6)}
+.su-go{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:6px}
+.su-back{all:unset;box-sizing:border-box;cursor:pointer;padding:0 18px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--c-ink);font:500 15px var(--c-body);display:grid;place-items:center}
+.su-back:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
+.setup .cv-play{width:100%;background:var(--c-ink);color:var(--c-paper)}

@@ -107,7 +107,13 @@ function splashTwist(){
   $('spLevel').textContent=LEVEL_NAMES[level];
   $('spPips').querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
   $('spMax').textContent=num(maxScore(level));
-  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}. ${LEVEL_NAMES[level]}. Max score ${num(maxScore(level))}.`);
+  $('spIssue').setAttribute('aria-label',`${D?`Cube ${D.cubeNo}, `:''}${longDate(today)}.`);
+  $('suNo').textContent=D?String(D.cubeNo):'–';$('suDate').textContent=longDate(today);
+  // what everyone else did with each choice today
+  const tiers=(D&&D.stats&&D.stats.tiers)||[];
+  document.querySelectorAll('#spTwists button').forEach(x=>{const ts=tiers.find(r=>r.tier===+x.dataset.t);
+    let el=x.querySelector('.ts');if(!el){el=document.createElement('span');el.className='ts';x.appendChild(el)}
+    el.textContent=!online?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
   const lk=twistDay!==null;
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Rotation multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
@@ -162,8 +168,15 @@ $('spPlay').onclick=()=>{
   if(tx.busy)return;music.unlock();
   if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
   journey.start();
-  void tx.enter({before:hideSplashNow,ready:playDaily(tier).then(()=>{holdClock();return new Promise(r=>setTimeout(r,60))}),
+  // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
+  const locked=twistDay!==null;
+  void tx.enter({hold:locked?null:showSetup,before:hideSplashNow,ready:()=>playDaily(tier).then(()=>{holdClock();return new Promise(r=>setTimeout(r,60))}),
     done:releaseClock})};
+// the setup screen, over the yellow: true on Start, false on Back
+function showSetup(){const su=$('setup');splashTwist();renderSplashExtras();su.hidden=false;
+  requestAnimationFrame(()=>su.classList.add('in'));$('suStart').focus();
+  return new Promise(res=>{const end=ok=>{su.classList.remove('in');su.hidden=true;$('suStart').onclick=$('suBack').onclick=null;res(ok)};
+    $('suStart').onclick=()=>end(true);$('suBack').onclick=()=>end(false)})}
 
 // ---------- pause ----------
 // pausing stops the clock and covers the cube with the start screen, which shows Resume

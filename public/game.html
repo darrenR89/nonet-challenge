@@ -23,22 +23,12 @@
         <div class="cv-col">
           <div class="cv-issue" id="spIssue">
             <div class="cv-row" aria-hidden="true"><span class="cv-daily" lang="ja">日刊</span><span class="cv-no">No.<b id="spNo">–</b></span></div>
-            <div class="cv-meta">
-              <span class="cv-max"><span>Max score</span><b id="spMax"></b></span>
-              <span class="cv-level"><span class="cv-pips" id="spPips" aria-hidden="true"><i></i><i></i><i></i></span><span class="cv-tag" id="spLevel"></span></span>
-            </div>
           </div>
-          <h1 class="cv-head">A sudoku cube, one a day, the same for everyone on Reddit.</h1>
+          <h1 class="cv-head cv-sr">A sudoku cube, one a day, the same for everyone on Reddit.</h1>
           <dl class="cv-stats" id="spStats" hidden></dl>
         </div>
       </div>
       <div class="cv-go">
-        <div class="cv-scr">
-          <p class="cv-cap" id="spScrCap">Rotation multiplier</p>
-          <div class="cv-twists" id="spTwists" role="group" aria-label="How many rotations scramble today's cube">
-            <button type="button" data-t="0" aria-pressed="false"><b>×1</b><small>0 rotations</small></button><button type="button" data-t="1" aria-pressed="true"><b>×1.25</b><small>1 rotation</small></button><button type="button" data-t="2" aria-pressed="false"><b>×1.5</b><small>2 rotations</small></button><button type="button" data-t="3" aria-pressed="false"><b>×2</b><small>3 rotations</small></button>
-          </div>
-        </div>
         <p class="cv-sub" id="spSub" aria-live="polite"></p>
         <button class="cv-play" id="spPlay" type="button" disabled>Play today's cube</button>
       </div>
@@ -46,11 +36,35 @@
         <li><button type="button" id="spHelp">How to play</button></li>
         <li><button type="button" id="spPractice">Practice play</button></li>
       </ul>
-      <section class="event compact" id="spEvent" hidden></section>
-      <section class="peek compact" id="spPeek" hidden></section>
     </div>
   </main>
 </div>
+
+<section class="cv setup" id="setup" hidden aria-labelledby="suHead">
+  <div class="su-in">
+    <p class="su-top"><span>No.<b id="suNo">–</b></span><span id="suDate"></span></p>
+    <p class="su-lv"><span class="cv-pips" id="spPips" aria-hidden="true"><i></i><i></i><i></i></span><span class="cv-tag" id="spLevel"></span><span class="cv-max"><span>Max</span><b id="spMax"></b></span></p>
+    <h2 id="suHead">How many rotations?</h2>
+    <p class="su-lead">More rotations scramble the cube further and multiply your score. You pick once a day.</p>
+    <div class="cv-scr">
+      <p class="cv-cap" id="spScrCap">Rotation multiplier</p>
+      <div class="cv-twists" id="spTwists" role="group" aria-label="How many rotations scramble today's cube">
+        <button type="button" data-t="0" aria-pressed="false"><b>×1</b><small>0 rotations</small></button>
+        <button type="button" data-t="1" aria-pressed="true"><b>×1.25</b><small>1 rotation</small></button>
+        <button type="button" data-t="2" aria-pressed="false"><b>×1.5</b><small>2 rotations</small></button>
+        <button type="button" data-t="3" aria-pressed="false"><b>×2</b><small>3 rotations</small></button>
+      </div>
+    </div>
+    <div class="su-extra">
+      <section class="event compact" id="spEvent" hidden></section>
+      <section class="peek compact" id="spPeek" hidden></section>
+    </div>
+    <div class="su-go">
+      <button type="button" class="su-back" id="suBack">Back</button>
+      <button type="button" class="cv-play" id="suStart">Start</button>
+    </div>
+  </div>
+</section>
 
 <div class="wrap">
   <header>
