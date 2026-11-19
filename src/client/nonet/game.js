@@ -273,7 +273,7 @@ function updateRunButtons(){const r=$('restart');
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
-function restart(){setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
+function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice step 1: the cube is one turn out, and the turn that puts it back pulses
 function coachTurn(){if(!isPrac()||stage!==1)return;$('banner').hidden=false;
@@ -315,9 +315,28 @@ function finishStage2(){
     $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash()};return}
   runScore=score();lastScore=null;
   if(!daily||tkUsed)journey.end(true,true,daily?0:runScore.total);
-  renderEndCard();void submitRun();
-  requestAnimationFrame(()=>$('results').scrollIntoView({behavior:'smooth',block:'start'}));
+  flying=true;void submitRun();
+  void finale().then(()=>{flying=false;renderEndCard();const el=$('results');el.classList.remove('slidein');void el.offsetWidth;el.classList.add('slidein');
+    scrollTo(0,0)});
 }
+// the finish: the solved cube holds a beat, spins faster and faster as it glows brighter, then
+// shoots up out of frame while the camera stays, and the result card slides in after it
+let flying=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function finale(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){await sleep(900);stageEl.classList.add('flown');return}
+  await sleep(1400);
+  const base=cubeEl.style.transform,SPIN=1900,FLY=550,t0=performance.now();let a=0,last=t0;
+  await new Promise(done=>{const step=now=>{const e=now-t0,dt=(now-last)/1000;last=now;
+    const t=Math.min(1,e/SPIN),f=Math.max(0,Math.min(1,(e-SPIN)/FLY));
+    a+=(60+1500*t*t*t)*dt; // degrees a second, rising fast
+    cubeEl.style.transform=`${base} rotateY(${a}deg)`;
+    const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
+    stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
+  stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
+// the cube comes back when the result card is closed, or a new cube starts
+function landCube(){stageEl.classList.remove('flown');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
@@ -347,7 +366,7 @@ async function claimPending(r){const p=readPending();if(!p)return;
   const me=s.boards.day.me;
   ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let teamAsk=false;
-function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
+function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
   let rank='';
@@ -373,7 +392,7 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
-  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false};
+  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
   if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
