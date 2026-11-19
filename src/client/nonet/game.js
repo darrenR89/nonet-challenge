@@ -305,16 +305,13 @@ function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d
 // what signing up gets a guest, on the end card: where this run would place, and what it unlocks
 function signupHTML(total){
   const b=D&&D.boards&&D.boards.day,above=b?b.top.filter(x=>x.score>total).length:0,inTop=b&&above<b.top.length;
-  const place=b&&b.players?(inTop?`It would be <b>#${above+1}</b> of ${num(b.players+1)} on today's board.`:`It would join ${num(b.players)} players on today's board.`):'It would be the first score on today\'s board.';
-  const items=[`<b>${num(total)} points</b> on today's board and this week's, where the top nine are the Nine`,
-    '<b>Day 1 of your streak.</b> Play tomorrow to keep it going',
-    '<b>Challenge friends</b> to beat your score, and see who wins',
-    starWon.size===3?'<b>Tomorrow\'s clues tonight:</b> you locked all three ★ first':'<b>Tomorrow\'s clues early</b> when you lock all three ★ first',
-    'A ping when the next cube is out'];
-  return `<div class="signup"><h3>Save this run</h3><p>${place} You're not logged in, so it isn't saved yet.</p>
+  const place=!b||!b.players?'You\'d be first on today\'s board.':inTop?`You'd be <b>#${above+1}</b> today.`:`You'd join ${num(b.players)} players on today's board.`;
+  const items=['A place on today\'s board and the weekly top nine','A streak, starting today','Challenges with friends',
+    starWon.size===3?'Tomorrow\'s clues, unlocked by your three ★':'Tomorrow\'s clues early, when you lock all three ★ first','A ping when the next cube is out'];
+  return `<div class="signup"><h3>Save your score</h3><p>${place} Sign in to keep it, and get:</p>
     <ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>
-    <button id="eSignup" class="primary">Sign up or log in to save it</button>
-    <p class="meta">A free Reddit account. This device keeps your run until the next cube at midnight Pacific.</p></div>`}
+    <button id="eSignup" class="primary">Save my score</button>
+    <p class="meta">Sign up or log in with Reddit. It's free, and your score waits on this device until midnight Pacific.</p></div>`}
 // after signing up the page reloads logged in: a run finished as a guest today is sent as this player's
 async function claimPending(r){const p=readPending();if(!p)return;
   if(r.my.tier!==undefined||r.my.score!==undefined){clearPending();return}
@@ -346,18 +343,18 @@ function renderEndCard(){const s=runScore;if(!s)return;const r=lastScore,el=$('r
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
   el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
   <h2>Solved in ${fmt(t1+t2)}</h2><div class="total">${num(total)} pts<small>${s.name}${pen<1?` · retry ×${pen}`:''}</small></div>
-  ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${more}${pv}
+  ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false};
-  $('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
+  if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
   // team play isn't built yet: the button counts who would use it
-  $('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
+  if($('eTeam'))$('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
   if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
