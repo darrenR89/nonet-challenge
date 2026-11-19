@@ -73,9 +73,8 @@
   <header>
     <h1><img src="/brand/nonet-wordmark.svg" alt="Nonet" width="141" height="26"></h1>
     <span class="hdr">
+      <button class="icon" id="helpBtn" type="button" aria-label="How to play">?</button>
       <button class="icon" id="soundBtn" type="button" aria-label="Music and sound" aria-pressed="true">♪</button>
-      <span class="timer" id="timer" aria-label="Time">0:00</span>
-      <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
     </span>
   </header>
 
@@ -88,9 +87,11 @@
       <button data-t="2" aria-pressed="false" aria-label="2 turns">2</button>
       <button data-t="3" aria-pressed="false" aria-label="3 turns">3</button>
     </div>
-    <div class="progress s1" id="progress" aria-label="Stage progress">
-      <div class="pstage on" id="step1"><span class="plbl">Dial in</span><span class="pbar" role="progressbar" aria-label="Clues home" aria-valuemin="0" aria-valuemax="100" id="pAlign"><i></i></span><span class="pval" id="pAlignVal">0%</span><span class="pinfo" id="pTurns"></span></div>
-      <div class="pstage" id="step2"><span class="plbl">Fill in</span><span class="pbar" role="progressbar" aria-label="Squares filled" aria-valuemin="0" aria-valuemax="100" id="pFill"><i></i></span><span class="pval" id="pFillVal">0%</span><span class="pinfo"><span class="misses" id="misses" role="img" aria-label="No wrong locks" hidden><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg><b id="missN">00</b></span></span></div>
+    <div class="prow" id="progress">
+      <span class="pbar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="pAll"><i></i></span>
+      <span class="misses" id="misses" role="img" aria-label="No wrong locks" hidden><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13"/></svg><b id="missN">00</b></span>
+      <span class="timer" id="timer" aria-label="Time">0:00</span>
+      <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
     </div>
   </div>
   <div class="penrow" id="tools2" hidden>
@@ -134,8 +135,7 @@
   <section class="results" id="results" hidden></section>
   <button class="showres" id="showRes" type="button" hidden>Show result</button>
 
-  <div class="row runbar">
-    <button id="helpBtn" type="button" aria-label="How to play">? Help</button>
+  <div class="row runbar" id="runbar">
     <button id="suggest" type="button">Suggest</button>
     <button id="restart" type="button">Restart</button>
     <button id="reveal" type="button">Give up</button>

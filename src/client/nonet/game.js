@@ -371,8 +371,7 @@ let teamAsk=false;
 function resHead(total,time,rank,name,pen){
   const pips=[0,1,2].map(k=>`<i${k<=level?' class="on"':''}></i>`).join('');
   const col=(l,v)=>`<div><dt>${l}</dt><dd>${v}</dd></div>`;
-  return `<h2 class="res-title">Solved</h2>
-  <div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
+  return `<h2 class="cv-sr">Solved</h2><div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
   <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}`):''}</dl>
   <p class="res-sub">${esc(name)}${pen<1?` · retry ×${pen}`:''}</p>`}
 function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
@@ -394,15 +393,14 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
-  el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
-  ${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
+  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
   ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
   el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{endTab=endTab===b.dataset.tab?'':b.dataset.tab;if(endTab)journey.interaction('view_board',endTab);renderEndCard()});
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
-  $('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
+  if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
   if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
@@ -478,15 +476,14 @@ function render(){
   if(stage===2&&P.k>0&&blanks&&left<=blanks/2)journey.progress(.75,'half_filled');
   if(stage===2&&left===0&&bad.size===0)finishStage2();
   if(stage<3)saveSoon();
-  // the progress is a switch: the stage you're on takes most of the row, the other shrinks to its name
-  $('step1').className='pstage '+(stage===1?'on':'done');$('step2').className='pstage '+(stage===2?'on':stage===3?'done':'');
-  $('progress').className=`progress ${P.k===0?'solo':stage===1?'s1':'s2'}`;$('views').hidden=stage!==1;
-  $('pTurns').textContent=`${turns} turn${turns===1?'':'s'} · fewest ${P.k}`;
-  setBar('pAlign',stage===1?home/nClues:1);const tot=blanks||P.start.filter(v=>!v).length;setBar('pFill',stage===1?0:stage===3?1:tot?1-left/tot:0);
+  // one thin bar for the whole run: Dial in is the first half when there are turns, Fill in the rest
+  const tot=blanks||P.start.filter(v=>!v).length,fill=stage===1?0:stage===3?1:tot?1-left/tot:0;
+  setBar('pAll',P.k===0?fill:stage===1?home/nClues/2:.5+fill/2);$('views').hidden=stage!==1;
+  $('runbar').hidden=stage===3;
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
   $('tools2').hidden=stage!==2;$('pad').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('step1').hidden=P.k===0;$('suggest').textContent=`Suggest · ${hintsLeft}`;
+  $('suggest').disabled=hintsLeft<=0||stage===3;$('suggest').hidden=isPrac();$('suggest').textContent=`Suggest · ${hintsLeft}`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
@@ -521,7 +518,7 @@ function callout(big,small){let el=$('moment');if(!el){el=document.createElement
   el.innerHTML=`<b>${esc(big)}</b>${small?`<span>${esc(small)}</span>`:''}`;el.classList.remove('go');void el.offsetWidth;el.classList.add('go');
   clearTimeout(calloutT);calloutT=setTimeout(()=>el.classList.remove('go'),1500)}
 // stage progress: Align fills with the share of clues home, Fill with the share of blanks filled
-function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p);$(id+'Val').textContent=p+'%'}
+function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p)}
 // a nudge, not the answer: a row or column of a face glows once every clue in it is back home.
 // It needs two or more clues, so one digit landing by chance doesn't light anything up.
 const faceLines=groups.slice(0,6).flatMap(g=>[0,1,2].flatMap(k=>[[g[3*k],g[3*k+1],g[3*k+2]],[g[k],g[k+3],g[k+6]]]));
@@ -533,7 +530,7 @@ function updateStatus(){
   const nClues=P.given.filter(Boolean).length,home=locked.reduce((n,l,i)=>n+(l&&P.given[i]===vals[i]?1:0),0);
   const t=stage===3?t1+t2:nowSec();
   $('timer').textContent=fmt(t);$('timer').hidden=isPrac();$('reveal').disabled=stage===3;
-  $('status').textContent=gaveUp?'Answer shown · not scored':stage===3?`Total time ${fmt(t1+t2)}`:'';
+  $('status').textContent=gaveUp?'Answer shown · not scored':'';
   $('status').classList.toggle('win',stage===3);
   showMisses();
 }

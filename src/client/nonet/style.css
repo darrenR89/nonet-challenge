@@ -406,3 +406,12 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .res-stats dt{font:400 11px/1.3 var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--lead)}
 .res-stats dd{margin:2px 0 0;font:500 30px/1.1 var(--code);font-variant-numeric:tabular-nums}
 .results .res-sub{margin:-6px 0 0;font:400 12px var(--code);color:var(--lead);text-align:right}
+
+/* one thin progress bar for the whole run, with the time and pause on the same line */
+.prow{display:flex;align-items:center;gap:10px;width:100%;flex:1 1 100%;min-height:36px}
+.prow .pbar{flex:1;height:4px;border-radius:2px;background:var(--edge);box-shadow:none}
+.prow .pbar i{background:var(--yellow);border-radius:2px}
+.prow .timer{font-variant-numeric:tabular-nums}
+.prow .misses{display:inline-flex;align-items:center;gap:3px}
+.prow .misses[hidden]{display:none}
+.runbar[hidden]{display:none}
