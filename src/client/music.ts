@@ -16,7 +16,7 @@ import {fromStart, layersFor, type MusicState} from './music-layers.ts'
 
 const STORE = 'nonet-sound'
 // the mix: music sits well under the sound effects
-const MUSIC_LEVEL = 0.45
+const MUSIC_LEVEL = 0.7
 const SFX_LEVEL = 1.6
 
 type Track = {src: AudioBufferSourceNode; gain: GainNode; on: boolean}
