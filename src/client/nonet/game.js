@@ -395,9 +395,35 @@ function render(){
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
   // the grid flashes yellow once when the cube lines up and once when it is solved; tutorials skip the align flash
   if(stage!==lastStage){if(lastStage>0&&((stage===2&&P.k>0)||stage===3)){stageEl.classList.add('gridflash');clearTimeout(flashT);flashT=setTimeout(()=>stageEl.classList.remove('gridflash'),900)}lastStage=stage}
+  moments(home);
   updateStatus();
   placeArrows();
 }
+// bigger moments as the cube comes together: a clue home pops, a finished line sweeps yellow,
+// a finished face glows, and a word over the cube marks the big steps. A new cube starts quiet.
+let mom=null;
+function moments(home){
+  const lineSet=new Set(),faceSet=new Set(),full=l=>{const vs=l.map(i=>vals[i]);return vs.every(Boolean)&&new Set(vs).size===9};
+  if(stage>=2){lines.forEach((l,k)=>{if(full(l))lineSet.add(k)});groups.slice(0,6).forEach((g,k)=>{if(full(g))faceSet.add(k)})}
+  const tot=blanks||P.start.filter(v=>!v).length,left=vals.filter(v=>!v).length,pct=stage===2&&tot?1-left/tot:0;
+  const now={P,stage,home,lineSet,faceSet,quarter:Math.floor(pct*4)};
+  const was=mom;mom=now;
+  if(!was||was.P!==P||isPrac()&&stage===1)return;
+  if(stage===1&&home>was.home)cells.forEach((_,i)=>{if(locked[i]&&P.given[i]===vals[i])stickers[i].forEach(x=>{if(!x.classList.contains('home'))return;x.classList.remove('pop');void x.offsetWidth;x.classList.add('pop')})});
+  if(was.stage===1&&stage===2&&P.k>0){callout('Dialled in',`${turns} turn${turns===1?'':'s'} · ${fmt(t1)}`);return}
+  if(was.stage===2&&stage===3&&!gaveUp){callout('Solved','');return}
+  if(stage!==2)return;
+  const newFaces=[...faceSet].filter(k=>!was.faceSet.has(k)),newLines=[...lineSet].filter(k=>!was.lineSet.has(k));
+  newLines.forEach(k=>lines[k].forEach((c,n)=>stickers[c].forEach(x=>{x.classList.remove('sweep');void x.offsetWidth;x.style.animationDelay=`${n*40}ms`;x.classList.add('sweep')})));
+  newFaces.forEach(k=>groups[k].forEach(c=>stickers[c].forEach(x=>{x.classList.remove('facedone');void x.offsetWidth;x.classList.add('facedone')})));
+  if(newFaces.length)callout('Face done',`${faceSet.size} of 6`);
+  else if(newLines.length)callout(newLines.length>1?`${newLines.length} lines`:'Line',`${lineSet.size} of ${lines.length}`);
+  else if(now.quarter>was.quarter&&now.quarter<4)callout(['','A quarter in','Halfway','Nearly there'][now.quarter],'');
+}
+let calloutT=0;
+function callout(big,small){let el=$('moment');if(!el){el=document.createElement('div');el.id='moment';el.className='moment';el.setAttribute('role','status');stageEl.appendChild(el)}
+  el.innerHTML=`<b>${esc(big)}</b>${small?`<span>${esc(small)}</span>`:''}`;el.classList.remove('go');void el.offsetWidth;el.classList.add('go');
+  clearTimeout(calloutT);calloutT=setTimeout(()=>el.classList.remove('go'),1500)}
 // stage progress: Align fills with the share of clues home, Fill with the share of blanks filled
 function setBar(id,f){const p=Math.round(Math.max(0,Math.min(1,f))*100);const b=$(id);b.firstElementChild.style.width=p+'%';b.setAttribute('aria-valuenow',p);$(id+'Val').textContent=p+'%'}
 // a nudge, not the answer: a row or column of a face glows once every clue in it is back home.

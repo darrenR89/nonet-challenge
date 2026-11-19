@@ -358,3 +358,17 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
 .rules .diag svg{display:block;width:100%;height:auto;font-family:var(--code)}
 .rules .diag figure:first-child svg{max-width:240px;margin:0 auto}
+/* moments: a clue home pops, a finished line sweeps yellow, a finished face glows, a word over the cube */
+.st.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{scale:1}40%{scale:1.18;box-shadow:0 0 0 3px var(--yellow)}100%{scale:1}}
+.st.sweep{animation:sweep .7s ease both}
+@keyframes sweep{0%{background:var(--tile)}25%{background:var(--yellow);color:var(--sumi)}100%{}}
+.st.facedone{animation:facedone 1.1s ease .25s both}
+@keyframes facedone{0%{box-shadow:0 0 0 0 transparent}30%{box-shadow:0 0 0 3px var(--yellow),0 0 22px 4px rgba(245,193,46,.55)}100%{box-shadow:0 0 0 0 transparent}}
+.moment{position:absolute;left:50%;top:50%;z-index:6;pointer-events:none;display:grid;justify-items:center;gap:4px;
+  transform:translate(-50%,-50%);opacity:0;text-align:center;white-space:nowrap;background:rgba(18,19,22,.78);padding:12px 18px 10px;border-radius:12px}
+.moment b{font:400 clamp(30px,10vw,48px)/1 var(--display);color:var(--yellow);text-shadow:0 2px 0 var(--sumi),0 0 18px rgba(0,0,0,.6)}
+.moment span{font:500 13px var(--code);letter-spacing:.08em;text-transform:uppercase;color:var(--washi);background:var(--sumi);padding:3px 8px;border-radius:4px}
+.moment.go{animation:moment 1.5s ease both}
+@keyframes moment{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}25%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+@media (prefers-reduced-motion:reduce){.st.pop,.st.sweep,.st.facedone{animation:none}.moment.go{animation:momentfade 1.5s both}@keyframes momentfade{0%,100%{opacity:0}15%,75%{opacity:1}}}
