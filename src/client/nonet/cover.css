@@ -173,3 +173,35 @@
 .su-guest[hidden]{display:none}
 .cv-title .cv-stats{border-top:0;padding-top:0}
 .cv-title .cv-first{border-top:0;padding-top:0}
+
+/* today done: how you did, then what next, each opening in place */
+.cv-done{width:100%;display:grid;gap:12px;text-align:left}
+.cv-done[hidden]{display:none}
+.dn-res{display:grid;gap:2px;justify-items:end;text-align:right}
+.dn-cap{font:400 11px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-lead)}
+.dn-score{font:500 15px var(--c-code)}
+.dn-score b{font-size:44px;line-height:1;font-weight:500;letter-spacing:-.02em;margin-right:6px}
+.dn-meta{font:500 13px var(--c-code)}
+.dn-acts{display:grid;gap:6px}
+.dn-row{border:1px solid var(--c-ink);border-radius:8px;background:rgba(255,255,255,.6)}
+.dn-chip{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:10px 12px;align-items:center}
+.dn-chip b{font-size:15px;font-weight:700}
+.dn-chip span{grid-column:1;font:400 12px var(--c-code);color:var(--c-lead)}
+.dn-chip::after{content:"▾";grid-column:2;grid-row:1/span 2;color:var(--c-ink)}
+.dn-chip[aria-expanded="true"]::after{content:"▴"}
+.dn-chip:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px;border-radius:8px}
+.dn-row>.more{padding:0 12px 12px;display:grid;gap:8px;font-size:14px}
+.dn-row>.more[hidden]{display:none}
+.cv-done .duels{background:none;border:0;padding:0;color:var(--c-ink)}
+.cv-done .duels h3{display:none}
+.cv-done .event{background:none;border:0;padding:0}
+.cv-done .board h4{margin:6px 0 4px;font:500 12px var(--c-code);letter-spacing:.06em;text-transform:uppercase;color:var(--c-lead)}
+.cv-done .board ol{margin:0;padding:0;list-style:none;display:grid;gap:2px;font:400 13px var(--c-code)}
+.cv-done .board li{display:flex;justify-content:space-between}
+.cv-done .board li.mine{font-weight:700}
+.dn-next{font:500 13px var(--c-code);text-align:right}
+/* done: Play steps back to a quiet link-like button */
+.is-done .cv-go{border:0;background:none;padding:0}
+.is-done .cv-play{background:transparent;box-shadow:inset 0 0 0 1px var(--c-ink);height:44px}
+.dn-go{border:1px solid var(--c-ink);border-radius:8px;background:rgba(255,255,255,.6)}
+.dn-go::after{content:"→"}

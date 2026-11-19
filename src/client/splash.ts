@@ -91,6 +91,14 @@ showDay(dayKey(), undefined)
 
 const startBtn = $('start-btn') as HTMLButtonElement
 startBtn.addEventListener('click', ev => requestExpandedMode(ev, 'game'))
+// the next steps open the game with that one ready, passed through this device's storage
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
+  b.addEventListener('click', ev => {
+    try {
+      localStorage.setItem('nonet-open', b.dataset.open ?? '')
+    } catch {}
+    requestExpandedMode(ev, 'game')
+  })
 
 /** A stat: a small label over a number. */
 function stat(label: string, value: string): HTMLElement {
@@ -121,13 +129,20 @@ void getCard().then(card => {
   ]
   if (card.fastest) parts.push(stat('Fastest', mm(card.fastest)))
   if (card.score !== undefined) {
-    parts.unshift(
-      stat(
-        card.rank ? `You · #${card.rank} today` : 'Your score',
-        card.score.toLocaleString('en-GB'),
-      ),
+    startBtn.textContent = 'See your solved cube'
+    // done today: the card turns to how you did, and each next step opens the game on it
+    $('dnScore')?.replaceChildren(card.score.toLocaleString('en-GB'))
+    $('dnMeta')?.replaceChildren(
+      [
+        card.rank ? `#${card.rank} today` : '',
+        card.streak ? `${card.streak}-day streak` : '',
+      ]
+        .filter(Boolean)
+        .join(' · '),
     )
-    startBtn.textContent = 'See how you did'
+    if (card.rank) $('dnBoards')?.replaceChildren(`You're #${card.rank} today`)
+    $('done')?.removeAttribute('hidden')
+    document.body.classList.add('is-done')
   }
   stats.replaceChildren(...parts)
   stats.removeAttribute('hidden')

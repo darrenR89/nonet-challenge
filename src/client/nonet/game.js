@@ -86,7 +86,7 @@ async function loadDaily(){
   // locked in earlier today: today's cube waits behind the start screen, paused,
   // and picks up where you left it if this device saved a run
   if(online&&r.puzzle){P=r.puzzle;daily=true;sent=r.my.score!==undefined;restart();if(!sent){restoreRun();pauseNow()}}
-  renderSplashExtras();splashTwist();
+  renderSplashExtras();splashTwist();openFromCard();
   $('spPlay').disabled=false;
   journey.ready();
 }
@@ -128,11 +128,10 @@ function splashTwist(){
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Rotation multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
-  $('spPlay').textContent=isPaused?'Resume':done?'See today\'s cube':'Play today\'s cube';
+  $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':'Play today\'s cube';
   let sub='';
   if(guest)sub='Play free, no account needed. Sign up at the end to save your score and start a streak.';
   else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
-  else if(done)sub=`Done today: ${num(D.my.score)} points${D.boards.day.me?` · #${D.boards.day.me.rank} today`:''}. Next cube in ${untilNext()}.`;
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
   const st=D&&D.stats;
@@ -168,8 +167,30 @@ function renderSplashExtras(){
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
   {const h=online&&D?splashDuelsHTML(D.duels||[]):'';let el=$('spDuels');if(!el&&h){el=document.createElement('section');el.id='spDuels';el.className='duelsSplash';$('spPeek').after(el)}if(el){el.hidden=!h;el.innerHTML=h;wireAnswers(el,d=>{if(D)D.duels=d;journey.interaction('answer_challenge',String(d.length));renderSplashExtras()})}}
   $('spPeek').hidden=!(D&&D.preview);
+  renderDone();
   if(D&&D.preview){$('spPeek').innerHTML=`<button class="chip" type="button" aria-expanded="false"><b>Tomorrow's clues</b><span>unlocked with all three ★</span></button><div class="more" hidden>${cluesNet(D.preview.given)}</div>`;wireChip($('spPeek'))}
 }
+// once today is done the cover turns to how you did, and what to do next: challenge someone,
+// the team challenge, the boards. Each opens in place; the feed card can ask for one.
+function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="button" class="dn-chip" data-dn="${k}" aria-expanded="false"><b>${label}</b><span>${sub}</span></button><div class="more" hidden>${body}</div></div>`}
+function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined;el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
+  const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
+  const me=D.boards.day.me,st=D.streak,ev=D.event,mine=ev&&ev.teams.find(t=>t.team.id===ev.myTeam);
+  const meta=[me?`#${me.rank} of ${num(D.boards.day.players)} today`:'',st&&st.current?`${st.current}-day streak`:'',D.my.starsWon?'★'.repeat(D.my.starsWon):''].filter(Boolean).join(' · ');
+  const sent=(D.duels||[]).filter(d=>d.sent).length;
+  el.innerHTML=`<div class="dn-res"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p>${meta?`<p class="dn-meta">${meta}</p>`:''}</div>
+    <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
+    ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`)
+      :dnRow('team','Team challenge','Coming soon','<p class="meta">Play as a team of three on one cube. We\'ll let you know when it opens.</p>')}
+    ${dnRow('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week',boardsHTML({boards:D.boards}))}</div>
+    <p class="dn-next">Next cube in <b>${untilNext()}</b></p>`;
+  el.querySelectorAll('.dn-chip').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
+    b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
+  wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el)}
+// the feed card's buttons ask for one of those to be open when the game comes up
+function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
+  if(!k)return;const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
+addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
 document.querySelectorAll('#spTwists button').forEach(b=>b.onclick=()=>{if(twistDay!==null)return;tier=+b.dataset.t;splashTwist();
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));journey.interaction('pick_turns',String(tier))});

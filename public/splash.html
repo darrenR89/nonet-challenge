@@ -62,6 +62,31 @@
           </h1>
         </div>
         <div class="cv-mid">
+          <section
+            class="cv-done"
+            id="done"
+            hidden
+            aria-label="How you did today"
+          >
+            <div class="dn-res">
+              <p class="dn-cap">Your cube today</p>
+              <p class="dn-score"><b id="dnScore"></b> points</p>
+              <p class="dn-meta" id="dnMeta"></p>
+            </div>
+            <div class="dn-acts">
+              <button type="button" class="dn-chip dn-go" data-open="challenge">
+                <b>Challenge someone</b
+                ><span>Dare them to beat your score</span>
+              </button>
+              <button type="button" class="dn-chip dn-go" data-open="team">
+                <b>Team challenge</b><span>Play for a side</span>
+              </button>
+              <button type="button" class="dn-chip dn-go" data-open="boards">
+                <b>Leaderboards</b
+                ><span id="dnBoards">Today and this week</span>
+              </button>
+            </div>
+          </section>
           <div class="cv-go">
             <p class="cv-sub" id="live" aria-live="polite"></p>
             <button class="cv-play" id="start-btn" type="button">
