@@ -189,7 +189,8 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
   wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el)}
 // the feed card's buttons ask for one of those to be open when the game comes up
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
-  if(!k)return;const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
+  if(!k)return;if(k==='rules'){showRules();return}if(k==='practice'){$('spPractice').click();return}
+  const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
 addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
 document.querySelectorAll('#spTwists button').forEach(b=>b.onclick=()=>{if(twistDay!==null)return;tier=+b.dataset.t;splashTwist();
