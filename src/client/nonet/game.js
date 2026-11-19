@@ -366,6 +366,15 @@ async function claimPending(r){const p=readPending();if(!p)return;
   const me=s.boards.day.me;
   ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let teamAsk=false;
+// the top of the end card, set like the cover: the issue row between double rules, then the
+// numbers in columns, label over value
+function resHead(total,time,rank,name,pen){
+  const pips=[0,1,2].map(k=>`<i${k<=level?' class="on"':''}></i>`).join('');
+  const col=(l,v)=>`<div><dt>${l}</dt><dd>${v}</dd></div>`;
+  return `<h2 class="res-title">Solved</h2>
+  <div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
+  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}`):''}</dl>
+  <p class="res-sub">${esc(name)}${pen<1?` · retry ×${pen}`:''}</p>`}
 function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
   const st=D&&D.streak,me=r&&r.boards.day.me;
@@ -374,7 +383,8 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else rank=`<p class="rank">${r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players · `:''}<b>#${me?me.rank:'–'}</b> today${duelRank()}${r.boards.week.me&&r.boards.week.me.rank<=9?' · in the Nine this week':''}</p>`;
+  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In the Nine this week':''].filter(Boolean);
+    rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
@@ -385,7 +395,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
   el.innerHTML=`<button class="close" id="eClose" aria-label="Close">✕</button>
-  <h2>Solved in ${fmt(t1+t2)}</h2><div class="total">${num(total)} pts<small>${s.name}${pen<1?` · retry ×${pen}`:''}</small></div>
+  ${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
   ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
@@ -492,8 +502,7 @@ let mom=null;
 function moments(home){
   const lineSet=new Set(),faceSet=new Set(),full=l=>{const vs=l.map(i=>vals[i]);return vs.every(Boolean)&&new Set(vs).size===9};
   if(stage>=2){lines.forEach((l,k)=>{if(full(l))lineSet.add(k)});groups.slice(0,6).forEach((g,k)=>{if(full(g))faceSet.add(k)})}
-  const tot=blanks||P.start.filter(v=>!v).length,left=vals.filter(v=>!v).length,pct=stage===2&&tot?1-left/tot:0;
-  const now={P,stage,home,lineSet,faceSet,quarter:Math.floor(pct*4)};
+  const now={P,stage,home,lineSet,faceSet};
   const was=mom;mom=now;
   if(!was||was.P!==P||isPrac()&&stage===1)return;
   if(stage===1&&home>was.home)cells.forEach((_,i)=>{if(locked[i]&&P.given[i]===vals[i])stickers[i].forEach(x=>{if(!x.classList.contains('home'))return;x.classList.remove('pop');void x.offsetWidth;x.classList.add('pop')})});
@@ -503,9 +512,9 @@ function moments(home){
   const newFaces=[...faceSet].filter(k=>!was.faceSet.has(k)),newLines=[...lineSet].filter(k=>!was.lineSet.has(k));
   newLines.forEach(k=>lines[k].forEach((c,n)=>stickers[c].forEach(x=>{x.classList.remove('sweep');void x.offsetWidth;x.style.animationDelay=`${n*40}ms`;x.classList.add('sweep')})));
   newFaces.forEach(k=>groups[k].forEach(c=>stickers[c].forEach(x=>{x.classList.remove('facedone');void x.offsetWidth;x.classList.add('facedone')})));
-  if(newFaces.length)callout('Face done',`${faceSet.size} of 6`);
-  else if(newLines.length)callout(newLines.length>1?`${newLines.length} lines`:'Line',`${lineSet.size} of ${lines.length}`);
-  else if(now.quarter>was.quarter&&now.quarter<4)callout(['','A quarter in','Halfway','Nearly there'][now.quarter],'');
+  // just the moment, no tallies: the progress bar already shows how far along you are
+  if(newFaces.length)callout('Face done','');
+  else if(newLines.length)callout(newLines.length>1?'Lines':'Line','');
 }
 let calloutT=0;
 function callout(big,small){let el=$('moment');if(!el){el=document.createElement('div');el.id='moment';el.className='moment';el.setAttribute('role','status');stageEl.appendChild(el)}

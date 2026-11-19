@@ -305,7 +305,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .progress{display:grid;grid-template-columns:1fr 1fr;gap:0;width:100%;box-sizing:border-box;padding:6px 4px;border:1px solid var(--edge);border-radius:8px;background:var(--slate);transition:grid-template-columns .45s cubic-bezier(.2,.8,.2,1)}
 .progress.s1{grid-template-columns:5fr 1fr}
 .progress.s2{grid-template-columns:1fr 5fr}
-.progress.solo{grid-template-columns:0fr 1fr}
+.progress.solo{grid-template-columns:1fr}
 .pstage:not(.on) .pbar,.pstage:not(.on) .pinfo{display:none}
 .pstage:not(.on){grid-template-columns:auto;justify-content:center;padding:4px 10px}
 /* one panel: a hairline between the two stages */
@@ -387,3 +387,22 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .results.slidein{animation:slidein .6s cubic-bezier(.2,.8,.2,1) both}
 @keyframes slidein{from{opacity:0;transform:translateY(70vh)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.results.slidein{animation:fadein .4s both}@keyframes fadein{from{opacity:0}}}
+
+/* the end card's head, set like the cover's issue box: number and level between double rules,
+   then the numbers in right-aligned columns, label over value, with a hairline between */
+.results .res-title{font-size:20px;letter-spacing:.02em;color:var(--lead)}
+.res-issue{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:4px double var(--washi);border-bottom:4px double var(--washi)}
+.res-no{font:500 14px var(--code);letter-spacing:.04em}
+.res-no b{font-size:44px;line-height:1;font-weight:500;letter-spacing:-.02em;margin-left:6px}
+.res-level{display:flex;align-items:center;gap:8px}
+.res-pips{display:flex;gap:3px}
+.res-pips i{width:10px;height:10px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--washi)}
+.res-pips i.on{background:var(--washi)}
+.res-tag{font:500 13px var(--code);letter-spacing:.1em;text-transform:uppercase;background:var(--washi);color:var(--sumi);border-radius:5px;padding:3px 8px 2px}
+.res-stats{margin:0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+.res-stats div{text-align:right;padding:0 12px;border-left:1px solid var(--edge)}
+.res-stats div:first-child{border-left:0;padding-left:0}
+.res-stats div:last-child{padding-right:0}
+.res-stats dt{font:400 11px/1.3 var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--lead)}
+.res-stats dd{margin:2px 0 0;font:500 30px/1.1 var(--code);font-variant-numeric:tabular-nums}
+.results .res-sub{margin:-6px 0 0;font:400 12px var(--code);color:var(--lead);text-align:right}
