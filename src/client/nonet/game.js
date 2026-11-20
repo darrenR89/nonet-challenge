@@ -39,6 +39,7 @@ const $=id=>document.getElementById(id);
 // ---------- state ----------
 let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
+let flatOn=false; // the flattened net is showing
 let hold=false; // the clock is held during the intro animation and countdown
 let t0=0,t1=0,t2=0,wrong=0,blanks=0,penMode=false,gaveUp=false,aligned=false;
 const alignMemo=new Map();
@@ -543,7 +544,9 @@ function render(){
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
   $('padbox').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;$('suggest').textContent=`Suggest ${hintsLeft}/3`;
+  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;
+  $('flatBtn').disabled=hintsLeft<=0||flatOn;$('flatBtn').hidden=$('hCount').hidden=$('suggest').hidden;
+  $('hCount').textContent=`${hintsLeft} helper${hintsLeft===1?'':'s'}`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   // the walkthrough's next thing to tap
@@ -678,6 +681,21 @@ function showHint(free){
       if(mm[0]===m[0]&&mm[1]===m[1]&&mm[2]===m[2]){if(!free){hintsLeft--;hintsUsed++;journey.interaction('hint')}sel=c;selFace=fi;hintArrow=[fi,ai];render();return}}}
 }
 $('suggest').onclick=()=>showHint(false);
+// flatten: the cube unfolds into a flat net for 20 seconds, on its own clock, like a sudoku sheet.
+// Tapping a square on the net picks the real square, so the pad and the line highlights work as usual.
+const FLAT_MS=20000,NET=[[4,1,0],[3,0,1],[0,1,1],[2,2,1],[1,3,1],[5,1,2]]; // face, column, row
+let flatEnd=0,flatTick=0;
+function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';
+  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-70)/3,150));g.style.setProperty('--u',`${u}px`);
+  for(const [fi,c,r] of NET){const f=faceEls[fi].cloneNode(true);f.className='nface';f.style.transform='';f.style.gridColumn=String(c+1);f.style.gridRow=String(r+1);f.dataset.f=fi;f.style.scale=String(u/180);g.appendChild(f)}
+  const left=Math.max(0,flatEnd-Date.now());$('netClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
+  net.style.setProperty('--left',String(left/FLAT_MS));if(left<=0)flatStop()}
+function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
+  flatOn=true;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150);render()}
+function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);$('net').hidden=true;render()}
+$('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
+$('net').addEventListener('click',e=>{const s=e.target.closest('.st');if(!s)return;e.stopPropagation();
+  const real=faceEls[+s.dataset.f].querySelector(`.st[data-i="${s.dataset.i}"][data-j="${s.dataset.j}"]`);moved=false;real?.click();flatDraw()});
 
 $('restart').onclick=askRetry;$('spRetry').onclick=askRetry;
 // giving up asks first, and offers today's retry instead when there is one
