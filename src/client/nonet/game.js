@@ -7,7 +7,8 @@ import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastErro
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
-import {exitExpandedMode,showLoginPrompt} from '@devvit/web/client';
+import {context,exitExpandedMode,showLoginPrompt,showShareSheet} from '@devvit/web/client';
+import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -250,7 +251,7 @@ let saveT=0;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(saveRun,400
 // one retry a day on today's cube: it starts again from the turned cube, and the day's total is ×0.8
 function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalBody').innerHTML=body;
   $('modalActs').innerHTML='';buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;
-    b.onclick=()=>{m.hidden=true;if(fn)fn()};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
+    b.onclick=e=>{m.hidden=true;if(fn)fn(e)};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden)$('modal').hidden=true});
 const canRetry=()=>online&&daily&&!sent&&retries===0&&stage<3;
@@ -391,7 +392,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
-    <div class="acts"><button id="eComment" class="primary">Share to the thread</button><button id="eTeam" aria-pressed="${teamAsk?'true':'false'}">${teamAsk?'Thanks: we\'ll tell you when teams open':'Play as a team <small>coming soon</small>'}</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+    <div class="acts"><button id="eComment" class="primary">Share my result</button><button id="eTeam" aria-pressed="${teamAsk?'true':'false'}">${teamAsk?'Thanks: we\'ll tell you when teams open':'Play as a team <small>coming soon</small>'}</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
@@ -404,15 +405,38 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
-  if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
-    const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
-    navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
+  if($('eComment'))$('eComment').onclick=()=>void openShare(s,total,scored&&me?me.rank:0);
   // team play isn't built yet: the button counts who would use it
   if($('eTeam'))$('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
   if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
+// sharing: a picture of the result, points first (no digits, so no spoilers), and the
+// post's link so whoever sees it can tap through and play
+async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=true;
+  const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
+  const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
+  const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||''}).catch(()=>undefined);
+  if(b)b.disabled=false;
+  if(!card){copyResult(txt);return}
+  journey.interaction('share','open');
+  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: ${num(total)} points in ${fmt(t1+t2)}"><p class="meta">No digits on it, so it spoils nothing.${url?' The link lets anyone tap through and play today\'s cube.':''}</p>`,[
+    ['Copy text',ev=>copyResult(txt,ev)],
+    ['Save image',()=>{journey.interaction('share','save');saveImage(card.dataUrl,`nonet-${D?D.cubeNo:'cube'}.png`)}],
+    ['Share',()=>void shareOut(card.blob,title,txt,url),'primary']]);
+  $('modalBody').querySelector('img').src=card.dataUrl}
+// the picture and link through the phone's share sheet; where the webview can't share files,
+// Reddit's own share sheet sends the post link with the result line
+async function shareOut(blob,title,txt,url){const r=await shareImage(blob,title,shareText(txt,url));
+  if(r!=='unsupported'){journey.interaction('share',r==='shared'?'image':'cancel');return}
+  journey.interaction('share','link');
+  try{await showShareSheet({title,text:shareText(txt,undefined)})}catch(e){copyResult(shareText(txt,url))}}
+const pageUrl=()=>/^https?:$/.test(location.protocol)?location.href.split('#')[0]:undefined;
+function copyResult(txt,ev){journey.interaction('share','comment');
+  const done=()=>{const b=$('eComment');if(b)b.textContent='Copied. Paste it in the thread';try{if(ev)exitExpandedMode(ev)}catch(e){}};
+  navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})}
 $('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
