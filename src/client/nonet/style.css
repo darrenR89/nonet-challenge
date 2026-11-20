@@ -506,6 +506,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   /* the interface buttons are solid ink on the paper */
   header button,.modes button,.modal button:not(.primary):not([aria-selected]):not([aria-pressed]){background:#23252b;color:#eceae3;border-color:#23252b}
   header button:hover,.modes button:hover{border-color:#5b5f69}
+  /* yellow type is too faint on paper: a deep gold instead */
+  .rules .diag figcaption,.rules .callout b,.tx-count b,.pstage.done .plbl::before{color:#9a6f00}
 }
 /* short windows (a desktop post): the cube's area may shrink so the page never scrolls */
 @media (max-height:600px){
