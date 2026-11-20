@@ -337,3 +337,27 @@
   .cv-title .cv-stats div:first-child dd{order:0}
   .cv-title .cv-stats div:last-child:not(:first-child){align-items:flex-end}
 }
+
+/* a wide but short window, like a Reddit post on desktop (about 512px tall): the cover fills the
+   frame's height instead of a framed page, with tighter space so Play and both links fit */
+@media (min-width:600px) and (max-height:720px){
+  .cv{padding:0}
+  .splash.cv{padding:0}
+  .cv-cover{--H:100svh;width:max(calc(var(--H) * .9),440px)}
+  .cv-spine{padding:12px 10px 14px}
+  .cv-title{--top:48px;gap:10px}
+  .cv-mark{margin:0 auto;width:min(100%,300px);align-self:center}
+  .cv-no b{font-size:46px}
+  .cv-issue .cv-level .cv-tag{font-size:14px;padding:4px 10px 3px}
+  .cv-title .cv-stats,.cv-title .cv-first{margin-top:-10px;padding:8px 12px 9px}
+  .cv-body{gap:24px;padding-bottom:12px}
+  .cv-play{height:44px}
+  .cv-go .cv-links button{height:38px}
+  .is-done .cv-title{--top:36px}
+  .is-done .cv-mid{gap:12px;padding-top:12px}
+  .is-done .cv-play{height:38px}
+  .dn-res{padding:6px 12px 8px}
+  .dn-score b{font-size:34px}
+  .dn-chip{padding-block:8px}
+  .dn-chip span{display:none}
+}
