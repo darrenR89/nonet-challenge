@@ -302,7 +302,7 @@
   .cv-title,.cv-mid{z-index:1}
 }
 /* done today: no rules or practice links under the solved-cube button */
-.is-done .cv-links{display:none}
+.is-done .cv-links,.is-past .cv-links{display:none}
 /* the score on the left; today's rank in a chip and the streak stacked on the right */
 .dn-res{grid-template-columns:1fr auto;align-items:center;gap:12px}
 .dn-main{display:grid;gap:2px}

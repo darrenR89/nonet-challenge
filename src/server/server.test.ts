@@ -759,6 +759,8 @@ test("an older day's post keeps its date, and links to today's post", async () =
     "the game in an old post won't start today's cube",
   )
   assert.equal(game.todayPost, old.todayPost)
+  assert.equal(game.pastBoards?.day.players, 1, "that day's board")
+  assert.equal(game.boards.day.players, 0, "today's board is separate")
   later(86400)
   as('t2_new', 'new')
   const missed = (await get<CardRsp>(Endpoint.Card)).body

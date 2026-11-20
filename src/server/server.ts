@@ -326,10 +326,11 @@ async function needUser(): Promise<string> {
 async function dayBoards(
   day: string,
   uid: string | undefined,
+  labels: [string, string] = ['Today', 'This week'],
 ): Promise<{day: Board; week: Board}> {
   return {
-    day: await readBoard(boardKey.day(day), 'Today', uid),
-    week: await readBoard(boardKey.week(weekKey(day)), 'This week', uid),
+    day: await readBoard(boardKey.day(day), labels[0], uid),
+    week: await readBoard(boardKey.week(weekKey(day)), labels[1], uid),
   }
 }
 
@@ -381,6 +382,7 @@ export function pastDayOf(postData: unknown, now: string): string | undefined {
 
 async function routeDaily(): Promise<DailyRsp> {
   const day = today()
+  const past = pastDayOf(context.postData, day)
   const uid = await who()
   const my = uid
     ? await getMyDay(day, uid)
@@ -405,8 +407,15 @@ async function routeDaily(): Promise<DailyRsp> {
       : false,
     duels: uid ? await duelsFor(day, uid) : [],
     crew: uid ? await crewInfo(day, uid) : NO_CREW,
-    ...(pastDayOf(context.postData, day)
-      ? {past: true, todayPost: (await redis.hGet(DAILY_POSTS, day)) ?? ''}
+    ...(past
+      ? {
+          past: true,
+          todayPost: (await redis.hGet(DAILY_POSTS, day)) ?? '',
+          pastBoards: await dayBoards(past, uid, [
+            shortDate(past),
+            `Week of ${shortDate(addDays(past, 1 - weekday(past)))}`,
+          ]),
+        }
       : {}),
   }
 }

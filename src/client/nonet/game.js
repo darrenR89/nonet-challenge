@@ -201,7 +201,8 @@ function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undef
 function crewChanged(info,what){if(!D)return;D.crew=info;journey.interaction(what);renderSplashExtras();if(runScore&&!$('results').hidden)renderEndCard()}
 // the feed card's buttons ask for one of those to be open when the game comes up
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
-  if(!k)return;if(k==='rules'){showRules();return}if(k==='practice'){$('spPractice').click();return}
+  if(!k)return;if(k==='rules'){showRules();return}
+  if(k==='pastboard'){if(D&&D.pastBoards)ask('Leaderboard',boardsHTML({boards:D.pastBoards}),[['Close',ev=>{try{exitExpandedMode(ev)}catch(e){}},'primary']]);return}if(k==='practice'){$('spPractice').click();return}
   const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
 addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
