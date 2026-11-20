@@ -3,6 +3,16 @@
 // to logged in and reloads it, as Reddit's flow does.
 export {exitExpandedMode} from '@devvit/client'
 
+// Outside Reddit there is no post: the game shares the page's own link instead.
+export const context: {postId: string | undefined} = {postId: undefined}
+
+// Reddit's share sheet sends the post link; here the browser's share sheet sends the page's.
+export async function showShareSheet(o: {title?: string; text?: string}): Promise<void> {
+  const url = location.href.split('#')[0]
+  if (navigator.share) await navigator.share({title: o.title, text: o.text, url})
+  else await navigator.clipboard.writeText(`${o.text ?? ''}\n${url}`)
+}
+
 export function showLoginPrompt(): void {
   const d = document.createElement('div')
   d.className = 'fake-login'

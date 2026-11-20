@@ -2,12 +2,14 @@
 import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ringOf,ringCells,isOverlap,shuffle,solveCount,rotV,rotCell,turnArr,randomTurn,TIERS,sameLayer,makePuzzle,singlesOrder,PRACTICE,setLayout} from '../../shared/model.js';
 import './style.css';
 import {makeTransitions} from './transitions.js';
+import {makeRoom} from './room.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {crewTitle,crewSummary,crewButton,crewShareLine,crewPanelHTML,wireCrew} from '../crew.ts';
-import {exitExpandedMode,showLoginPrompt} from '@devvit/web/client';
+import {context,exitExpandedMode,showLoginPrompt,showShareSheet} from '@devvit/web/client';
+import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -97,7 +99,7 @@ function applyTwistLock(){
   document.querySelectorAll('#spTwists button').forEach(x=>{const t=+x.dataset.t;x.hidden=!tierAllowed(level,t);x.disabled=lk&&t!==twistDay;x.querySelector('b').textContent=`×${multOf(level,t)}`});
   document.querySelectorAll('#tierSeg button').forEach(x=>{const t=+x.dataset.t;x.hidden=t!==PRACTICE&&!tierAllowed(level,t);x.disabled=lk&&t!==twistDay&&t!==PRACTICE;x.setAttribute('aria-pressed',t===tier)});
 }
-// splash: your place on this week's board. One cube a day; more turns, bigger multiplier; the top nine are the Nine.
+// splash: your place on this week's board. One cube a day; more turns, bigger multiplier; the top nine go up each Monday.
 let splashUp=true;
 const ord=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
 const num=n=>Math.round(n).toLocaleString('en-GB');
@@ -259,7 +261,7 @@ let saveT=0;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(saveRun,400
 // one retry a day on today's cube: it starts again from the turned cube, and the day's total is ×0.8
 function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalBody').innerHTML=body;
   $('modalActs').innerHTML='';buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;
-    b.onclick=()=>{m.hidden=true;if(fn)fn()};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
+    b.onclick=e=>{m.hidden=true;if(fn)fn(e)};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('modal').hidden)$('modal').hidden=true});
 const canRetry=()=>online&&daily&&!sent&&retries===0&&stage<3;
@@ -344,10 +346,11 @@ async function finale(){
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
     const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
     stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    if(f>0)stageEl.classList.add('leaving'); // the progress bar goes up and away with the cube
     if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
   stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
 // the cube comes back when the result card is closed, or a new cube starts
-function landCube(){stageEl.classList.remove('flown');apply()}
+function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
@@ -393,13 +396,13 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In the Nine this week':''].filter(Boolean);
+  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
-    <div class="acts"><button id="eComment" class="primary">Share to the thread</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+    <div class="acts"><button id="eComment" class="primary">Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
@@ -412,9 +415,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   wireSides(el);
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
-  if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
-    const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
-    navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
+  if($('eComment'))$('eComment').onclick=()=>void openShare(s,total,scored&&me?me.rank:0);
   // the crew box opens under What next: start one, or see who has played
   if($('eCrew'))$('eCrew').onclick=()=>{crewOpen=!crewOpen;if(crewOpen)journey.interaction('end_crew');renderEndCard()};
   if($('eCrewBox'))wireCrew($('eCrewBox'),crewChanged);
@@ -422,6 +423,31 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
+// sharing: a picture of the result, points first (no digits, so no spoilers), and the
+// post's link so whoever sees it can tap through and play
+async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=true;
+  const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
+  const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
+  const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||''}).catch(()=>undefined);
+  if(b)b.disabled=false;
+  if(!card){copyResult(txt);return}
+  journey.interaction('share','open');
+  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: ${num(total)} points in ${fmt(t1+t2)}"><p class="meta">No digits on it, so it spoils nothing.${url?' The link lets anyone tap through and play today\'s cube.':''}</p>`,[
+    ['Copy text',ev=>copyResult(txt,ev)],
+    ['Save image',()=>{journey.interaction('share','save');saveImage(card.dataUrl,`nonet-${D?D.cubeNo:'cube'}.png`)}],
+    ['Share',()=>void shareOut(card.blob,title,txt,url),'primary']]);
+  $('modalBody').querySelector('img').src=card.dataUrl}
+// the picture and link through the phone's share sheet; where the webview can't share files,
+// Reddit's own share sheet sends the post link with the result line
+async function shareOut(blob,title,txt,url){const r=await shareImage(blob,title,shareText(txt,url));
+  if(r!=='unsupported'){journey.interaction('share',r==='shared'?'image':'cancel');return}
+  journey.interaction('share','link');
+  try{await showShareSheet({title,text:shareText(txt,undefined)})}catch(e){copyResult(shareText(txt,url))}}
+const pageUrl=()=>/^https?:$/.test(location.protocol)?location.href.split('#')[0]:undefined;
+function copyResult(txt,ev){journey.interaction('share','comment');
+  const done=()=>{const b=$('eComment');if(b)b.textContent='Copied. Paste it in the thread';try{if(ev)exitExpandedMode(ev)}catch(e){}};
+  navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})}
 $('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
@@ -604,14 +630,17 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
-// a Fill in suggestion points at a square where only one digit fits, without filling it in
-function hintSquare(){const order=singlesOrder(vals);let c=order[0];
-  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+// a Fill in suggestion finds a square where only one digit fits and pencils that digit in for you;
+// it skips squares already pencilled with the right digit, and you still lock it in yourself
+function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
+  const order=singlesOrder(vals).filter(i=>!done(i));let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]&&!done(i)){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
   if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
+  if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
   stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
-  $('status').textContent='Only one digit fits in this square.'}
+  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to the pen to lock it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
@@ -657,7 +686,10 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
-const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+// the room behind the cube turns with the view but doesn't lean in when a face is focused
+const room=makeRoom(document.getElementById('room'));
+const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  room.set(rx,ry,scaleK,cubeEl.classList.contains('dragging'));shadeFaces()};
 // tap to focus: a square tapped on a steep face turns the view until that face is in front,
 // kept a little off square so the cube still reads as a cube, and the view leans in a touch
 let zoom=1;
@@ -680,7 +712,9 @@ $('vu').onclick=()=>{rx=Math.min(62,rx+45);apply()};
 $('vd').onclick=()=>{rx=Math.max(-62,rx-45);apply()};
 
 // a cube to show behind the splash while today's loads; Play swaps in today's
-window.addEventListener('resize',setH);setH();apply();applyTwistLock();newGame();void loadDaily();
+window.addEventListener('resize',setH);// the page leaves exactly the pad's height free at the bottom, so the cube centres in what is left
+const padRoom=()=>{const b=$('padbox');document.documentElement.style.setProperty('--padH',`${b.hidden?0:b.offsetHeight}px`)};
+if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
 // number pad layouts to compare for speed: A a row of five under the cube, B a phone keypad in the

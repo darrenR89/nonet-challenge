@@ -321,7 +321,7 @@
 .dn-score{font-weight:700}
 .dn-score b{margin-right:-1px}
 /* paused: Retry and Give up take the place of the two links under Resume */
-.cv-pause{display:none}
+.cv-pause,.cv-go .cv-pause{display:none}
 .is-paused .cv-go .cv-pause{display:grid}
 .is-paused .cv-go .cv-home{display:none}
 .cv-go .cv-links button:disabled{opacity:.45;cursor:default}
