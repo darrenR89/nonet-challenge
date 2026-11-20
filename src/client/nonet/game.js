@@ -115,7 +115,7 @@ function splashTwist(){
   const d=new Date(today+'T12:00:00Z');
   $('spDate').innerHTML=`${WDAYS[d.getUTCDay()]} <span class="cv-dm"><span class="cv-tcy">${d.getUTCDate()}</span> ${MONTHS[d.getUTCMonth()]}</span> <span class="cv-yr">${d.getUTCFullYear()}</span>`;
   $('spNo').textContent=D?String(D.cubeNo):'–';
-  $('spKanji').textContent=D?kanjiNo(D.cubeNo):'〇〇〇';
+  $('spKanji').replaceChildren(...[...(D?kanjiNo(D.cubeNo):'〇〇〇')].map(c=>{const s=document.createElement('span');s.textContent=c;return s}));
   $('spLevel').textContent=LEVEL_NAMES[level];$('cvLevel').textContent=LEVEL_NAMES[level];
   for(const id of ['spPips','cvPips'])$(id).querySelectorAll('i').forEach((x,k)=>x.classList.toggle('on',k<=level));
   $('spMax').textContent=num(maxScore(level));

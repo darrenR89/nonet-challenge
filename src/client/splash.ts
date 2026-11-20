@@ -154,7 +154,8 @@ function showDay(day: string, no: number | undefined): void {
   $('mults')?.replaceChildren(...cells)
   if (no !== undefined) {
     if ($('no')) ($('no') as HTMLElement).textContent = String(no)
-    if ($('kanji')) ($('kanji') as HTMLElement).textContent = kanjiNo(no)
+    // one span per character, stacked down the spine
+    $('kanji')?.replaceChildren(...[...kanjiNo(no)].map(c => el('span', '', c)))
   }
   $('issue')?.setAttribute(
     'aria-label',
