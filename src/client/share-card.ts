@@ -120,15 +120,36 @@ function doubleRule(c: Ctx, y: number): void {
   c.fillRect(72, y + 9, CARD_W - 144, 3)
 }
 
-// the hero: the points, big, in the yellow glow of a solved cube
+// behind the hero: the brand's cells (rounded squares, 5 to 6 on pitch), lit at the centre and fading out in a
+// circle, with a touch of a solved cube's yellow in the middle
+function cellField(c: Ctx, cx: number, cy: number): void {
+  const pitch = 36
+  const cell = 30
+  const radius = 420
+  c.save()
+  c.beginPath()
+  c.rect(0, 334, CARD_W, 506)
+  c.clip()
+  const x0 = cx - pitch * Math.ceil(cx / pitch) - cell / 2
+  const y0 = cy - pitch * Math.ceil(cy / pitch) - cell / 2
+  for (let y = y0; y < CARD_H; y += pitch)
+    for (let x = x0; x < CARD_W; x += pitch) {
+      const d = Math.hypot(x + cell / 2 - cx, y + cell / 2 - cy) / radius
+      if (d >= 1) continue
+      const f = (1 - d) ** 1.6
+      roundRect(c, x, y, cell, cell, 5)
+      c.fillStyle = `rgba(236,234,227,${(0.17 * f).toFixed(3)})`
+      c.fill()
+      c.fillStyle = `rgba(245,193,46,${(0.3 * f ** 3).toFixed(3)})`
+      c.fill()
+    }
+  c.restore()
+}
+
+// the hero: the points, big, over the cells
 function hero(c: Ctx, d: ShareCard): void {
   const cx = CARD_W / 2
-  const g = c.createRadialGradient(cx, 560, 40, cx, 560, 520)
-  g.addColorStop(0, 'rgba(245,193,46,.30)')
-  g.addColorStop(0.5, 'rgba(245,193,46,.08)')
-  g.addColorStop(1, 'rgba(245,193,46,0)')
-  c.fillStyle = g
-  c.fillRect(0, 0, CARD_W, CARD_H)
+  cellField(c, cx, 586)
   c.textAlign = 'center'
   c.fillStyle = C.lead
   c.font = `500 30px ${CODE}`
