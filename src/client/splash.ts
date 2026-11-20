@@ -1,9 +1,4 @@
-import {
-  context,
-  navigateTo,
-  navigateToPost,
-  requestExpandedMode,
-} from '@devvit/web/client'
+import {requestExpandedMode} from '@devvit/web/client'
 import './nonet/fonts.css'
 import './nonet/cover.css'
 import './nonet/feed.css'
@@ -171,15 +166,13 @@ function showDay(day: string, no: number | undefined): void {
 showDay(dayKey(), undefined)
 
 const startBtn = $('start-btn') as HTMLButtonElement
-/** On an older day's post: today's post to go to instead of playing here. */
-let goToday: string | undefined
 startBtn.addEventListener('click', ev => {
-  if (goToday === undefined) {
-    requestExpandedMode(ev, 'game')
-    return
-  }
-  if (goToday) navigateToPost(goToday as `t3_${string}`)
-  else navigateTo(`https://www.reddit.com/r/${context.subredditName ?? ''}/`)
+  // an older day's post has one button: that day's leaderboard
+  if (startBtn.dataset.open)
+    try {
+      localStorage.setItem('nonet-open', startBtn.dataset.open)
+    } catch {}
+  requestExpandedMode(ev, 'game')
 })
 // the next steps open the game with that one ready, passed through this device's storage
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
@@ -201,18 +194,19 @@ function stat(label: string, value: string): HTMLElement {
 void getCard().then(card => {
   if (!card) return
   showDay(card.day, card.no)
-  // an older day's post keeps its own date and sends players on to today's post
+  // an older day's post keeps its own date, can't be played, and only shows its leaderboard
   if (card.past) {
-    goToday = card.todayPost ?? ''
     const missed = $('missed')
     if (missed) {
       missed.textContent =
         card.score === undefined
-          ? "You missed this cube. Today's cube is ready."
-          : `You scored ${card.score.toLocaleString('en-GB')} on this cube. Today's cube is ready.`
+          ? 'You missed this cube.'
+          : `You scored ${card.score.toLocaleString('en-GB')} on this cube.`
       missed.hidden = false
     }
-    startBtn.textContent = "Play today's cube"
+    startBtn.textContent = 'View leaderboard'
+    startBtn.dataset.open = 'pastboard'
+    document.body.classList.add('is-past')
     return
   }
   if (card.streak > 1) {

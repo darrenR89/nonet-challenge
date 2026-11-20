@@ -132,6 +132,8 @@ export type DailyRsp = {
   /** Opened from an earlier day's post: Play goes on to today's post (its id, or empty). */
   past?: true
   todayPost?: string
+  /** On an earlier day's post: that day's board and its week's. */
+  pastBoards?: {day: Board; week: Board}
 }
 
 /** What the feed card shows. Light: a few reads, so it's fine on every scroll past. */
