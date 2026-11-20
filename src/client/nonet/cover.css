@@ -35,7 +35,7 @@
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
 .cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:5px 4px;margin:4px;width:max-content}
 /* one character per line, written across: vertical text spilled out of the box on iOS */
-.cv-kanji{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--c-kanji);line-height:1;font-size:22px}
+.cv-kanji{display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--c-kanji);line-height:1;font-size:22px}
 .cv-kanji>span{display:block;width:1em;text-align:center}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
 .cv-dot{display:inline-block;margin:.6em 0}
