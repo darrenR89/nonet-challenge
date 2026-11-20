@@ -117,6 +117,7 @@ import {
   listEvents,
   saveEvent,
 } from './events.ts'
+import {cubeList} from './export.ts'
 import {flairAfterSolve, lapseFlair} from './flair.ts'
 import {
   getSpot,
@@ -282,6 +283,9 @@ async function route(
         break
       case Endpoint.OnMenuWiki:
         rsp = await routeMenuWiki()
+        break
+      case Endpoint.OnMenuCubes:
+        rsp = await routeMenuCubes()
         break
       case Endpoint.OnFormNewEvent:
         rsp = await routeFormNewEvent(await readJson<unknown>(reqMsg))
@@ -1045,6 +1049,24 @@ async function routeMenuWeekPost(): Promise<UiResponse> {
   return {
     showToast: {text: "This week's board is posted.", appearance: 'success'},
     navigateTo: url,
+  }
+}
+
+/** Sends the mod who asked a private message with the stored cubes. Players never see it. */
+async function routeMenuCubes(): Promise<UiResponse> {
+  const name = context.username
+  if (!name) return {showToast: 'Log in to get the cube list.'}
+  try {
+    await reddit.sendPrivateMessage({to: name, ...(await cubeList())})
+    return {
+      showToast: {
+        text: 'Sent: check your Reddit messages.',
+        appearance: 'success',
+      },
+    }
+  } catch (err) {
+    console.warn(`cube list failed: ${err}`)
+    return {showToast: "The cube list couldn't be sent."}
   }
 }
 

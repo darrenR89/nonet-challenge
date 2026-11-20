@@ -1139,6 +1139,15 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   assert.equal(wiki.created, 1)
 })
 
+test('a mod can message themselves the cube list; players never get it', async () => {
+  await daily()
+  as('t2_mod', 'themod')
+  const sent = messages.length
+  const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuCubes)
+  assert.equal(menu.body.showToast?.text, 'Sent: check your Reddit messages.')
+  assert.deepEqual(messages.slice(sent), [['themod', 'Nonet cube list']])
+})
+
 test('pinning can be turned off', async () => {
   pinPosts = false
   now = new Date('2026-11-16T08:01:00Z')

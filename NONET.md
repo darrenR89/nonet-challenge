@@ -14,6 +14,7 @@ The Nonet prototype, ported into Reddit's Devvit "bare" web template.
 - Mondays it posts the weekly top nine for last week, plus the solve of the week (the highest single-day score), pinned second.
 - From 3 days in a row a player's user flair shows their streak ("Nonet · 7-day streak"), and their best once it lapses. Flair a player or a mod set some other way is left alone.
 - The app writes `/wiki/nonet`: the short rules, the scoring table and the records (longest streaks, all-time points, past weeks). It rewrites it on install, every Monday, and from the mod menu "Nonet: update the wiki". The app account needs wiki permission.
+- Mods can get the stored cubes from the mod menu "Nonet: message me the cube list": a private message with the last 30 days (tomorrow's included once it's made), each with its clues and answer. Cubes stay in Redis, which players can't read.
 - Subreddit settings turn off auto posting, pinning and streak flair.
 
 Not yet on Reddit's side: the week board and ranks on the splash are samples, and the daily turn pick is stored in the browser only. Both move to Redis on the server next.

@@ -34,6 +34,13 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/on/menu/wiki"
+      },
+      {
+        "label": "Nonet: message me the cube list",
+        "description": "Sends you a private message with the last 30 days of cubes, clues and answers.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/cubes"
       }
     ]
   },
