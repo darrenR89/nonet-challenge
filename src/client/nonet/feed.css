@@ -21,17 +21,17 @@ body.cv {
   padding: 16px 20px;
   background: #121316;
   cursor: pointer;
-  transition: background-color 0.8s ease;
+  transition: background-color 1.4s ease;
 }
 .fd-fold {
   width: min(100%, 900px);
   max-height: 100%;
   overflow: visible;
   transform-origin: 0 0;
-  transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1);
+  transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1);
 }
 .fd-fold > rect {
-  transition: fill 0.8s ease;
+  transition: fill 1.2s ease;
 }
 /* lifting off: the black clears and the cells take the cover's ink, the yellow cell stays yellow */
 .fd-intro.fd-lift {

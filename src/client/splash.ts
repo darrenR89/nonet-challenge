@@ -47,7 +47,7 @@ function flyToCover(svg: SVGSVGElement, target: Element): Promise<void> {
       res()
     }
     svg.addEventListener('transitionend', e => e.target === svg && end())
-    setTimeout(end, 1300)
+    setTimeout(end, 1600)
     svg.style.transform = `translate(${dx}px, ${dy}px) scale(${k})`
   })
 }
@@ -76,14 +76,15 @@ async function intro(): Promise<void> {
     skipped = true
     show()
   })
-  await foldIntro(svg)
-  await wait(650)
+  const formed = foldIntro(svg)
+  // while the letters are still landing, the black lifts, the cells turn to ink, the cover
+  // starts to come in, and the forming wordmark flies onto the cover's
+  await wait(1700)
   if (skipped) return
-  // the black lifts, the cells turn to ink, and the cover comes in around the flying wordmark
   box.classList.add('fd-lift')
   body.classList.add('fd-in', 'fd-hold')
   body.classList.remove('fd-pre')
-  await flyToCover(svg, mark)
+  await Promise.all([formed, flyToCover(svg, mark)])
   if (!skipped) show()
 }
 void intro()
