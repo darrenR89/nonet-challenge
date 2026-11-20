@@ -110,8 +110,6 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .hint[hidden]{display:none}
 .hint.tipin{animation:tipin .5s ease}
 @keyframes tipin{from{opacity:0;transform:translateY(4px)}}
-.views{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
-.views button{font-size:12px}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
 /* pencil and pen: an icon switch at the top right, under the progress */
 .penrow{display:flex;justify-content:flex-end;margin-top:-6px}
@@ -239,7 +237,10 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 
 /* ---------- dialog ---------- */
 .modal{position:fixed;inset:0;z-index:60;background:rgba(10,11,13,.72);display:grid;place-items:center;padding:16px}
-.modal .card{width:min(420px,100%);max-height:calc(100% - 32px);overflow-y:auto;box-sizing:border-box;background:var(--slate);border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);padding:18px 16px;display:grid;gap:12px}
+.modal .card{width:min(420px,100%);max-height:calc(100% - 32px);overflow:hidden;box-sizing:border-box;background:var(--slate);border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);padding:18px 16px;display:flex;flex-direction:column;gap:12px}
+/* the title and buttons stay put; only the body scrolls */
+.modal .card>*{flex:none}
+.modal .card>.body{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .modal h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px;line-height:1.2}
 .modal .body p{margin:0;font-size:15px;line-height:1.5;color:var(--washi)}
 .modal .body .rules{margin:0;padding:0;border:0;background:none}
@@ -341,7 +342,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .progress.s1 #step2,.progress.s2 #step2{margin-left:4px}
 .pstage{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;font-family:var(--code);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--lead);min-width:0}
 .pstage[hidden]{display:none}
-.views[hidden]{display:none}
 .pstage.on{color:var(--washi)}
 .pbar{display:block;height:8px;border-radius:3px;background:var(--sumi);box-shadow:inset 0 0 0 1px var(--edge);overflow:hidden}
 .pbar i{display:block;height:100%;width:0;background:var(--washi);border-radius:3px;transition:width .45s cubic-bezier(.2,.8,.2,1)}
@@ -456,7 +456,10 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
 .modal .body p.meta{font-size:13px;color:var(--lead)}
 .modal .body .rules p:not(.lead){margin:10px 0 0;font-size:13px;color:var(--lead)}
-.rules .rtabs{display:flex;gap:4px;padding:4px;margin:0 0 12px;border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);background:var(--slate)}
+.rules .rtabs{display:flex;gap:4px;padding:4px;margin:0 0 12px;position:sticky;top:0;z-index:2;border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);background:var(--slate)}
+/* while the help scrolls, the tabs stay on top over a solid band */
+.rules .rtabs::before{content:"";position:absolute;inset:-12px -4px -12px;background:var(--slate);z-index:-1}
+.rules .rtabs::after{content:"";position:absolute;inset:-1px;border:1px solid var(--edge);border-radius:inherit;pointer-events:none}
 .rules .rtabs button{flex:1;padding:6px 4px;font-size:12px;border:0;background:none;color:var(--lead)}
 .rules .rtabs button[aria-selected="true"]{background:var(--washi);color:var(--sumi)}
 .rules .minis{display:grid;gap:8px;margin:0}
@@ -467,3 +470,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .rules .mini p,.modal .body .rules .mini p{margin:0;font-size:14px;line-height:1.45;color:var(--washi)}
 .rules p.callout,.modal .body .rules p.callout{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--yellow);border-radius:4px;background:rgb(245 193 46 / .1);font-size:14px;color:var(--washi)}
 .rules .callout b{display:block;font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+/* practice walkthrough: the next thing to tap pulses yellow */
+.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:pulse 1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:none;box-shadow:0 0 0 3px var(--yellow)}}

@@ -1,4 +1,9 @@
-import {requestExpandedMode} from '@devvit/web/client'
+import {
+  context,
+  navigateTo,
+  navigateToPost,
+  requestExpandedMode,
+} from '@devvit/web/client'
 import './nonet/fonts.css'
 import './nonet/cover.css'
 import './nonet/feed.css'
@@ -166,7 +171,16 @@ function showDay(day: string, no: number | undefined): void {
 showDay(dayKey(), undefined)
 
 const startBtn = $('start-btn') as HTMLButtonElement
-startBtn.addEventListener('click', ev => requestExpandedMode(ev, 'game'))
+/** On an older day's post: today's post to go to instead of playing here. */
+let goToday: string | undefined
+startBtn.addEventListener('click', ev => {
+  if (goToday === undefined) {
+    requestExpandedMode(ev, 'game')
+    return
+  }
+  if (goToday) navigateToPost(goToday as `t3_${string}`)
+  else navigateTo(`https://www.reddit.com/r/${context.subredditName ?? ''}/`)
+})
 // the next steps open the game with that one ready, passed through this device's storage
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
   b.addEventListener('click', ev => {
@@ -187,6 +201,20 @@ function stat(label: string, value: string): HTMLElement {
 void getCard().then(card => {
   if (!card) return
   showDay(card.day, card.no)
+  // an older day's post keeps its own date and sends players on to today's post
+  if (card.past) {
+    goToday = card.todayPost ?? ''
+    const missed = $('missed')
+    if (missed) {
+      missed.textContent =
+        card.score === undefined
+          ? "You missed this cube. Today's cube is ready."
+          : `You scored ${card.score.toLocaleString('en-GB')} on this cube. Today's cube is ready.`
+      missed.hidden = false
+    }
+    startBtn.textContent = "Play today's cube"
+    return
+  }
   if (card.streak > 1) {
     $('streak-n')?.replaceChildren(`${card.streak}-day streak`)
     $('streak')?.removeAttribute('hidden')

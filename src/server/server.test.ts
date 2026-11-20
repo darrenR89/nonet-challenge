@@ -34,6 +34,8 @@ import {
 let server: Server
 let serverURL: string
 let user: {userId?: string; username?: string} = {}
+/** The open post's data, as Devvit passes it: daily posts carry their day. */
+let postData: {day?: string} | undefined
 let now = new Date('2026-11-14T12:00:00Z')
 const posts: string[] = []
 /** Text post bodies, in order. */
@@ -166,6 +168,7 @@ before(async () => {
       {
         appName: 'nonet-challenge',
         postId: 't3_123',
+        postData,
         subredditName: SUB,
         ...user,
       } as unknown as Context,
@@ -734,6 +737,34 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
   assert.equal(lapsed.body.streak, 0, 'a missed day ends the streak')
   assert.equal(lapsed.body.no, 320)
   assert.equal(lapsed.body.solves, 0, 'a new day starts at zero')
+})
+
+test("an older day's post keeps its date, and links to today's post", async () => {
+  as('t2_ann', 'ann')
+  const day = (await get<CardRsp>(Endpoint.Card)).body.day
+  await playDay(0, run())
+  postData = {day}
+  assert.equal((await get<CardRsp>(Endpoint.Card)).body.past, undefined)
+  later(86400)
+  await daily()
+  const old = (await get<CardRsp>(Endpoint.Card)).body
+  assert.equal(old.past, true)
+  assert.equal(old.day, day, "the post's own day, not today")
+  assert.ok((old.score ?? 0) > 0, 'how you did that day')
+  assert.match(old.todayPost ?? '', /^t3_/, "today's auto post")
+  const game = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(
+    game.past,
+    true,
+    "the game in an old post won't start today's cube",
+  )
+  assert.equal(game.todayPost, old.todayPost)
+  later(86400)
+  as('t2_new', 'new')
+  const missed = (await get<CardRsp>(Endpoint.Card)).body
+  assert.equal(missed.past, true)
+  assert.equal(missed.score, undefined, 'never played that day')
+  postData = undefined
 })
 
 test('a challenge is offered, accepted before playing, then settles', async () => {

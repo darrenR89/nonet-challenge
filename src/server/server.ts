@@ -361,6 +361,20 @@ const ZERO_RUN: RunStats = {
   starsWon: 0,
 }
 
+/** Where each day's post is, so an older post can send players on to today's. */
+const DAILY_POSTS = 'posts:daily'
+
+/**
+ * The day a daily post is for, when it is an earlier day than today. Each daily post is
+ * fixed to its own date: an older one shows how that day went and links to today's post.
+ */
+export function pastDayOf(postData: unknown, now: string): string | undefined {
+  const d = (postData as {day?: unknown} | undefined)?.day
+  return typeof d === 'string' && /^\d{4}-\d\d-\d\d$/.test(d) && d < now
+    ? d
+    : undefined
+}
+
 async function routeDaily(): Promise<DailyRsp> {
   const day = today()
   const uid = await who()
@@ -387,12 +401,17 @@ async function routeDaily(): Promise<DailyRsp> {
       : false,
     duels: uid ? await duelsFor(day, uid) : [],
     crew: uid ? await crewInfo(day, uid) : NO_CREW,
+    ...(pastDayOf(context.postData, day)
+      ? {past: true, todayPost: (await redis.hGet(DAILY_POSTS, day)) ?? ''}
+      : {}),
   }
 }
 
-/** The feed card: today's number, how many solved, and the asker's streak and result. */
+/** The feed card: the post's own day's number, how many solved, and the asker's streak and result. */
 async function routeCard(): Promise<CardRsp> {
-  const day = today()
+  const now = today()
+  const past = pastDayOf(context.postData, now)
+  const day = past ?? now
   // no rememberName here: the card is read on every scroll past
   const uid = context.userId
   const score = uid ? (await getMyDay(day, uid)).score : undefined
@@ -404,12 +423,15 @@ async function routeCard(): Promise<CardRsp> {
     solves: st.solves,
     played: (st.tiers ?? []).reduce((n, t) => n + t.picks, 0),
     fastest: st.fastest,
-    streak: uid ? (await getStreak(day, uid)).current : 0,
+    streak: uid ? (await getStreak(now, uid)).current : 0,
     score,
     rank:
       uid && score !== undefined
         ? await rankOn(boardKey.day(day), uid)
         : undefined,
+    ...(past
+      ? {past: true, todayPost: (await redis.hGet(DAILY_POSTS, now)) ?? ''}
+      : {}),
   }
 }
 
@@ -885,6 +907,7 @@ async function postDaily(day: string): Promise<{url: string; id: string}> {
     title: dailyTitle(day, e),
     postData: {day},
   })
+  await redis.hSet(DAILY_POSTS, {[day]: post.id})
   await pin(post, 1)
   return {url: post.url, id: post.id}
 }

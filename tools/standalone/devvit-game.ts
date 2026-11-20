@@ -4,7 +4,7 @@
 export {exitExpandedMode} from '@devvit/client'
 
 // Outside Reddit there is no post: the game shares the page's own link instead.
-export const context: {postId: string | undefined} = {postId: undefined}
+export const context: {postId: string | undefined; subredditName?: string} = {postId: undefined}
 
 // Reddit's share sheet sends the post link; here the browser's share sheet sends the page's.
 export async function showShareSheet(o: {title?: string; text?: string}): Promise<void> {
@@ -33,3 +33,5 @@ export function showLoginPrompt(): void {
     } else d.remove()
   })
 }
+export function navigateTo(_url: string): void {}
+export function navigateToPost(_id: string): void {}

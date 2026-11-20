@@ -290,6 +290,12 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       } catch {}
       const b = boards(day, s)
       const played = look === 'played' || (look === '' && rec.score !== undefined)
+      // an older day's post: fixed to its date, and Play goes on to today's post
+      if (look === 'past') {
+        const y = addDays(day, -1)
+        return json({day: y, no: cubeNo(y), loggedIn: true, solves: 0, played: 0, fastest: 0,
+          streak: 0, score: undefined, rank: undefined, past: true, todayPost: 't3_today'})
+      }
       return json({
         day,
         no: look === 'cycled' ? 366 : cubeNo(day),
