@@ -134,7 +134,8 @@ export function moodFor(seed: number): Mood {
   const r = rng(seed)
   const scale = pick(r, Object.keys(SCALES) as ScaleName[])
   const root = 60 + Math.floor(r() * 7) - 2 // A♯3 to E4
-  const bpm = 88 + 4 * Math.floor(r() * 6) // 88 to 108
+  // from an unhurried 76 to a brisk 124, so some runs drift and some drive
+  const bpm = 76 + 4 * Math.floor(r() * 13)
   // half the tunes change chord every bar, half every two beats. The sounds
   // lean to the original organ, plucks and bells, so most runs keep that feel
   const chords = pick(r, [

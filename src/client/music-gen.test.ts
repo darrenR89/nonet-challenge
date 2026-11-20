@@ -58,6 +58,8 @@ test('tunes differ in more than key: chords, swing, sounds and patterns', () => 
     new Set(moods.map(m => JSON.stringify(f(m)))).size
   assert.ok(kinds(m => m.chords.length) === 2, 'two and four chord loops')
   assert.ok(kinds(m => m.swing) >= 3, 'straight and swung')
+  const bpms = moods.map(m => m.bpm)
+  assert.ok(Math.min(...bpms) <= 80 && Math.max(...bpms) >= 120, 'tempos')
   assert.ok(kinds(m => m.voices.pad) >= 3, 'pad sounds')
   assert.ok(kinds(m => m.padHits.length > 0) === 2, 'held and plucked chords')
   assert.ok(kinds(m => m.voices.lead) >= 3, 'lead sounds')
