@@ -1,6 +1,11 @@
 // Sharing a result: the card as a PNG through the device's share sheet where it takes files,
 // and the post link (the way in for others to play) in the text.
-import {CARD_FONTS, drawShareCard, type ShareCard} from './share-card.ts'
+import {
+  CARD_FONTS,
+  CARD_GLYPHS,
+  drawShareCard,
+  type ShareCard,
+} from './share-card.ts'
 
 /** The post's Reddit link, for others to open and play. Undefined outside a post. */
 export function postUrl(
@@ -23,7 +28,7 @@ export async function renderCard(
   d: ShareCard,
 ): Promise<{blob: Blob; dataUrl: string} | undefined> {
   try {
-    await Promise.all(CARD_FONTS.map(f => document.fonts.load(f)))
+    await Promise.all(CARD_FONTS.map(f => document.fonts.load(f, CARD_GLYPHS)))
   } catch {}
   const canvas = document.createElement('canvas')
   drawShareCard(canvas, d)

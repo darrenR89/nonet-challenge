@@ -7,7 +7,7 @@ import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastErro
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
-import {crewTitle,crewSummary,crewButton,crewShareLine,crewPanelHTML,wireCrew} from '../crew.ts';
+import {crewTitle,crewSummary,crewButton,crewShareLine,crewCard,crewPanelHTML,wireCrew} from '../crew.ts';
 import {context,exitExpandedMode,showLoginPrompt,showShareSheet} from '@devvit/web/client';
 import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
@@ -429,7 +429,7 @@ async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=tru
   const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
   const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
   const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
-    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||''}).catch(()=>undefined);
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||'',crew:daily?crewCard(D&&D.crew):undefined}).catch(()=>undefined);
   if(b)b.disabled=false;
   if(!card){copyResult(txt);return}
   journey.interaction('share','open');

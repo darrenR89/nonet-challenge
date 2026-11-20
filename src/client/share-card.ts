@@ -20,6 +20,16 @@ export type ShareCard = {
   rank: number
   /** Subreddit without the r/, or empty. */
   subreddit: string
+  /** The player's crew today, for the crew version of the card. */
+  crew?: CrewCard
+}
+
+/** A crew on the card: its name, today's crew points and streak, and each member's score. */
+export type CrewCard = {
+  name: string
+  points: number
+  streak: number
+  members: {name: string; score: number | undefined}[]
 }
 
 export const CARD_W = 1080
@@ -53,6 +63,9 @@ export const CARD_FONTS = [
   `700 24px ${CODE}`,
   `700 24px ${JP}`,
 ]
+
+/** Characters to load the fonts for, so the kanji subsets come in too. */
+export const CARD_GLYPHS = 'No.0123456789 日刊連'
 
 type Ctx = CanvasRenderingContext2D
 
@@ -230,6 +243,63 @@ export function detailLine(
   return bits.join(' · ')
 }
 
+/** The crew's members and scores on one line, e.g. "u/ann 1,240 · u/bob 980 · u/cat –". */
+export function crewMembersLine(k: Pick<CrewCard, 'members'>): string {
+  return k.members
+    .map(
+      m =>
+        `u/${m.name} ${m.score === undefined ? '–' : m.score.toLocaleString('en-GB')}`,
+    )
+    .join(' · ')
+}
+
+/** The crew's right-hand figure: crew points today, and the streak once it's going. */
+export function crewFigure(k: Pick<CrewCard, 'points' | 'streak'>): string {
+  const pts = `${k.points.toLocaleString('en-GB')} crew pts`
+  return k.streak > 1 ? `${pts} · ${k.streak}-day streak` : pts
+}
+
+/** Fits text to a width by trimming it with an ellipsis. */
+function fit(c: Ctx, s: string, max: number): string {
+  if (c.measureText(s).width <= max) return s
+  let t = s
+  while (t.length > 1 && c.measureText(`${t}…`).width > max) t = t.slice(0, -1)
+  return `${t}…`
+}
+
+// the crew band, between the numbers and the call to play: 連 and the crew's name, its points
+// and streak, then each member's score
+function crewBand(c: Ctx, k: CrewCard, y: number): void {
+  const x0 = 72
+  const w = CARD_W - 144
+  c.fillStyle = C.slate
+  roundRect(c, x0, y, w, 104, 12)
+  c.fill()
+  c.fillStyle = C.yellow
+  roundRect(c, x0, y, 8, 104, 4)
+  c.fill()
+  // the mark: 連 on a yellow cell
+  c.fillStyle = C.yellow
+  roundRect(c, x0 + 28, y + 16, 48, 48, 8)
+  c.fill()
+  c.fillStyle = C.sumi
+  c.font = `400 38px ${DISPLAY}`
+  c.textAlign = 'center'
+  c.fillText('連', x0 + 52, y + 54)
+  const figure = crewFigure(k)
+  c.font = `500 26px ${CODE}`
+  c.textAlign = 'right'
+  c.fillStyle = C.washi
+  c.fillText(figure, x0 + w - 24, y + 50)
+  const fw = c.measureText(figure).width
+  c.textAlign = 'left'
+  c.font = `700 34px ${JP}`
+  c.fillText(fit(c, k.name, w - 140 - fw), x0 + 92, y + 52)
+  c.fillStyle = C.lead
+  c.font = `500 24px ${CODE}`
+  c.fillText(fit(c, crewMembersLine(k), w - 52), x0 + 28, y + 88)
+}
+
 /** Draws the card. Load CARD_FONTS first, or the browser's fallbacks are used. */
 export function drawShareCard(canvas: HTMLCanvasElement, d: ShareCard): void {
   canvas.width = CARD_W
@@ -288,7 +358,10 @@ export function drawShareCard(canvas: HTMLCanvasElement, d: ShareCard): void {
   c.fillStyle = C.lead
   c.font = `500 26px ${CODE}`
   c.textAlign = 'center'
-  c.fillText(detailLine(d), CARD_W / 2, 1090)
+  // with a crew, the detail line moves up to make room for the crew band
+  c.fillText(detailLine(d), CARD_W / 2, d.crew ? 1030 : 1090)
+  if (d.crew) crewBand(c, d.crew, 1046)
+  c.textAlign = 'center'
 
   // the call to play, set as the game's primary button
   c.fillStyle = C.yellow

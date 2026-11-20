@@ -17,6 +17,7 @@ import {
   leaveCrew,
   nudgeCrew,
 } from './api.ts'
+import type {CrewCard} from './share-card.ts'
 
 const esc = (s: string): string =>
   s.replace(
@@ -59,6 +60,20 @@ export function crewButton(info: Readonly<CrewInfo>): string {
   return info.crew
     ? `${mark} Crew: ${playedText(info.crew)}`
     : `${mark} Start a crew`
+}
+
+/** The crew part of the share card, or undefined without a crew. */
+export function crewCard(
+  info: Readonly<CrewInfo> | undefined,
+): CrewCard | undefined {
+  const c = info?.crew
+  if (!c) return
+  return {
+    name: c.name,
+    points: c.today,
+    streak: c.streak,
+    members: c.members.map(m => ({name: m.name, score: m.score})),
+  }
 }
 
 /** The crew line added to the shared result, or nothing without a crew. */
