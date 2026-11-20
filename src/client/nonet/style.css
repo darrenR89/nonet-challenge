@@ -431,12 +431,15 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .prow .timer{font-variant-numeric:tabular-nums}
 .prow .misses{display:inline-flex;align-items:center;gap:3px}
 .prow .misses[hidden]{display:none}
+/* the helpers, under the progress bar: a suggested move for now */
+.helpers{display:flex;gap:8px;width:100%;flex:1 1 100%}
+.helpers:not(:has(>:not([hidden]))){display:none}
 .runbar[hidden]{display:none}
 
 /* Suggest sits with Help and music at the top right */
-.hdr .sugg{width:auto;padding:0 12px;font:500 13px var(--code);letter-spacing:.02em;white-space:nowrap}
-.hdr .sugg[hidden]{display:none}
-.hdr .sugg:disabled{opacity:.4}
+.sugg{width:auto;padding:0 12px;font:500 13px var(--code);letter-spacing:.02em;white-space:nowrap}
+.sugg[hidden]{display:none}
+.sugg:disabled{opacity:.4}
 /* the number pad in a frame, with pencil and lock-in as tabs on its top edge */
 .padbox{border:1px solid var(--edge);border-radius:0 var(--r) var(--r) var(--r);padding:8px;background:var(--slate);position:relative;margin-top:36px}
 .padbox[hidden]{display:none}
@@ -451,6 +454,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the cube's area takes all the height left between the top bar and the pad, and the cube sits in
    its middle, so it stays centred whatever the screen height */
 .wrap{min-height:100svh;box-sizing:border-box}
+/* the room's faint grid fades out past the cube; it must never make the page taller than the screen */
+.wrap{overflow:visible clip}
 .stage{flex:1 1 auto;height:auto;min-height:min(80vw,320px)}
 /* the share card's preview in the share dialog */
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
@@ -473,3 +478,37 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* practice walkthrough: the next thing to tap pulses yellow */
 .st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:pulse 1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+
+/* light: the board on paper. The page takes the cover's paper and faint print, and the cube is
+   black lacquer with cream stickers and ink numbers. Dark keeps the graphite board above. */
+@media (prefers-color-scheme:light){
+  :root{--sumi:#f3f2ec;--slate:#e6e4dc;--tile:#e9e7df;--edge:#cfccc2;--washi:#23252b;--lead:#5b5f69;
+    --peer:#dde3f2;--done:#f6e7b8;--ai:#3d5fb8;--beni:#b8423f;
+    --body-ink:#23252b;--cell-top:#f6f5f0;--cell-right:#e4e2da;--cell-left:#d6d3c9;color-scheme:light}
+  body{background:#e9ece9 url(/brand/paper.jpg) center/cover fixed;color:#23252b}
+  body::after{opacity:.25;mix-blend-mode:multiply}
+  body::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-30vw;bottom:-6vh;height:96vh;aspect-ratio:1000/1342;
+    background:url(/brand/harunobu-line.jpg) center/contain no-repeat;mix-blend-mode:multiply;opacity:.14}
+  h1 img{content:url(/brand/nonet-wordmark-ink.svg)}
+  /* lanes: opaque tints over each sticker's own shade, so the black body never shows through */
+  .st.ov{background:color-mix(in srgb,var(--shade) 72%,#5b7fd6)!important}
+  .st.la,.st.lb{box-shadow:inset 0 0 0 2px #d9a514}
+  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2px #d9a514}
+  .st.wrong{color:#fff!important}
+  .arw:hover{background:#fff}
+  .testkit{background:rgba(243,242,236,.94)}
+  .modal{background:rgba(35,37,43,.45)}
+  .penalty{text-shadow:0 2px 0 #f3f2ec}
+  .moment b{text-shadow:0 2px 0 #121316,0 0 18px rgba(0,0,0,.6)}
+  /* dark type on every yellow */
+  .results button,.splash .play,button.primary,.results .more button.primary,.progress .pstage.on,.results .signup{color:#121316}
+  @keyframes sweep{0%{background:var(--tile)}25%{background:var(--yellow);color:#121316}100%{}}
+  /* the interface buttons are solid ink on the paper */
+  header button,.modes button,.modal button:not(.primary):not([aria-selected]):not([aria-pressed]){background:#23252b;color:#eceae3;border-color:#23252b}
+  header button:hover,.modes button:hover{border-color:#5b5f69}
+}
+/* short windows (a desktop post): the cube's area may shrink so the page never scrolls */
+@media (max-height:600px){
+  .stage{min-height:200px}
+  .wrap{padding-block:12px 16px;gap:10px}
+}

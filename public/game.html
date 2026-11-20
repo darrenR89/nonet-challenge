@@ -77,7 +77,6 @@
   <header>
     <h1><img src="/brand/nonet-wordmark.svg" alt="Nonet" width="141" height="26"></h1>
     <span class="hdr">
-      <button class="icon sugg" id="suggest" type="button">Suggest 3/3</button>
       <button class="icon" id="helpBtn" type="button" aria-label="How to play">?</button>
       <button class="icon" id="soundBtn" type="button" aria-label="Music and sound" aria-pressed="true">♪</button>
     </span>
@@ -97,13 +96,16 @@
       <span class="timer" id="timer" aria-label="Time">0:00</span>
       <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
     </div>
+    <div class="helpers" id="helpers">
+      <button class="icon sugg" id="suggest" type="button">Suggest 3/3</button>
+    </div>
   </div>
   <span class="status" id="status" aria-live="polite"></span>
 
   <div class="stage" id="stage" aria-label="Puzzle cube. Drag to look around.">
     <div class="space" aria-hidden="true"><canvas id="room"></canvas></div>
     <div class="cube" id="cube"></div>
-    <details class="testkit" id="testkit">
+    <details class="testkit" id="testkit" hidden>
       <summary>Test</summary>
       <div class="tk">
         <button id="tkAlign">Dial in now</button>

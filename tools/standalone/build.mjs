@@ -76,7 +76,7 @@ body:has(.padbox:not([hidden])) .demo{display:none}
 .demo{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:70;font-family:var(--code);font-size:11px;color:var(--lead);background:var(--slate);border:1px solid var(--edge);border-radius:6px;padding:4px 8px;min-height:0;opacity:.85}</style>`)
   .replace('/brand/nonet-wordmark.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark.svg')}`)
   .replace('<script src="game.js" type="module"></script>', () => `${cardLayer}
-<button class="demo" id="resetDemo" type="button" title="Prototype: start today over in this browser">Reset demo</button>
+<button class="demo" id="resetDemo" type="button" hidden title="Prototype: start today over in this browser">Reset demo</button>
 <script type="module">${js.replaceAll('</script', '<\\/script')}</script>`)
 writeFileSync(out, html)
 console.log(`${out} ${(html.length / 1024).toFixed(1)} KB`)

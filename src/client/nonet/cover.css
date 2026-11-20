@@ -358,12 +358,14 @@
   .is-done .cv-play{height:38px}
   .dn-res{padding:6px 12px 8px}
   .dn-score b{font-size:34px}
-  .dn-chip{padding-block:8px}
+  .dn-chip{padding-block:6px}
   .dn-chip span{display:none}
 }
 
 /* every width: the spine sits hard against the right edge at full height, and the title block and
    Play are centred across the space left of it */
+/* in the game too: no frame round the cover, so the spine runs from the very top to the very bottom */
+.splash.cv{padding:0}
 @media (min-width:600px){
   .cv,.splash.cv{padding:0}
   .cv-cover{--H:100svh;width:100%}
@@ -395,4 +397,21 @@
   .cv .event,.cv .peek,.su-guest{background:rgba(255,255,255,.06)}
   /* the setup screen keeps its yellow page with ink type */
   .cv.setup{--c-ink:#23252b;--c-paper:#f3f2ec;--c-lead:#5b5f69;color-scheme:light}
+}
+
+/* short screens (a small phone, a desktop post): the played card and the setup page tighten up
+   so nothing scrolls */
+@media (max-height:700px){
+  .is-done .cv-mid{gap:20px}
+  .is-done .cv-title{--top:28px}
+}
+@media (max-height:700px){
+  .cv.setup{padding-top:12px;padding-bottom:12px}
+  .su-in{gap:8px}
+  .su-lead{display:none}
+  .setup h2{font-size:24px;margin-top:0}
+  .setup .cv-twists{gap:6px}
+  .setup .cv-twists>*{min-height:44px;padding:6px 14px}
+  .setup .cv-twists b{font-size:18px}
+  .su-go{margin-top:2px}
 }
