@@ -111,7 +111,7 @@ Finish a cube on days in a row to build a streak.${flair} Lock all three ★ ope
 
 ## The week
 
-Every day's points add up on the weekly board, Monday to Sunday. Each Monday the week's top nine, the Nine, go up in a post with the solve of the week: the highest score on a single day.
+Every day's points add up on the weekly board, Monday to Sunday. Each Monday the weekly top nine go up in a post with the solve of the week: the highest score on a single day.
 
 ## Challenges and events
 

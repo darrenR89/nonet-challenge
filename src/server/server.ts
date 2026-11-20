@@ -778,7 +778,7 @@ async function postWeekResults(
       : '',
   ]
   const post = await reddit.submitPost({
-    title: `Nonet · the Nine${final ? '' : ' so far'} · week of ${shortDate(from)}`,
+    title: `Nonet · weekly top nine${final ? '' : ' so far'} · week of ${shortDate(from)}`,
     text: text.filter(Boolean).join('\n\n'),
   })
   await pin(post, 2)

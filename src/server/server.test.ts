@@ -474,7 +474,7 @@ test('the daily job posts once a day, and the week on Mondays', async () => {
   await daily()
   assert.equal(posts.length, 2)
   assert.match(posts[0] ?? '', /^Nonet: today's cube · Mon 16 Nov/)
-  assert.match(posts[1] ?? '', /^Nonet · the Nine · week of Mon 9 Nov$/)
+  assert.match(posts[1] ?? '', /^Nonet · weekly top nine · week of Mon 9 Nov$/)
   autoPost = false
   now = new Date('2026-11-17T08:01:00Z')
   await daily()
@@ -869,7 +869,7 @@ test('streak flair from three days in a row, then the best once it lapses', asyn
   assert.equal(flairs.get('t2_ann'), 'sudoku fan')
 })
 
-test("Monday's post has the Nine and the solve of the week, is pinned, and the wiki is written", async () => {
+test("Monday's post has the weekly top nine and the solve of the week, is pinned, and the wiki is written", async () => {
   now = new Date('2026-11-16T12:00:00Z') // Monday, week of 16 Nov
   const ann = await playDay(1, run())
   as('t2_bob', 'bob')
@@ -883,11 +883,11 @@ test("Monday's post has the Nine and the solve of the week, is pinned, and the w
   await daily()
   assert.deepEqual(posts, [
     "Nonet: today's cube · Mon 23 Nov",
-    'Nonet · the Nine · week of Mon 16 Nov',
+    'Nonet · weekly top nine · week of Mon 16 Nov',
   ])
   assert.deepEqual(pins, [
     "Nonet: today's cube · Mon 23 Nov @ 1",
-    'Nonet · the Nine · week of Mon 16 Nov @ 2',
+    'Nonet · weekly top nine · week of Mon 16 Nov @ 2',
   ])
   const text = texts[0] ?? ''
   assert.match(text, /from 2 players/)

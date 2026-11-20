@@ -73,7 +73,7 @@
       },
       "pinPosts": {
         "type": "boolean",
-        "label": "Pin the daily cube and the week's Nine",
+        "label": "Pin the daily cube and the weekly top nine",
         "helpText": "Pins each day's cube as the first community highlight and the Monday post as the second, replacing whatever was pinned there.",
         "defaultValue": true
       },
