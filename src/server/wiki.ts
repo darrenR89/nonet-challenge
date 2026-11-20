@@ -81,12 +81,12 @@ export function wikiText(d: WikiData): string {
     : 'The first week is still going.'
   return `# Nonet
 
-One cube a day, the same for everyone, new at midnight Pacific time. Open today's pinned post and press Play. The **How to play** screen in the game (the ? button) has the full rules with pictures; this page is the short version, plus the records.
+Nonet is a daily sudoku challenge with a twist: it's a 3D cube. Nonet is the sudoku word for a group of nine, and every face of the cube is one. One cube a day, the same for everyone, new at midnight Pacific time. Open today's pinned post and press Play. The **How to play** screen in the game (the ? button) has the full rules with pictures; this page is the short version, plus the records.
 
 ## A day of Nonet
 
 1. **Pick your turns.** Before you play, choose how far today's cube is scrambled. It stays set until tomorrow.
-2. **Dial in.** Turn rows and columns to bring the bold clues home.
+2. **Dial in.** Rotate the cube horizontally and vertically until no number conflicts on a face or a line.
 3. **Fill in.** Every face holds 1 to 9 once, and every line of nine across three faces holds 1 to 9 once.
 
 Your first finished run each day counts. You get one retry a day, and it multiplies the day's total by ${RETRY_MULT}.
@@ -97,7 +97,7 @@ ${levels}
 
 ## Scoring
 
-Up to 300 points for turns and 200 for speed while dialling in, then up to 300 for speed and 200 for accuracy while filling in (a wrong lock costs 25). +100 if you use no suggested turns, and +50 for each ★ opening square you lock before any other square. With no turns there is no dialling in, so only the fill and the ★ squares score.
+Up to 300 points for turns and 200 for speed while dialling in, then up to 300 for speed and 200 for accuracy while filling in (a wrong lock costs 25). +100 if you use no suggested turns, and +50 for each ★ lock-first square you lock before any other square. With no turns there is no dialling in, so only the fill and the ★ lock-first squares score.
 
 Then the total is multiplied by how far you had it turned:
 
@@ -107,15 +107,15 @@ ${mult}
 
 ## Streaks
 
-Finish a cube on days in a row to build a streak.${flair} Lock all three ★ opening squares and you get a look at tomorrow's clues.
+Finish a cube on days in a row to build a streak.${flair} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
 
 ## The week
 
 Every day's points add up on the weekly board, Monday to Sunday. Each Monday the weekly top nine go up in a post with the solve of the week: the highest score on a single day.
 
-## Challenges and events
+## Challenges and crews
 
-Once you've finished today's cube you can dare another player to beat your score; they have to accept before they play. During an event your points also count on its board and, if it has sides, for the side you pick.
+Once you've finished today's cube you can dare another player to beat your score; they have to accept before they play. You can also team up with up to two friends in a Nonet Crew (連). Your daily scores add up, and your crew streak grows every day you all play.
 
 ## Records
 
