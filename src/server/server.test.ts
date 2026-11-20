@@ -22,6 +22,7 @@ import {
   type StartRsp,
 } from '../shared/api.ts'
 import type {RunStats} from '../shared/scoring.ts'
+import {eventsSwitch} from './events.ts'
 import {clock, onReq, runDaily} from './server.ts'
 import {
   clearFakeRedis,
@@ -142,6 +143,7 @@ beforeEach(() => {
   optedIn = false
   autoPost = true
   now = new Date('2026-11-14T12:00:00Z')
+  eventsSwitch.on = false
   as('t2_ann', 'ann')
 })
 
@@ -350,7 +352,29 @@ test('the week board adds up days and ranks players', async () => {
   assert.equal(daily.body.boards.week.me?.rank, 2)
 })
 
+test('events are switched off: a saved event shows nowhere', async () => {
+  await post(Endpoint.OnFormNewEvent, {
+    title: 'Big Game Week',
+    start: '2026-11-13',
+    end: '2026-11-16',
+    teams: 'Chiefs\nEagles',
+  })
+  const daily = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(daily.body.event, undefined)
+  const join = await post<ErrorRsp>(Endpoint.JoinTeam, {
+    eventId: '2026-11-13-big-game-week',
+    team: 'eagles',
+  })
+  assert.equal(join.status, 404)
+  const played = await playDay(1, run())
+  assert.equal(played.body.event, undefined)
+  // switched back on, the saved event is there as it was
+  eventsSwitch.on = true
+  assert.ok((await get<DailyRsp>(Endpoint.Daily)).body.event)
+})
+
 test('a team event: create, pick a side once, points count for it', async () => {
+  eventsSwitch.on = true
   const made = await post<{showToast?: {text: string}}>(
     Endpoint.OnFormNewEvent,
     {

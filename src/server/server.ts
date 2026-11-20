@@ -82,6 +82,7 @@ import {
   endEvent,
   eventFromForm,
   eventState,
+  eventsSwitch,
   getEvent,
   joinTeam,
   listEvents,
@@ -590,7 +591,7 @@ async function routeJoinSub(): Promise<JoinRsp> {
 
 async function routeJoinTeam(req: JoinTeamReq): Promise<JoinTeamRsp> {
   const uid = await needUser()
-  const e = await getEvent(String(req.eventId))
+  const e = eventsSwitch.on ? await getEvent(String(req.eventId)) : undefined
   const day = today()
   if (!e || day > e.end) throw new HttpError(404, 'That event is over.')
   try {
@@ -616,7 +617,11 @@ async function routeBoard(req: BoardReq): Promise<BoardRsp> {
     case 'all':
       return {board: await readBoard(boardKey.all, 'All time', uid)}
     case 'event': {
-      const e = req.key ? await getEvent(req.key) : await activeEvent(day)
+      const e = !eventsSwitch.on
+        ? undefined
+        : req.key
+          ? await getEvent(req.key)
+          : await activeEvent(day)
       if (!e) throw new HttpError(404, 'No such event.')
       return {board: await readBoard(boardKey.event(e.id), e.title, uid)}
     }
@@ -747,6 +752,7 @@ export async function runDaily(): Promise<void> {
   const yesterday = addDays(day, -1)
   if (weekday(day) === 1 && (await claim('week', weekKey(yesterday))))
     await postWeekResults(weekKey(yesterday))
+  if (!eventsSwitch.on) return
   for (const e of await listEvents())
     if (e.end === yesterday && (await claim('event', e.id)))
       await postEventResults(e)

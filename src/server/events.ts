@@ -5,6 +5,13 @@ import type {EventState, GameEvent, Team, TeamStanding} from '../shared/api.ts'
 import {inRange, isDay} from '../shared/scoring.ts'
 import {boardKey, readBoard} from './board.ts'
 
+/**
+ * Events are switched off for now: players see no event, side or event board, and the
+ * moderator menu items are out of devvit.json. Saved events stay in Redis, so turning
+ * this back on (plus the two menu items) brings them back as they were.
+ */
+export const eventsSwitch = {on: false}
+
 const eventsKey = 'events'
 const teamOfKey = (id: string): string => `ev:${id}:team`
 const teamScoreKey = (id: string): string => `ev:${id}:tscore`
@@ -27,6 +34,7 @@ export async function getEvent(id: string): Promise<GameEvent | undefined> {
 
 /** The event running on a day. If two overlap, the one that started last. */
 export async function activeEvent(day: string): Promise<GameEvent | undefined> {
+  if (!eventsSwitch.on) return
   const live = (await listEvents()).filter(e => inRange(day, e.start, e.end))
   return live.at(-1)
 }
