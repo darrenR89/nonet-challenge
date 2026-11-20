@@ -20,7 +20,7 @@
 .crew-leave{justify-self:start;min-height:32px;padding:0 12px;font-size:13px;background:transparent;color:var(--lead);border:1px solid var(--edge)}
 .crewOffer{display:grid;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--edge)}
 .crewOffer p{margin:0}
-.results .crewBox{display:grid;gap:10px;margin:8px 0;padding:16px;border:2px solid var(--yellow);border-radius:var(--r)}
+.results .crewBox{display:grid;gap:10px;margin:8px 0;padding:20px;border:2px solid var(--yellow);border-radius:var(--r)}
 .results .crewBox h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
 /* on the paper cover */
 .cv .crew-mark{background:var(--c-ink);color:var(--c-paper)}

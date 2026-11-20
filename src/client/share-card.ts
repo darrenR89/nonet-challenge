@@ -273,33 +273,33 @@ function crewBand(c: Ctx, k: CrewCard, y: number): void {
   const x0 = 72
   const w = CARD_W - 144
   c.fillStyle = C.slate
-  roundRect(c, x0, y, w, 98, 12)
+  roundRect(c, x0, y, w, 110, 12)
   c.fill()
   // outlined all round in the solved cube's yellow
   c.lineWidth = 3
   c.strokeStyle = C.yellow
-  roundRect(c, x0 + 1.5, y + 1.5, w - 3, 95, 11)
+  roundRect(c, x0 + 1.5, y + 1.5, w - 3, 107, 11)
   c.stroke()
   // the mark: 連 on a yellow cell
   c.fillStyle = C.yellow
-  roundRect(c, x0 + 28, y + 14, 48, 48, 8)
+  roundRect(c, x0 + 36, y + 18, 48, 48, 8)
   c.fill()
   c.fillStyle = C.sumi
   c.font = `400 38px ${DISPLAY}`
   c.textAlign = 'center'
-  c.fillText('連', x0 + 52, y + 52)
+  c.fillText('連', x0 + 60, y + 56)
   const figure = crewFigure(k)
   c.font = `500 26px ${CODE}`
   c.textAlign = 'right'
   c.fillStyle = C.washi
-  c.fillText(figure, x0 + w - 28, y + 48)
+  c.fillText(figure, x0 + w - 36, y + 52)
   const fw = c.measureText(figure).width
   c.textAlign = 'left'
   c.font = `700 34px ${JP}`
-  c.fillText(fit(c, k.name, w - 140 - fw), x0 + 92, y + 50)
+  c.fillText(fit(c, k.name, w - 160 - fw), x0 + 100, y + 54)
   c.fillStyle = C.lead
   c.font = `500 24px ${CODE}`
-  c.fillText(fit(c, crewMembersLine(k), w - 52), x0 + 28, y + 84)
+  c.fillText(fit(c, crewMembersLine(k), w - 72), x0 + 36, y + 92)
 }
 
 /** Draws the card. Load CARD_FONTS first, or the browser's fallbacks are used. */
@@ -362,8 +362,8 @@ export function drawShareCard(canvas: HTMLCanvasElement, d: ShareCard): void {
   c.fillStyle = C.lead
   c.font = `500 26px ${CODE}`
   c.textAlign = 'center'
-  c.fillText(detailLine(d), CARD_W / 2, d.crew ? 1004 : 1090)
-  if (d.crew) crewBand(c, d.crew, 1034)
+  c.fillText(detailLine(d), CARD_W / 2, d.crew ? 998 : 1090)
+  if (d.crew) crewBand(c, d.crew, 1026)
   c.textAlign = 'center'
 
   // the call to play, set as the game's primary button
