@@ -72,10 +72,15 @@ html = html
 .fake-login button.primary{background:#0045ac;color:#fff;border-color:#0045ac}
 @media (prefers-reduced-motion:reduce){.feedcard{transition:none}}
 body:has(.padbox:not([hidden])) .demo{display:none}
+.demo.grids{left:auto;right:max(8px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:4px;padding:3px}
+.grids span{padding:0 4px}
+.grids button{font:inherit;font-size:11px;color:var(--lead);background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 6px;min-height:24px}
+.grids button[aria-pressed="true"]{color:var(--washi);border-color:var(--lead)}
 .demo{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:max(8px,env(safe-area-inset-bottom,0px));z-index:70;font-family:var(--code);font-size:11px;color:var(--lead);background:var(--slate);border:1px solid var(--edge);border-radius:6px;padding:4px 8px;min-height:0;opacity:.85}</style>`)
   .replace('/brand/nonet-wordmark.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark.svg')}`)
   .replace('<script src="game.js" type="module"></script>', () => `${cardLayer}
 <button class="demo" id="resetDemo" type="button" title="Prototype: start today over in this browser">Reset demo</button>
+<div class="demo grids" role="group" aria-label="Prototype: background grid"><span>Grid</span><button type="button" data-grid="" aria-pressed="true">Room</button><button type="button" data-grid="floor" aria-pressed="false">Floor</button><button type="button" data-grid="horizon" aria-pressed="false">Horizon</button><button type="button" data-grid="off" aria-pressed="false">Off</button></div>
 <script type="module">${js.replaceAll('</script', '<\\/script')}</script>`)
 writeFileSync(out, html)
 console.log(`${out} ${(html.length / 1024).toFixed(1)} KB`)

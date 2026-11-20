@@ -646,7 +646,10 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
-const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+// the room behind the cube turns with the view but doesn't lean in when a face is focused
+const roomEl=document.getElementById('room');
+const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  roomEl.style.transform=`scale(${scaleK}) rotateX(${rx}deg) rotateY(${ry}deg)`;roomEl.parentElement.style.setProperty('--ry',String(ry));shadeFaces()};
 // tap to focus: a square tapped on a steep face turns the view until that face is in front,
 // kept a little off square so the cube still reads as a cube, and the view leans in a touch
 let zoom=1;

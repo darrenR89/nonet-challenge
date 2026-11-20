@@ -39,3 +39,24 @@ guestBtn?.addEventListener('click', () => {
   } catch {}
   location.reload()
 })
+
+// Prototype: compare the background grids behind the cube (room, floor, horizon or none)
+const grids = [...document.querySelectorAll<HTMLButtonElement>('.grids button')]
+const showGrid = (g: string): void => {
+  if (g) document.documentElement.dataset.grid = g
+  else delete document.documentElement.dataset.grid
+  for (const b of grids) b.setAttribute('aria-pressed', String((b.dataset.grid ?? '') === g))
+}
+let grid = ''
+try {
+  grid = sessionStorage.getItem('nonet-grid') ?? ''
+} catch {}
+showGrid(grid)
+for (const b of grids)
+  b.addEventListener('click', () => {
+    const g = b.dataset.grid ?? ''
+    try {
+      sessionStorage.setItem('nonet-grid', g)
+    } catch {}
+    showGrid(g)
+  })
