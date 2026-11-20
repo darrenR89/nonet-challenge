@@ -138,9 +138,9 @@ function cellField(c: Ctx, cx: number, cy: number): void {
       if (d >= 1) continue
       const f = (1 - d) ** 1.6
       roundRect(c, x, y, cell, cell, 5)
-      c.fillStyle = `rgba(236,234,227,${(0.17 * f).toFixed(3)})`
+      c.fillStyle = `rgba(236,234,227,${(0.11 * f).toFixed(3)})`
       c.fill()
-      c.fillStyle = `rgba(245,193,46,${(0.3 * f ** 3).toFixed(3)})`
+      c.fillStyle = `rgba(245,193,46,${(0.2 * f ** 3).toFixed(3)})`
       c.fill()
     }
   c.restore()
@@ -176,7 +176,7 @@ function stats(c: Ctx, d: ShareCard, y: number): void {
   const cols: [string, (x: number) => void][] = [
     ['Time', x => text(c, d.time, x, y + 120)],
     [
-      'Openers',
+      'Lock-first',
       x => {
         for (let k = 0; k < 3; k++) {
           star(c, x + (k - 1) * 76, y + 86, 32)
