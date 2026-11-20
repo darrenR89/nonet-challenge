@@ -144,6 +144,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .rules ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
 .rules p{margin:10px 0 0;color:var(--lead);font-size:13px}
 .rules p.lead{margin:0 0 10px;color:inherit;font-size:14px}
+.rules p.lead.drag{margin:12px 0 0}
 .rules table.pts{width:100%;border-collapse:collapse;margin:12px 0 0;font-size:13px;font-variant-numeric:tabular-nums}
 .rules .pts th,.rules .pts td{padding:3px 0;border-bottom:1px solid var(--edge);text-align:right}
 .rules .pts th{font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--lead)}
@@ -457,8 +458,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .rules .rtabs button{flex:1;padding:6px 4px;font-size:12px;border:0;background:none;color:var(--lead)}
 .rules .rtabs button[aria-selected="true"]{background:var(--washi);color:var(--sumi)}
 .rules .minis{display:grid;gap:8px;margin:0}
-.rules .mini{display:flex;gap:10px;align-items:center;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px}
-.rules .mini svg{flex:none;width:120px;height:auto;font-family:var(--code)}
+.rules .mini{display:flex;flex-direction:column;gap:8px;align-items:flex-start;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px}
+.rules .mini svg{flex:none;width:168px;height:auto;font-family:var(--code)}
+.modal h3.vh{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .rules .mini p,.modal .body .rules .mini p{margin:0;font-size:14px;line-height:1.45;color:var(--washi)}
 .rules p.callout,.modal .body .rules p.callout{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--yellow);border-radius:4px;background:rgb(245 193 46 / .1);font-size:14px;color:var(--washi)}
 .rules .callout b{display:block;font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}

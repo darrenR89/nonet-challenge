@@ -259,7 +259,7 @@ let saveT=0;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(saveRun,400
 
 // ---------- retry and give up ----------
 // one retry a day on today's cube: it starts again from the turned cube, and the day's total is ×0.8
-function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalBody').innerHTML=body;
+function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalTitle').classList.remove('vh');$('modalBody').innerHTML=body;
   $('modalActs').innerHTML='';buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;
     b.onclick=e=>{m.hidden=true;if(fn)fn(e)};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
@@ -284,7 +284,7 @@ function updateRunButtons(){const r=$('restart');
   if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
   const sr=$('spRetry');sr.textContent=r.textContent;sr.disabled=r.disabled;
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
-function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
+function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);$('modalTitle').classList.add('vh');const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 // How to play has three tabs: the game, what the squares and controls look like, and scoring
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
