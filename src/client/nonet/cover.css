@@ -202,6 +202,7 @@
 .dn-row{border-bottom:1px solid var(--c-ink)}
 .dn-chip{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:10px 12px;align-items:center}
 .dn-chip b{font-size:15px;font-weight:700}
+.dn-kanji{font-family:var(--c-kanji);font-weight:400}
 .dn-chip span{grid-column:1;font:400 12px var(--c-code);color:var(--c-lead)}
 .dn-chip::after{content:"▾";grid-column:2;grid-row:1/span 2;color:var(--c-ink)}
 .dn-chip[aria-expanded="true"]::after{content:"▴"}

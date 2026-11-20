@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {postUrl, shareText} from './share.ts'
-import {detailLine} from './share-card.ts'
+import {crewFigure, crewMembersLine, detailLine} from './share-card.ts'
 
 test('the post link is built from the post id, with or without the subreddit', () => {
   assert.equal(
@@ -34,4 +34,20 @@ test('the detail line reads cleanly', () => {
     detailLine(d),
     'Medium · 1 rotation · no wrong locks · 1 suggestion',
   )
+})
+
+test('the crew band lists each member and the crew points', () => {
+  const k = {
+    name: 'Night Owls',
+    points: 2840,
+    streak: 1,
+    members: [
+      {name: 'ann', score: 1240},
+      {name: 'bob', score: 1600},
+      {name: 'cat', score: undefined},
+    ],
+  }
+  assert.equal(crewMembersLine(k), 'u/ann 1,240 · u/bob 1,600 · u/cat –')
+  assert.equal(crewFigure(k), '2,840 crew pts')
+  assert.equal(crewFigure({...k, streak: 6}), '2,840 crew pts · 6-day streak')
 })

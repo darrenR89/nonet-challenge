@@ -7,6 +7,11 @@ import {
   type CardRsp,
   type ChallengeReq,
   type ChallengeRsp,
+  type CrewAnswerReq,
+  type CrewCreateReq,
+  type CrewInviteReq,
+  type CrewNudgeReq,
+  type CrewRsp,
   type DailyRsp,
   Endpoint,
   type JoinRsp,
@@ -93,3 +98,17 @@ export const challenge = (
 export const answerChallenge = (
   req: AnswerReq,
 ): Promise<ChallengeRsp | undefined> => call<ChallengeRsp>(Endpoint.Answer, req)
+/** Starts a crew; up to two invited players are tagged in a comment. */
+export const createCrew = (req: CrewCreateReq): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewCreate, req)
+/** Invites players into the crew's open seats. */
+export const inviteCrew = (req: CrewInviteReq): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewInvite, req)
+/** Joins or declines a crew invitation. */
+export const answerCrew = (req: CrewAnswerReq): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewAnswer, req)
+export const leaveCrew = (): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewLeave, {})
+/** Nudges a crewmate who hasn't played today, by private message. */
+export const nudgeCrew = (req: CrewNudgeReq): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewNudge, req)

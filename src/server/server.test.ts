@@ -13,6 +13,7 @@ import {
 import {
   type CardRsp,
   type ChallengeRsp,
+  type CrewRsp,
   type DailyRsp,
   Endpoint,
   type ErrorRsp,
@@ -22,6 +23,7 @@ import {
   type StartRsp,
 } from '../shared/api.ts'
 import type {RunStats} from '../shared/scoring.ts'
+import {eventsSwitch} from './events.ts'
 import {clock, onReq, runDaily} from './server.ts'
 import {
   clearFakeRedis,
@@ -51,6 +53,8 @@ let optedIn = false
 const pushed: string[] = []
 /** Comments the app made, as [post id, text]. */
 const comments: [string, string][] = []
+/** Private messages the app sent, as [to, subject]. */
+const messages: [string, string][] = []
 
 const r = reddit as unknown as Record<string, unknown>
 const s = settings as unknown as Record<string, unknown>
@@ -59,6 +63,7 @@ const was = {
   submitPost: r.submitPost,
   getUserByUsername: r.getUserByUsername,
   submitComment: r.submitComment,
+  sendPrivateMessage: r.sendPrivateMessage,
   getUserById: r.getUserById,
   setUserFlair: r.setUserFlair,
   getWikiPage: r.getWikiPage,
@@ -125,6 +130,9 @@ before(async () => {
     comments.push([o.id, o.text])
     return {id: 't1_c'}
   }
+  r.sendPrivateMessage = async (o: {to: string; subject: string}) => {
+    messages.push([o.to, o.subject])
+  }
   const t = telemetry as unknown as Record<string, unknown>
   const log =
     (kind: string, rsp: Record<string, unknown> = {}) =>
@@ -178,6 +186,7 @@ after(async () => {
     submitPost: was.submitPost,
     getUserByUsername: was.getUserByUsername,
     submitComment: was.submitComment,
+    sendPrivateMessage: was.sendPrivateMessage,
     getUserById: was.getUserById,
     setUserFlair: was.setUserFlair,
     getWikiPage: was.getWikiPage,
@@ -204,9 +213,11 @@ beforeEach(() => {
   journeys.length = 0
   pushed.length = 0
   comments.length = 0
+  messages.length = 0
   optedIn = false
   autoPost = true
   now = new Date('2026-11-14T12:00:00Z')
+  eventsSwitch.on = false
   as('t2_ann', 'ann')
 })
 
@@ -415,7 +426,29 @@ test('the week board adds up days and ranks players', async () => {
   assert.equal(daily.body.boards.week.me?.rank, 2)
 })
 
+test('events are switched off: a saved event shows nowhere', async () => {
+  await post(Endpoint.OnFormNewEvent, {
+    title: 'Big Game Week',
+    start: '2026-11-13',
+    end: '2026-11-16',
+    teams: 'Chiefs\nEagles',
+  })
+  const daily = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(daily.body.event, undefined)
+  const join = await post<ErrorRsp>(Endpoint.JoinTeam, {
+    eventId: '2026-11-13-big-game-week',
+    team: 'eagles',
+  })
+  assert.equal(join.status, 404)
+  const played = await playDay(1, run())
+  assert.equal(played.body.event, undefined)
+  // switched back on, the saved event is there as it was
+  eventsSwitch.on = true
+  assert.ok((await get<DailyRsp>(Endpoint.Daily)).body.event)
+})
+
 test('a team event: create, pick a side once, points count for it', async () => {
+  eventsSwitch.on = true
   const made = await post<{showToast?: {text: string}}>(
     Endpoint.OnFormNewEvent,
     {
@@ -835,6 +868,161 @@ test('challenges explain what is wrong', async () => {
 
   as(undefined)
   assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 401)
+})
+
+test('a crew: start one, invite by name, join, and scores add up', async () => {
+  const made = await post<CrewRsp>(Endpoint.CrewCreate, {
+    name: ' Night  Owls ',
+    invite: ['u/Bob', 'cat'],
+  })
+  assert.equal(made.status, 200)
+  assert.equal(made.body.crew?.name, 'Night Owls')
+  assert.deepEqual(
+    made.body.crew?.members.map(m => m.name),
+    ['ann'],
+  )
+  assert.equal(made.body.note, undefined)
+  assert.equal(comments.length, 1, 'one comment tags both')
+  assert.match(comments[0]?.[1] ?? '', /^u\/bob and u\/cat, u\/ann wants you/)
+
+  // ann plays before anyone joins; her run counts for the crew
+  const ann = await playDay(0, run())
+  assert.equal(ann.body.crew.crew?.today, ann.body.total)
+
+  as('t2_bob', 'bob')
+  const open = await get<DailyRsp>(Endpoint.Daily)
+  const inv = open.body.crew.invites[0]
+  assert.deepEqual(inv && {crew: inv.crew, from: inv.from}, {
+    crew: 'Night Owls',
+    from: 'ann',
+  })
+  const joined = await post<CrewRsp>(Endpoint.CrewAnswer, {
+    crewId: inv?.crewId,
+    accept: true,
+  })
+  assert.deepEqual(
+    joined.body.crew?.members.map(m => m.name),
+    ['ann', 'bob'],
+    'in the order they joined',
+  )
+  assert.deepEqual(joined.body.invites, [])
+  const bob = await playDay(0, run({wrong: 2}))
+  const crew = bob.body.crew.crew
+  assert.equal(crew?.today, ann.body.total + bob.body.total)
+  assert.equal(crew?.week, crew?.today)
+  assert.equal(crew?.rank, 1)
+  assert.equal(crew?.streak, 1, 'everyone in the crew played')
+
+  // cat declines; the invite goes
+  as('t2_cat', 'cat')
+  const no = await post<CrewRsp>(Endpoint.CrewAnswer, {
+    crewId: inv?.crewId,
+    accept: false,
+  })
+  assert.equal(no.body.crew, undefined)
+  assert.deepEqual(no.body.invites, [])
+
+  // the next day only ann plays: no streak yet, and bob can be nudged once
+  now = new Date('2026-11-15T12:00:00Z')
+  as('t2_ann', 'ann')
+  const day2 = await playDay(0, run())
+  assert.equal(
+    day2.body.crew.crew?.streak,
+    1,
+    'streak holds until the day ends',
+  )
+  const bobId = day2.body.crew.crew?.members.find(m => m.name === 'bob')?.id
+  const nudged = await post<CrewRsp>(Endpoint.CrewNudge, {to: bobId})
+  assert.equal(nudged.status, 200)
+  assert.deepEqual(messages, [['bob', '連 Night Owls is waiting on you']])
+  assert.equal(
+    nudged.body.crew?.members.find(m => m.name === 'bob')?.nudged,
+    true,
+  )
+  const again = await post<ErrorRsp>(Endpoint.CrewNudge, {to: bobId})
+  assert.equal(again.status, 409)
+  as('t2_bob', 'bob')
+  const bob2 = await playDay(0, run())
+  assert.equal(bob2.body.crew.crew?.streak, 2)
+
+  // Monday's post lists the top crews
+  now = new Date('2026-11-16T08:01:00Z')
+  await daily()
+  const weekPost = texts.find(t => t.startsWith("The week's top nine"))
+  assert.match(
+    weekPost ?? '',
+    /The top crews:\n\n1\. 連 Night Owls · [\d,]+ \(u\/ann, u\/bob\)/,
+  )
+})
+
+test('one crew at a time, and leaving keeps the points with the crew', async () => {
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Owls'})
+  const second = await post<ErrorRsp>(Endpoint.CrewCreate, {name: 'Larks'})
+  assert.equal(second.status, 409)
+
+  as('t2_bob', 'bob')
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Larks'})
+  const bobPlays = await playDay(0, run())
+  as('t2_ann', 'ann')
+  const busy = await post<ErrorRsp>(Endpoint.CrewInvite, {names: ['bob']})
+  assert.equal(busy.status, 400)
+  assert.match(busy.body.error, /u\/bob is already in a crew/)
+
+  // bob leaves Larks after playing, and joins Owls: his run already counted for Larks
+  as('t2_bob', 'bob')
+  const left = await post<CrewRsp>(Endpoint.CrewLeave)
+  assert.equal(left.body.crew, undefined)
+  as('t2_ann', 'ann')
+  await post<CrewRsp>(Endpoint.CrewInvite, {names: ['bob']})
+  as('t2_bob', 'bob')
+  const daily = await get<DailyRsp>(Endpoint.Daily)
+  const joined = await post<CrewRsp>(Endpoint.CrewAnswer, {
+    crewId: daily.body.crew.invites[0]?.crewId,
+    accept: true,
+  })
+  assert.equal(joined.body.crew?.name, 'Owls')
+  assert.equal(joined.body.crew?.today, 0, 'counted once, for Larks')
+  assert.ok(bobPlays.body.crew.crew?.today)
+})
+
+test('crew requests explain what is wrong', async () => {
+  as(undefined)
+  const out = await post<ErrorRsp>(Endpoint.CrewCreate, {name: 'Owls'})
+  assert.equal(out.status, 401)
+  assert.deepEqual((await get<DailyRsp>(Endpoint.Daily)).body.crew, {
+    invites: [],
+  })
+  as('t2_ann', 'ann')
+  const bad = await post<ErrorRsp>(Endpoint.CrewCreate, {name: '!'})
+  assert.equal(bad.status, 400)
+  const none = await post<ErrorRsp>(Endpoint.CrewLeave)
+  assert.equal(none.status, 409)
+  const made = await post<CrewRsp>(Endpoint.CrewCreate, {
+    name: 'Owls',
+    invite: ['ghost'],
+  })
+  assert.equal(made.status, 200, 'the crew stands without the invite')
+  assert.match(made.body.note ?? '', /no u\/ghost/)
+  assert.equal(comments.length, 0)
+  const self = await post<ErrorRsp>(Endpoint.CrewInvite, {names: ['ann']})
+  assert.match(self.body.error, /invite yourself/)
+  // fill the crew, then a third invite is refused
+  await post<CrewRsp>(Endpoint.CrewInvite, {names: ['bob', 'cat']})
+  for (const [id, name] of [
+    ['t2_bob', 'bob'],
+    ['t2_cat', 'cat'],
+  ] as const) {
+    as(id, name)
+    const d = await get<DailyRsp>(Endpoint.Daily)
+    await post(Endpoint.CrewAnswer, {
+      crewId: d.body.crew.invites[0]?.crewId,
+      accept: true,
+    })
+  }
+  as('t2_ann', 'ann')
+  const full = await post<ErrorRsp>(Endpoint.CrewInvite, {names: ['dan']})
+  assert.equal(full.status, 400)
+  assert.match(full.body.error, /already has 3 players/)
 })
 
 test('streak flair from three days in a row, then the best once it lapses', async () => {

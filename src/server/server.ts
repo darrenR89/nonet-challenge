@@ -20,6 +20,11 @@ import {
   type CardRsp,
   type ChallengeReq,
   type ChallengeRsp,
+  type CrewAnswerReq,
+  type CrewCreateReq,
+  type CrewInviteReq,
+  type CrewNudgeReq,
+  type CrewRsp,
   type DailyRsp,
   type DayStats,
   Endpoint,
@@ -41,6 +46,16 @@ import {
   type StartRsp,
   type Streak,
 } from '../shared/api.ts'
+import {
+  CREW_SIZE,
+  type CrewInfo,
+  cleanCrewName,
+  crewInviteText,
+  crewRowText,
+  MAX_CREW_INVITES,
+  NO_CREW,
+  nudgeText,
+} from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {
   addDays,
@@ -57,6 +72,7 @@ import {
 import {
   addSolve,
   addToBoards,
+  BOARD_TOP,
   beatPct,
   boardKey,
   bumpStreak,
@@ -66,6 +82,7 @@ import {
   getStreak,
   lockTier,
   markScored,
+  namesOf,
   rankOn,
   readBoard,
   rememberName,
@@ -73,6 +90,18 @@ import {
   takeGuest,
   useRetry,
 } from './board.ts'
+import {
+  addToCrew,
+  answerInvite,
+  type CrewError,
+  createCrew,
+  crewInfo,
+  crewOf,
+  inviteToCrew,
+  leaveCrew,
+  nudge,
+  topCrews,
+} from './crews.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
 import {addDuel, answerDuel, duelsFor, settleDuels} from './duels.ts'
 import {
@@ -82,6 +111,7 @@ import {
   endEvent,
   eventFromForm,
   eventState,
+  eventsSwitch,
   getEvent,
   joinTeam,
   listEvents,
@@ -120,6 +150,7 @@ type AnyRsp =
   | NotifyRsp
   | JoinRsp
   | ChallengeRsp
+  | CrewRsp
   | Record<string, unknown>
   | UiResponse
   | TriggerResponse
@@ -187,6 +218,21 @@ async function route(
         break
       case Endpoint.Answer:
         rsp = await routeAnswer(await readJson<AnswerReq>(reqMsg))
+        break
+      case Endpoint.CrewCreate:
+        rsp = await routeCrewCreate(await readJson<CrewCreateReq>(reqMsg))
+        break
+      case Endpoint.CrewInvite:
+        rsp = await routeCrewInvite(await readJson<CrewInviteReq>(reqMsg))
+        break
+      case Endpoint.CrewAnswer:
+        rsp = await routeCrewAnswer(await readJson<CrewAnswerReq>(reqMsg))
+        break
+      case Endpoint.CrewLeave:
+        rsp = await routeCrewLeave()
+        break
+      case Endpoint.CrewNudge:
+        rsp = await routeCrewNudge(await readJson<CrewNudgeReq>(reqMsg))
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -340,6 +386,7 @@ async function routeDaily(): Promise<DailyRsp> {
       ? await notifications.isOptedIn(uid as `t2_${string}`).catch(() => false)
       : false,
     duels: uid ? await duelsFor(day, uid) : [],
+    crew: uid ? await crewInfo(day, uid) : NO_CREW,
   }
 }
 
@@ -460,6 +507,7 @@ async function routeScore(
       event: await eventFor(day, uid),
       preview: undefined,
       duels: await duelsFor(day, uid),
+      crew: await crewInfo(day, uid),
     }
   }
   const puzzle = await dayPuzzle(day, tier)
@@ -487,6 +535,7 @@ async function routeScore(
     await flairSolve(day, uid, streak)
     dayStats = await addSolve(day, stats.t1 + stats.t2, tier, total)
     await settleDuels(day, uid)
+    await addToCrew(day, uid)
     // the journey ends here, with the total the server worked out, not the browser's
     await journey.end(journeyId, true, {win: true, score: total})
   } else {
@@ -509,6 +558,7 @@ async function routeScore(
     event: event ? await eventState(event, day, uid) : undefined,
     preview: await previewFor(day, uid),
     duels: await duelsFor(day, uid),
+    crew: await crewInfo(day, uid),
   }
 }
 
@@ -575,6 +625,150 @@ async function routeAnswer(req: AnswerReq): Promise<ChallengeRsp> {
   return {duels: await duelsFor(day, uid)}
 }
 
+// ---------- crews ----------
+
+const CREW_ERRORS: Record<CrewError, [number, string]> = {
+  'in-crew': [409, "You're already in a crew. Leave it first."],
+  'no-crew': [409, "You're not in a crew."],
+  full: [409, `That crew already has ${CREW_SIZE} players.`],
+  'no-invite': [404, 'That invitation has gone.'],
+  'too-many': [
+    429,
+    `That's ${MAX_CREW_INVITES} invites today. Try again tomorrow.`,
+  ],
+  played: [409, "They've already played today."],
+  nudged: [409, 'They were already nudged today.'],
+}
+
+function crewFail(e: CrewError): never {
+  const [status, msg] = CREW_ERRORS[e]
+  throw new HttpError(status, msg)
+}
+
+/**
+ * Invites players by username and tags them in one comment on this post. Returns a
+ * note for the names that didn't work; throws if none did.
+ */
+async function invite(
+  day: string,
+  uid: string,
+  raw: unknown,
+): Promise<string | undefined> {
+  const list = (Array.isArray(raw) ? raw : []).slice(0, CREW_SIZE - 1)
+  const sent: string[] = []
+  const problems: string[] = []
+  let crew = ''
+  for (const r of list) {
+    if (typeof r === 'string' && !r.trim()) continue
+    const name = cleanName(r)
+    if (!name) {
+      problems.push(`"${String(r).slice(0, 24)}" isn't a Reddit username.`)
+      continue
+    }
+    const them = await reddit.getUserByUsername(name).catch(() => undefined)
+    if (!them) {
+      problems.push(`There's no u/${name} on Reddit.`)
+      continue
+    }
+    if (them.id === uid) {
+      problems.push("You can't invite yourself.")
+      continue
+    }
+    await rememberName(them.id, them.username)
+    const r2 = await inviteToCrew(day, uid, them.id)
+    if (typeof r2 === 'string') {
+      if (r2 === 'in-crew')
+        problems.push(`u/${them.username} is already in a crew.`)
+      else problems.push(CREW_ERRORS[r2][1])
+      continue
+    }
+    crew = r2.crew
+    sent.push(them.username)
+  }
+  const postId = context.postId
+  if (sent.length && postId)
+    await reddit
+      .submitComment({
+        id: postId as `t3_${string}`,
+        text: crewInviteText(context.username ?? 'someone', sent, crew),
+      })
+      .catch(err => console.warn(`crew invite comment failed: ${err}`))
+  if (!problems.length) return
+  if (!sent.length && list.length) throw new HttpError(400, problems.join(' '))
+  return problems.join(' ')
+}
+
+const withNote = (info: CrewInfo, note: string | undefined): CrewRsp =>
+  note ? {...info, note} : info
+
+async function routeCrewCreate(req: CrewCreateReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const name = cleanCrewName(req.name)
+  if (!name)
+    throw new HttpError(
+      400,
+      'Give the crew a name of 2 to 24 letters, numbers or spaces.',
+    )
+  const made = await createCrew(day, uid, name)
+  if (made === 'in-crew') crewFail(made)
+  let note: string | undefined
+  try {
+    note = await invite(day, uid, req.invite)
+  } catch (err) {
+    // the crew stands; the invites can be sent again from the crew row
+    note = err instanceof Error ? err.message : String(err)
+  }
+  return withNote(await crewInfo(day, uid), note)
+}
+
+async function routeCrewInvite(req: CrewInviteReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  if (!(await crewOf(uid))) crewFail('no-crew')
+  const note = await invite(day, uid, req.names)
+  return withNote(await crewInfo(day, uid), note)
+}
+
+async function routeCrewAnswer(req: CrewAnswerReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const r = await answerInvite(
+    day,
+    uid,
+    String(req.crewId),
+    req.accept === true,
+  )
+  if (r !== 'ok') crewFail(r)
+  return crewInfo(day, uid)
+}
+
+async function routeCrewLeave(): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const r = await leaveCrew(day, uid)
+  if (r !== 'ok') crewFail(r)
+  return crewInfo(day, uid)
+}
+
+/** Sends a crewmate who hasn't played today a private message, once a day at most. */
+async function routeCrewNudge(req: CrewNudgeReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const them = String(req.to)
+  const r = await nudge(day, uid, them)
+  if (typeof r === 'string') crewFail(r)
+  const [name] = await namesOf([them])
+  if (name)
+    await reddit
+      .sendPrivateMessage({
+        to: name,
+        ...nudgeText(context.username ?? 'A crewmate', r.crew, r.played, r.of),
+      })
+      .catch(err => console.warn(`nudge failed: ${err}`))
+  return crewInfo(day, uid)
+}
+
 /** Uses today's one retry. The run restarts on the same cube and tier. */
 async function routeRetry(): Promise<RetryRsp> {
   const uid = await needUser()
@@ -611,7 +805,7 @@ async function routeJoinSub(): Promise<JoinRsp> {
 
 async function routeJoinTeam(req: JoinTeamReq): Promise<JoinTeamRsp> {
   const uid = await needUser()
-  const e = await getEvent(String(req.eventId))
+  const e = eventsSwitch.on ? await getEvent(String(req.eventId)) : undefined
   const day = today()
   if (!e || day > e.end) throw new HttpError(404, 'That event is over.')
   try {
@@ -637,7 +831,11 @@ async function routeBoard(req: BoardReq): Promise<BoardRsp> {
     case 'all':
       return {board: await readBoard(boardKey.all, 'All time', uid)}
     case 'event': {
-      const e = req.key ? await getEvent(req.key) : await activeEvent(day)
+      const e = !eventsSwitch.on
+        ? undefined
+        : req.key
+          ? await getEvent(req.key)
+          : await activeEvent(day)
       if (!e) throw new HttpError(404, 'No such event.')
       return {board: await readBoard(boardKey.event(e.id), e.title, uid)}
     }
@@ -754,6 +952,16 @@ function boardText(b: Board): string {
     .join('\n\n')
 }
 
+export function crewsText(
+  crews: {name: string; points: number; members: string[]}[],
+): string {
+  if (!crews.length) return ''
+  const rows = crews
+    .map((c, i) => crewRowText(i + 1, c.name, c.points, c.members))
+    .join('\n\n')
+  return `The top crews:\n\n${rows}`
+}
+
 /**
  * The week's top nine and its solve of the week, pinned second. `final` is the Monday post for the
  * week just ended; otherwise it's a moderator's post of the week so far.
@@ -765,10 +973,12 @@ async function postWeekResults(
 ): Promise<string> {
   const b = await readBoard(boardKey.week(week), week, undefined)
   const spot = await getSpot(week)
+  const crews = crewsText(await topCrews(week, BOARD_TOP))
   const sub = context.subredditName
   const text = [
     `The week's top nine${final ? '' : ' so far'}, from ${b.players.toLocaleString('en-GB')} players.`,
     boardText(b),
+    crews,
     spot ? `**Solve of the week.** ${spotText(spot)}` : '',
     final
       ? "A new week starts today. Every day's cube adds to your total."
@@ -859,6 +1069,7 @@ export async function runDaily(): Promise<void> {
     await writeWiki(day).catch(err => console.warn(`wiki failed: ${err}`))
   }
   if (!auto) return
+  if (!eventsSwitch.on) return
   for (const e of await listEvents())
     if (e.end === yesterday && (await claim('event', e.id)))
       await postEventResults(e)
