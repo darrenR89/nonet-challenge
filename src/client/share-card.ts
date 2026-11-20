@@ -159,7 +159,7 @@ function cellField(c: Ctx, cx: number, cy: number, bottom: number): void {
   c.restore()
 }
 
-// the hero: the points, big, over the cells
+// the hero: the points, big, over the cells, with no underline
 function hero(c: Ctx, d: ShareCard, bottom: number): void {
   const cx = CARD_W / 2
   cellField(c, cx, 586, bottom)
@@ -178,10 +178,6 @@ function hero(c: Ctx, d: ShareCard, bottom: number): void {
     c.font = `400 ${size}px ${DISPLAY}`
   }
   c.fillText(pts, cx, 700)
-  // a yellow bar under the number, the cell shape
-  c.fillStyle = C.yellow
-  roundRect(c, cx - 60, 740, 120, 16, 5)
-  c.fill()
 }
 
 // the numbers under the hero: time, the ★ openers, and today's rank, label over value
