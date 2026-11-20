@@ -5,7 +5,7 @@
   --sumi:#121316; --slate:#1c1e23; --tile:#23252b; --edge:#2c2f37; --washi:#eceae3; --lead:#8d919b;
   --yellow:#f5c12e; --ai:#8fb0ff; --beni:#f08a8a;
   --peer:#262a36; --done:#3a3219;
-  --cell-top:#3b3e47; --cell-right:#30333b; --cell-left:#272a31;
+  --cell-top:#3b3e47; --body-ink:#0b0c0e; --cell-right:#30333b; --cell-left:#272a31;
   --pitch:48px; --r:7px;
   --display:"DotGothic16","M PLUS 1 Code",ui-monospace,monospace;
   --body:"IBM Plex Sans JP",system-ui,sans-serif;
@@ -60,11 +60,16 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .steps span.on{background:var(--washi);color:var(--sumi);border-color:var(--washi)}
 .steps span.done{color:var(--washi);background:var(--done);border-color:var(--done)}
 
-/* the cube: built from cells. The gaps are empty, so it reads as the brand's cell cube. */
+/* the cube: built from cells on a solid body, so the gaps between them are filled and the room stays behind */
 .stage{position:relative;height:min(96vw,440px);touch-action:none;cursor:grab;display:grid;place-items:center;user-select:none;-webkit-user-select:none}
 .cube{--s:180px;--h:90px;width:180px;height:180px;position:relative;transform-style:preserve-3d;transition:transform .35s ease;z-index:1}
 .cube.dragging{transition:none}
-.face{position:absolute;inset:0;transform-style:preserve-3d;background:transparent;border-radius:10px;
+/* depth: a faint room around the cube, drawn by room.js, softer the further it is from the cube */
+.space{position:absolute;inset:-25% -16px -45%;pointer-events:none;overflow:hidden;z-index:-1;transition:opacity .4s;
+  -webkit-mask:radial-gradient(farthest-side,#000 50%,transparent);mask:radial-gradient(farthest-side,#000 50%,transparent)}
+.space canvas{display:block;width:100%;height:100%}
+.stage.flown .space{opacity:0}
+.face{position:absolute;inset:0;transform-style:preserve-3d;background:var(--body-ink);border-radius:10px;
   backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:background .8s ease-out}
 /* the gaps between cells flash yellow once when the cube lines up and once when it is solved */
 .stage.gridflash .face{background:var(--yellow);transition:background .12s}
@@ -384,6 +389,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .results .signup .meta{font-family:var(--code);font-size:12px;color:var(--sumi)}
 /* the finish: the cube has flown, and the result card slides up into its place */
 .stage.flown{display:none}
+/* the progress bar leaves with the cube: it lifts and fades as the cube shoots off, then makes room for the card */
+.wrap:has(.stage.leaving) .modes{opacity:0;transform:translateY(-32px);transition:opacity .4s ease-in,transform .4s ease-in}
+.wrap:has(.stage.flown) .modes{display:none}
 .results.slidein{animation:slidein .6s cubic-bezier(.2,.8,.2,1) both}
 @keyframes slidein{from{opacity:0;transform:translateY(70vh)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.results.slidein{animation:fadein .4s both}@keyframes fadein{from{opacity:0}}}
@@ -430,7 +438,11 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the pad is fixed to the bottom of the screen during Fill in; the page leaves room for it */
 .padbox{position:fixed;z-index:20;left:0;right:0;bottom:0;margin:0 auto;width:min(560px,calc(100% - 24px));box-sizing:border-box;
   border-bottom:0;border-radius:0 var(--r) 0 0;padding-bottom:max(8px,env(safe-area-inset-bottom));box-shadow:0 -12px 24px rgb(0 0 0 / .35)}
-.wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 48px)}
+.wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 44px)}
+/* the cube's area takes all the height left between the top bar and the pad, and the cube sits in
+   its middle, so it stays centred whatever the screen height */
+.wrap{min-height:100svh;box-sizing:border-box}
+.stage{flex:1 1 auto;height:auto;min-height:min(80vw,320px)}
 /* the share card's preview in the share dialog */
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
 .modal .body p.meta{font-size:13px;color:var(--lead)}
