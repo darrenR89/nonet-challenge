@@ -340,7 +340,7 @@ function finishStage1(){
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
   if(P.k>0)journey.progress(.5,'aligned');
   if(isPrac()){$('banner').hidden=true;setTimeout(walkFill,0);return}
-  $('banner').hidden=false; // a scored run goes straight on: no Stage 1 summary
+  $('banner').hidden=true; // a scored run goes straight on to Fill in, with no summary banner over the board
   $('banner').textContent=P.k===0?`No turns today: fill the cube. Lock the three ★ lock-first squares before any others for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ lock-first squares before any others for +50 each.`;
 }
 function finishStage2(){
