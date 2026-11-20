@@ -335,10 +335,11 @@ async function finale(){
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
     const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
     stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    if(f>0)stageEl.classList.add('leaving'); // the progress bar goes up and away with the cube
     if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
   stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
 // the cube comes back when the result card is closed, or a new cube starts
-function landCube(){stageEl.classList.remove('flown');apply()}
+function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
