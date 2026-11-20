@@ -595,14 +595,17 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
-// a Fill in suggestion points at a square where only one digit fits, without filling it in
-function hintSquare(){const order=singlesOrder(vals);let c=order[0];
-  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+// a Fill in suggestion finds a square where only one digit fits and pencils that digit in for you;
+// it skips squares already pencilled with the right digit, and you still lock it in yourself
+function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
+  const order=singlesOrder(vals).filter(i=>!done(i));let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]&&!done(i)){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
   if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
+  if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
   stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
-  $('status').textContent='Only one digit fits in this square.'}
+  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to the pen to lock it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
