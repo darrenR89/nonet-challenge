@@ -87,7 +87,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .st.sel{box-shadow:inset 0 0 0 2px var(--washi)!important}
 .st.star{box-shadow:inset 0 0 0 2px var(--lead)}
 .st.star::before,.st.starwon::before{position:absolute;top:4px;left:5px;font-family:var(--code);font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--lead);line-height:1}
-.st.star::before{content:"★OPEN"}
+.st.star::before{content:"★FIRST"}
 .st.starwon::before{content:"★+50";color:var(--yellow)}
 /* squares shared by both lines of a ring: soft ai blue, under the yellow line outline */
 .st.ov{background:rgb(143 176 255 / .26)!important}
@@ -368,6 +368,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
 .rules .diag svg{display:block;width:100%;height:auto;font-family:var(--code)}
 .rules .diag figure:first-child svg{max-width:240px;margin:0 auto}
+.rules .diag figure p,.modal .body .rules .diag figure p{margin:6px 0 4px;font-size:14px;line-height:1.45;color:var(--washi)}
 /* moments: a clue home pops, a finished line sweeps yellow, a finished face glows, a word over the cube */
 .st.pop{animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
 @keyframes pop{0%{scale:1}40%{scale:1.18;box-shadow:0 0 0 3px var(--yellow)}100%{scale:1}}
@@ -452,3 +453,12 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
 .modal .body p.meta{font-size:13px;color:var(--lead)}
 .modal .body .rules p:not(.lead){margin:10px 0 0;font-size:13px;color:var(--lead)}
+.rules .rtabs{display:flex;gap:4px;padding:4px;margin:0 0 12px;border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);background:var(--slate)}
+.rules .rtabs button{flex:1;padding:6px 4px;font-size:12px;border:0;background:none;color:var(--lead)}
+.rules .rtabs button[aria-selected="true"]{background:var(--washi);color:var(--sumi)}
+.rules .minis{display:grid;gap:8px;margin:0}
+.rules .mini{display:flex;gap:10px;align-items:center;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px}
+.rules .mini svg{flex:none;width:120px;height:auto;font-family:var(--code)}
+.rules .mini p,.modal .body .rules .mini p{margin:0;font-size:14px;line-height:1.45;color:var(--washi)}
+.rules p.callout,.modal .body .rules p.callout{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--yellow);border-radius:4px;background:rgb(245 193 46 / .1);font-size:14px;color:var(--washi)}
+.rules .callout b{display:block;font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}

@@ -286,6 +286,9 @@ function updateRunButtons(){const r=$('restart');
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
 function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);const box=$('modalBody');r.hidden=false;box.appendChild(r)}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
+// How to play has three tabs: the game, what the squares and controls look like, and scoring
+const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
+rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice step 1: the cube is one turn out, and the turn that puts it back pulses
