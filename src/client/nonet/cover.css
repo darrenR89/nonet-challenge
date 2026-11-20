@@ -361,3 +361,15 @@
   .dn-chip{padding-block:8px}
   .dn-chip span{display:none}
 }
+
+/* every width: the spine sits hard against the right edge at full height, and the title block and
+   Play are centred across the space left of it */
+@media (min-width:600px){
+  .cv,.splash.cv{padding:0}
+  .cv-cover{--H:100svh;width:100%}
+  .cv-title,.cv-mid{width:min(100%,400px);align-self:center}
+}
+@media (min-width:600px) and (max-height:720px){
+  .cv-cover{width:100%}
+  .cv-title,.cv-mid{width:min(100%,340px)}
+}
