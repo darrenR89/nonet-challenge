@@ -176,7 +176,7 @@ function stats(c: Ctx, d: ShareCard, y: number): void {
   const cols: [string, (x: number) => void][] = [
     ['Time', x => text(c, d.time, x, y + 120)],
     [
-      'Lock-first',
+      'Lock-firsts won',
       x => {
         for (let k = 0; k < 3; k++) {
           star(c, x + (k - 1) * 76, y + 86, 32)
