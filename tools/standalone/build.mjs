@@ -33,6 +33,7 @@ const brand = t =>
   t
     .replaceAll('/brand/nonet-wordmark-vertical.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark-vertical.svg')}`)
     .replaceAll('/brand/nonet-wordmark-ink.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark-ink.svg')}`)
+    .replaceAll('/brand/nonet-wordmark.svg', `data:image/svg+xml;base64,${b64('public/brand/nonet-wordmark.svg')}`)
     .replaceAll('/brand/paper.jpg', `data:image/jpeg;base64,${b64('public/brand/paper.jpg')}`)
     .replaceAll('/brand/harunobu-line.jpg', `data:image/jpeg;base64,${b64('public/brand/harunobu-line.jpg')}`)
 css = brand(css).replaceAll('/brand/paper-overlay.webp', `data:image/webp;base64,${b64('public/brand/paper-overlay.webp')}`)
