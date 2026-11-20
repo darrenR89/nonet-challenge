@@ -325,3 +325,11 @@
 .is-paused .cv-go .cv-pause{display:grid}
 .is-paused .cv-go .cv-home{display:none}
 .cv-go .cv-links button:disabled{opacity:.45;cursor:default}
+
+/* small phones: today's numbers stack, each figure before its label, a dotted rule between */
+@media (max-width:380px){
+  .cv-title .cv-stats{grid-template-columns:minmax(0,1fr);row-gap:6px}
+  .cv-title .cv-stats div,.cv-title .cv-stats div:last-child:not(:first-child){padding:0;border-left:0;justify-content:flex-start;text-align:left}
+  .cv-title .cv-stats div+div{border-top:1px dotted var(--c-ink);padding-top:6px}
+  .cv-title .cv-stats div dd{order:-1}
+}
