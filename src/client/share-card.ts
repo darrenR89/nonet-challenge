@@ -1,9 +1,5 @@
-// The share card: a picture of the solved cube with the player's result, drawn on a canvas in the
-// Nonet look (graphite, washi, the yellow of a solved cube). It is spoiler free, like the text
-// line: squares show who filled them (a clue, the player, a ★ opener) but never the digit.
-
-/** What a square on the card shows. */
-export type CellKind = 'clue' | 'fill' | 'star'
+// The share card: the player's result, drawn on a canvas in the Nonet look (graphite, washi, the
+// yellow of a solved cube), with the points as the hero. Spoiler free, like the text line.
 
 export type ShareCard = {
   cubeNo: number | undefined
@@ -22,70 +18,12 @@ export type ShareCard = {
   hints: number
   /** Today's rank, 0 when there is none. */
   rank: number
-  /** One per square, 54 long, in the model's order. */
-  cells: CellKind[]
   /** Subreddit without the r/, or empty. */
   subreddit: string
 }
 
 export const CARD_W = 1080
 export const CARD_H = 1350
-
-/** Which squares were clues, which the player filled, and the ★ openers they locked first. */
-export function cellKinds(
-  clue: readonly boolean[],
-  starsWon: Iterable<number>,
-): CellKind[] {
-  const won = new Set(starsWon)
-  return clue.map((c, i) => (won.has(i) ? 'star' : c ? 'clue' : 'fill'))
-}
-
-type V3 = [number, number, number]
-type Face = {index: number; map: (i: number, j: number) => V3; shade: string}
-
-// The three faces a viewer above, right and in front sees, as the model numbers them (see F in
-// shared/model.js). Square (i, j) of face f is cell f*9 + j*3 + i. y points down.
-const FACES: Face[] = [
-  {index: 4, map: (i, j) => [i - 1, -1, j - 1], shade: '#3b3e47'},
-  {index: 0, map: (i, j) => [i - 1, j - 1, 1], shade: '#272a31'},
-  {index: 2, map: (i, j) => [1, j - 1, 1 - i], shade: '#30333b'},
-]
-
-const COS30 = Math.cos(Math.PI / 6)
-
-/** Isometric projection, one unit per square: x runs right-down, z left-down, y down. */
-export function iso([x, y, z]: V3): [number, number] {
-  return [(x - z) * COS30, (x + z) / 2 + y]
-}
-
-/**
- * Where a face's 3 by 3 grid lands on the page, as a 2D affine transform [a, b, c, d, e, f]
- * (canvas setTransform order) from grid units (0 to 3 across, 0 to 3 down) to page pixels.
- */
-export function faceTransform(
-  map: Face['map'],
-  size: number,
-  cx: number,
-  cy: number,
-): [number, number, number, number, number, number] {
-  // map() gives square centres with the face at ±1; the surface sits at ±1.5
-  const at = (u: number, v: number): V3 => {
-    const p = map(u - 0.5, v - 0.5)
-    const n = map(1, 1)
-    return p.map((c, k) => (n[k] !== 0 && c === n[k] ? c * 1.5 : c)) as V3
-  }
-  const o = iso(at(0, 0))
-  const u = iso(at(1, 0))
-  const v = iso(at(0, 1))
-  return [
-    (u[0] - o[0]) * size,
-    (u[1] - o[1]) * size,
-    (v[0] - o[0]) * size,
-    (v[1] - o[1]) * size,
-    cx + o[0] * size,
-    cy + o[1] * size,
-  ]
-}
 
 // the wordmark's cells, from public/brand/nonet-wordmark.svg (X washi, Y the yellow dot)
 const WORDMARK = [
@@ -176,81 +114,51 @@ function wordmark(c: Ctx, x: number, y: number, cell: number): void {
   })
 }
 
-function cube(
-  c: Ctx,
-  cells: CellKind[],
-  cx: number,
-  cy: number,
-  size: number,
-): void {
-  // the glow of a solved cube
-  const g = c.createRadialGradient(cx, cy, size * 0.6, cx, cy, size * 4.2)
-  g.addColorStop(0, 'rgba(245,193,46,.42)')
-  g.addColorStop(0.45, 'rgba(245,193,46,.12)')
-  g.addColorStop(1, 'rgba(245,193,46,0)')
-  c.fillStyle = g
-  c.fillRect(0, 0, CARD_W, CARD_H)
-  for (const f of FACES) {
-    c.save()
-    c.setTransform(...faceTransform(f.map, size, cx, cy))
-    // the gaps between squares light up yellow when the cube is solved
-    c.fillStyle = C.yellow
-    roundRect(c, 0, 0, 3, 3, 0.17)
-    c.fill()
-    for (let j = 0; j < 3; j++)
-      for (let i = 0; i < 3; i++) {
-        const kind = cells[f.index * 9 + j * 3 + i] ?? 'fill'
-        const x = i + 5 / 60
-        const y = j + 5 / 60
-        const w = 50 / 60
-        roundRect(c, x, y, w, w, 9 / 60)
-        if (kind === 'star') {
-          c.fillStyle = C.yellow
-          c.fill()
-          c.fillStyle = C.sumi
-          star(c, i + 0.5, j + 0.5, 0.27)
-          c.fill()
-          continue
-        }
-        c.fillStyle = f.shade
-        c.fill()
-        c.fillStyle = 'rgba(245,193,46,.1)'
-        c.fill()
-        c.lineWidth = 2 / 60
-        c.strokeStyle = 'rgba(245,193,46,.55)'
-        roundRect(c, x + 1 / 60, y + 1 / 60, w - 2 / 60, w - 2 / 60, 8 / 60)
-        c.stroke()
-        // the digit, hidden: its 3 by 5 pixels, all lit, in the clue's washi or the player's blue
-        c.fillStyle = kind === 'clue' ? C.washi : C.ai
-        const px = 4.5 / 60
-        const step = 5.4 / 60
-        const gx = i + 0.5 - (2 * step + px) / 2
-        const gy = j + 0.5 - (4 * step + px) / 2
-        for (let r = 0; r < 5; r++)
-          for (let q = 0; q < 3; q++) {
-            roundRect(c, gx + q * step, gy + r * step, px, px, 1 / 60)
-            c.fill()
-          }
-      }
-    c.restore()
-  }
-}
-
 function doubleRule(c: Ctx, y: number): void {
   c.fillStyle = C.washi
   c.fillRect(72, y, CARD_W - 144, 3)
   c.fillRect(72, y + 9, CARD_W - 144, 3)
 }
 
+// the hero: the points, big, in the yellow glow of a solved cube
+function hero(c: Ctx, d: ShareCard): void {
+  const cx = CARD_W / 2
+  const g = c.createRadialGradient(cx, 560, 40, cx, 560, 520)
+  g.addColorStop(0, 'rgba(245,193,46,.30)')
+  g.addColorStop(0.5, 'rgba(245,193,46,.08)')
+  g.addColorStop(1, 'rgba(245,193,46,0)')
+  c.fillStyle = g
+  c.fillRect(0, 0, CARD_W, CARD_H)
+  c.textAlign = 'center'
+  c.fillStyle = C.lead
+  c.font = `500 30px ${CODE}`
+  c.fillText('POINTS', cx, 420)
+  c.fillStyle = C.washi
+  const pts = d.points.toLocaleString('en-GB')
+  let size = 260
+  c.font = `400 ${size}px ${DISPLAY}`
+  const max = CARD_W - 280
+  const w = c.measureText(pts).width
+  if (w > max) {
+    size = Math.floor((size * max) / w)
+    c.font = `400 ${size}px ${DISPLAY}`
+  }
+  c.fillText(pts, cx, 700)
+  // a yellow bar under the number, the cell shape
+  c.fillStyle = C.yellow
+  roundRect(c, cx - 60, 740, 120, 16, 5)
+  c.fill()
+}
+
+// the numbers under the hero: time, the ★ openers, and today's rank, label over value
 function stats(c: Ctx, d: ShareCard, y: number): void {
   const cols: [string, (x: number) => void][] = [
-    ['Points', x => text(c, d.points.toLocaleString('en-GB'), x, y + 96)],
-    ['Time', x => text(c, d.time, x, y + 96)],
+    ['Time', x => text(c, d.time, x, y + 120)],
     [
       'Openers',
       x => {
         for (let k = 0; k < 3; k++) {
-          star(c, x + (k - 1) * 62, y + 66, 26)
+          star(c, x + (k - 1) * 76, y + 86, 32)
           if (k < d.stars) {
             c.fillStyle = C.yellow
             c.fill()
@@ -263,20 +171,22 @@ function stats(c: Ctx, d: ShareCard, y: number): void {
       },
     ],
   ]
-  if (d.rank) cols.push(['Today', x => text(c, `#${d.rank}`, x, y + 96)])
+  if (d.rank) cols.push(['Today', x => text(c, `#${d.rank}`, x, y + 120)])
   const w = (CARD_W - 144) / cols.length
+  c.fillStyle = C.edge
+  c.fillRect(72, y - 28, CARD_W - 144, 2)
   cols.forEach(([label, draw], k) => {
     const x = 72 + w * k + w / 2
     if (k) {
       c.fillStyle = C.edge
-      c.fillRect(72 + w * k, y + 4, 2, 104)
+      c.fillRect(72 + w * k, y + 4, 2, 128)
     }
     c.fillStyle = C.lead
-    c.font = `500 24px ${CODE}`
+    c.font = `500 26px ${CODE}`
     c.textAlign = 'center'
-    c.fillText(label.toUpperCase(), x, y + 22)
+    c.fillText(label.toUpperCase(), x, y + 24)
     c.fillStyle = C.washi
-    c.font = `400 76px ${DISPLAY}`
+    c.font = `400 100px ${DISPLAY}`
     draw(x)
   })
 }
@@ -351,13 +261,13 @@ export function drawShareCard(canvas: HTMLCanvasElement, d: ShareCard): void {
   c.fillStyle = C.edge
   c.fillRect(72, 330, CARD_W - 144, 2)
 
-  cube(c, d.cells, CARD_W / 2, 652, 90)
+  hero(c, d)
 
-  stats(c, d, 962)
+  stats(c, d, 870)
   c.fillStyle = C.lead
   c.font = `500 26px ${CODE}`
   c.textAlign = 'center'
-  c.fillText(detailLine(d), CARD_W / 2, 1120)
+  c.fillText(detailLine(d), CARD_W / 2, 1090)
 
   // the call to play, set as the game's primary button
   c.fillStyle = C.yellow

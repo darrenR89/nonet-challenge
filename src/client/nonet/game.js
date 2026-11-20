@@ -8,7 +8,6 @@ import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {context,exitExpandedMode,showLoginPrompt,showShareSheet} from '@devvit/web/client';
 import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
-import {cellKinds} from '../share-card.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -411,17 +410,17 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
-// sharing: a picture of the solved cube with the result (no digits, so no spoilers), and the
+// sharing: a picture of the result, points first (no digits, so no spoilers), and the
 // post's link so whoever sees it can tap through and play
 async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=true;
   const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
   const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
   const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
-    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,cells:cellKinds(locked,starWon),subreddit:D&&D.subreddit||''}).catch(()=>undefined);
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||''}).catch(()=>undefined);
   if(b)b.disabled=false;
   if(!card){copyResult(txt);return}
   journey.interaction('share','open');
-  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: today's solved cube, ${num(total)} points in ${fmt(t1+t2)}"><p class="meta">No digits on it, so it spoils nothing.${url?' The link lets anyone tap through and play today\'s cube.':''}</p>`,[
+  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: ${num(total)} points in ${fmt(t1+t2)}"><p class="meta">No digits on it, so it spoils nothing.${url?' The link lets anyone tap through and play today\'s cube.':''}</p>`,[
     ['Copy text',ev=>copyResult(txt,ev)],
     ['Save image',()=>{journey.interaction('share','save');saveImage(card.dataUrl,`nonet-${D?D.cubeNo:'cube'}.png`)}],
     ['Share',()=>void shareOut(card.blob,title,txt,url),'primary']]);
