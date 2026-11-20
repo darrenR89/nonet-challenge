@@ -87,7 +87,16 @@ import {
   listEvents,
   saveEvent,
 } from './events.ts'
+import {flairAfterSolve, lapseFlair} from './flair.ts'
+import {
+  getSpot,
+  noteBestStreak,
+  noteSolve,
+  saveWeek,
+  spotText,
+} from './records.ts'
 import {journey} from './telemetry.ts'
+import {publishWiki, wikiPath} from './wiki.ts'
 
 /** The clock, swappable in tests. */
 export const clock = {now: (): Date => new Date()}
@@ -224,6 +233,9 @@ async function route(
         break
       case Endpoint.OnMenuWeekPost:
         rsp = await routeMenuWeekPost()
+        break
+      case Endpoint.OnMenuWiki:
+        rsp = await routeMenuWiki()
         break
       case Endpoint.OnFormNewEvent:
         rsp = await routeFormNewEvent(await readJson<unknown>(reqMsg))
@@ -464,6 +476,15 @@ async function routeScore(
     await addToBoards(day, uid, total)
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
+    await noteBestStreak(uid, streak.best)
+    await noteSolve(day, uid, {
+      score: total,
+      tier,
+      time: stats.t1 + stats.t2,
+      stars: stats.starsWon,
+      wrong: stats.wrong,
+    })
+    await flairSolve(day, uid, streak)
     dayStats = await addSolve(day, stats.t1 + stats.t2, tier, total)
     await settleDuels(day, uid)
     // the journey ends here, with the total the server worked out, not the browser's
@@ -625,7 +646,33 @@ async function routeBoard(req: BoardReq): Promise<BoardRsp> {
   }
 }
 
+/** Updates the player's streak flair after a counted run. A failure never stops the score. */
+async function flairSolve(day: string, uid: string, st: Streak): Promise<void> {
+  const sub = context.subredditName
+  const name = context.username
+  if (!sub || !name || !(await setting('streakFlair'))) return
+  await flairAfterSolve(day, uid, name, sub, st).catch(err =>
+    console.warn(`flair failed: ${err}`),
+  )
+}
+
 // ---------- posts ----------
+
+/** A yes/no subreddit setting; on unless a moderator turned it off. */
+async function setting(
+  name: 'autoPost' | 'pinPosts' | 'streakFlair',
+): Promise<boolean> {
+  return (await settings.get<boolean>(name).catch(() => undefined)) !== false
+}
+
+/** Pins a post as a community highlight, if the subreddit wants that. */
+async function pin(
+  post: {sticky(position?: 1 | 2): Promise<void>},
+  slot: 1 | 2,
+): Promise<void> {
+  if (!(await setting('pinPosts'))) return
+  await post.sticky(slot).catch(err => console.warn(`pin failed: ${err}`))
+}
 
 export function dailyTitle(day: string, e: GameEvent | undefined): string {
   const date = shortDate(day)
@@ -640,6 +687,7 @@ async function postDaily(day: string): Promise<{url: string; id: string}> {
     title: dailyTitle(day, e),
     postData: {day},
   })
+  await pin(post, 1)
   return {url: post.url, id: post.id}
 }
 
@@ -688,7 +736,15 @@ async function routeAppInstall(): Promise<TriggerResponse> {
   const day = today()
   await ensureDay(day)
   if (await claim('post', day)) await postDaily(day)
+  await writeWiki(day).catch(err => console.warn(`wiki failed: ${err}`))
   return {}
+}
+
+async function writeWiki(day: string): Promise<string | undefined> {
+  const sub = context.subredditName
+  if (!sub) return
+  await publishWiki(day, sub, await setting('streakFlair'))
+  return `https://www.reddit.com${wikiPath(sub)}`
 }
 
 function boardText(b: Board): string {
@@ -698,12 +754,34 @@ function boardText(b: Board): string {
     .join('\n\n')
 }
 
-async function postWeekResults(week: string): Promise<string> {
+/**
+ * The week's top nine and its solve of the week, pinned second. `final` is the Monday post for the
+ * week just ended; otherwise it's a moderator's post of the week so far.
+ */
+async function postWeekResults(
+  week: string,
+  from: string,
+  final: boolean,
+): Promise<string> {
   const b = await readBoard(boardKey.week(week), week, undefined)
+  const spot = await getSpot(week)
+  const sub = context.subredditName
+  const text = [
+    `The week's top nine${final ? '' : ' so far'}, from ${b.players.toLocaleString('en-GB')} players.`,
+    boardText(b),
+    spot ? `**Solve of the week.** ${spotText(spot)}` : '',
+    final
+      ? "A new week starts today. Every day's cube adds to your total."
+      : 'The week ends Sunday at midnight Pacific time.',
+    sub
+      ? `Rules, records and past weeks are on [the Nonet wiki](${wikiPath(sub)}).`
+      : '',
+  ]
   const post = await reddit.submitPost({
-    title: `Nonet · the Nine for ${week}`,
-    text: `The week's top nine, from ${b.players.toLocaleString('en-GB')} players.\n\n${boardText(b)}\n\nA new week starts today. Every day's cube adds to your total.`,
+    title: `Nonet · the Nine${final ? '' : ' so far'} · week of ${shortDate(from)}`,
+    text: text.filter(Boolean).join('\n\n'),
   })
+  await pin(post, 2)
   return post.url
 }
 
@@ -725,28 +803,62 @@ async function postEventResults(e: GameEvent): Promise<void> {
 }
 
 async function routeMenuWeekPost(): Promise<UiResponse> {
-  const url = await postWeekResults(weekKey(today()))
+  const day = today()
+  const url = await postWeekResults(
+    weekKey(day),
+    addDays(day, 1 - weekday(day)),
+    false,
+  )
   return {
     showToast: {text: "This week's board is posted.", appearance: 'success'},
     navigateTo: url,
   }
 }
 
+async function routeMenuWiki(): Promise<UiResponse> {
+  try {
+    const url = await writeWiki(today())
+    return {
+      showToast: {
+        text: 'The Nonet wiki page is up to date.',
+        appearance: 'success',
+      },
+      ...(url ? {navigateTo: url} : {}),
+    }
+  } catch (err) {
+    console.warn(`wiki failed: ${err}`)
+    return {
+      showToast: "The wiki couldn't be written. Check the app can edit it.",
+    }
+  }
+}
+
 /**
  * Runs just after midnight Pacific (the cron fires at 07:01 and 08:01 UTC to cover summer
  * time, and the once-only claims make the second run a no-op): makes today's and tomorrow's cubes,
- * posts today's cube, and on the right days posts week and event results.
+ * moves lapsed streak flair to best, posts today's cube, and on the right days posts week and
+ * event results. On Mondays it also saves last week's records and rewrites the wiki.
  */
 export async function runDaily(): Promise<void> {
   const day = today()
   await ensureDay(day)
   await ensureDay(addDays(day, 1))
-  const auto = await settings.get<boolean>('autoPost').catch(() => undefined)
-  if (auto === false) return
-  if (await claim('post', day)) await notifyNewCube(day, await postDaily(day))
+  const sub = context.subredditName
+  if (sub && (await setting('streakFlair')))
+    await lapseFlair(day, sub).catch(err =>
+      console.warn(`flair failed: ${err}`),
+    )
+  const auto = await setting('autoPost')
+  if (auto && (await claim('post', day)))
+    await notifyNewCube(day, await postDaily(day))
   const yesterday = addDays(day, -1)
-  if (weekday(day) === 1 && (await claim('week', weekKey(yesterday))))
-    await postWeekResults(weekKey(yesterday))
+  const lastWeek = weekKey(yesterday)
+  if (weekday(day) === 1 && (await claim('week', lastWeek))) {
+    await saveWeek(lastWeek, addDays(day, -7))
+    if (auto) await postWeekResults(lastWeek, addDays(day, -7), true)
+    await writeWiki(day).catch(err => console.warn(`wiki failed: ${err}`))
+  }
+  if (!auto) return
   for (const e of await listEvents())
     if (e.end === yesterday && (await claim('event', e.id)))
       await postEventResults(e)

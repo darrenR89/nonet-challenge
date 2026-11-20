@@ -34,7 +34,17 @@ let serverURL: string
 let user: {userId?: string; username?: string} = {}
 let now = new Date('2026-11-14T12:00:00Z')
 const posts: string[] = []
+/** Text post bodies, in order. */
+const texts: string[] = []
+/** Pinned posts, as "title @ slot". */
+const pins: string[] = []
+/** User flair in the subreddit, by user id. */
+const flairs = new Map<string, string>()
+/** The wiki page as the app last wrote it, and how many times it was created. */
+const wiki = {content: '', created: 0}
 let autoPost: boolean | undefined = true
+let pinPosts: boolean | undefined = true
+const SUB = 'nonetdaily'
 /** Journey events the server sent to Devvit, in order. */
 const journeys: {kind: string; body: unknown}[] = []
 let optedIn = false
@@ -49,21 +59,63 @@ const was = {
   submitPost: r.submitPost,
   getUserByUsername: r.getUserByUsername,
   submitComment: r.submitComment,
+  getUserById: r.getUserById,
+  setUserFlair: r.setUserFlair,
+  getWikiPage: r.getWikiPage,
+  createWikiPage: r.createWikiPage,
+  updateWikiPage: r.updateWikiPage,
+  updateWikiPageSettings: r.updateWikiPageSettings,
   get: s.get,
 }
+
+/** A post as Reddit returns it, enough to pin. */
+const madePost = (id: string, url: string, title: string) => ({
+  id,
+  url,
+  sticky: async (slot: number) => {
+    pins.push(`${title} @ ${slot}`)
+  },
+})
+
+/** The midnight job, run as the scheduler runs it: in the subreddit, with no user. */
+const daily = (): Promise<void> =>
+  runWithContext(
+    {appName: 'nonet-challenge', subredditName: SUB} as unknown as Context,
+    runDaily,
+  )
 
 before(async () => {
   installFakeRedis()
   clock.now = () => now
   r.submitCustomPost = async (o: {title: string}) => {
     posts.push(o.title)
-    return {id: 't3_post', url: 'https://reddit.com/x'}
+    return madePost('t3_post', 'https://reddit.com/x', o.title)
   }
-  r.submitPost = async (o: {title: string}) => {
+  r.submitPost = async (o: {title: string; text: string}) => {
     posts.push(o.title)
-    return {id: 't3_text', url: 'https://reddit.com/y'}
+    texts.push(o.text)
+    return madePost('t3_text', 'https://reddit.com/y', o.title)
   }
-  s.get = async () => autoPost
+  s.get = async (name: string) =>
+    name === 'pinPosts' ? pinPosts : name === 'autoPost' ? autoPost : true
+  r.getUserById = async (id: string) => ({
+    getUserFlairBySubreddit: async () => ({flairText: flairs.get(id)}),
+  })
+  r.setUserFlair = async (o: {username: string; text: string}) => {
+    flairs.set(`t2_${o.username}`, o.text)
+  }
+  r.getWikiPage = async () => {
+    if (!wiki.created) throw new Error('PAGE_NOT_FOUND')
+    return {content: wiki.content}
+  }
+  r.createWikiPage = async (o: {content: string}) => {
+    wiki.created++
+    wiki.content = o.content
+  }
+  r.updateWikiPage = async (o: {content: string}) => {
+    wiki.content = o.content
+  }
+  r.updateWikiPageSettings = async () => ({})
   // every name is a Reddit user except "ghost"
   r.getUserByUsername = async (name: string) =>
     name.toLowerCase() === 'ghost'
@@ -106,6 +158,7 @@ before(async () => {
       {
         appName: 'nonet-challenge',
         postId: 't3_123',
+        subredditName: SUB,
         ...user,
       } as unknown as Context,
       () => onReq(req, rsp),
@@ -125,6 +178,12 @@ after(async () => {
     submitPost: was.submitPost,
     getUserByUsername: was.getUserByUsername,
     submitComment: was.submitComment,
+    getUserById: was.getUserById,
+    setUserFlair: was.setUserFlair,
+    getWikiPage: was.getWikiPage,
+    createWikiPage: was.createWikiPage,
+    updateWikiPage: was.updateWikiPage,
+    updateWikiPageSettings: was.updateWikiPageSettings,
   })
   s.get = was.get
   if (!server.listening) return
@@ -136,6 +195,12 @@ after(async () => {
 beforeEach(() => {
   clearFakeRedis()
   posts.length = 0
+  texts.length = 0
+  pins.length = 0
+  flairs.clear()
+  wiki.content = ''
+  wiki.created = 0
+  pinPosts = true
   journeys.length = 0
   pushed.length = 0
   comments.length = 0
@@ -405,29 +470,29 @@ test('event forms explain mistakes', async () => {
 
 test('the daily job posts once a day, and the week on Mondays', async () => {
   now = new Date('2026-11-16T08:01:00Z') // just after midnight Pacific, a Monday
-  await runDaily()
-  await runDaily()
+  await daily()
+  await daily()
   assert.equal(posts.length, 2)
   assert.match(posts[0] ?? '', /^Nonet: today's cube · Mon 16 Nov/)
-  assert.match(posts[1] ?? '', /the Nine for 2026-W46/)
+  assert.match(posts[1] ?? '', /^Nonet · the Nine · week of Mon 9 Nov$/)
   autoPost = false
   now = new Date('2026-11-17T08:01:00Z')
-  await runDaily()
+  await daily()
   assert.equal(posts.length, 2)
 })
 
 test('the daily post waits for midnight Pacific and is dated that day', async () => {
   now = new Date('2026-11-14T08:01:00Z') // 12:01 AM Saturday in California
-  await runDaily()
+  await daily()
   assert.equal(posts.length, 1)
   assert.match(posts[0] ?? '', /^Nonet: today's cube · Sat 14 Nov$/)
   now = new Date('2026-11-15T00:03:00Z') // 4:03 PM Saturday: midnight UTC, still Saturday here
-  await runDaily()
+  await daily()
   now = new Date('2026-11-15T07:01:00Z') // the summer-time run, 11:01 PM Saturday in winter
-  await runDaily()
+  await daily()
   assert.equal(posts.length, 1)
   now = new Date('2026-11-15T08:01:00Z')
-  await runDaily()
+  await daily()
   assert.equal(posts.length, 2)
   assert.match(posts[1] ?? '', /^Nonet: today's cube · Sun 15 Nov$/)
 })
@@ -596,7 +661,7 @@ test('notify me: opt in, and the daily post pings opted-in players', async () =>
   assert.equal(on.body.notify, true)
   assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.notify, true)
   now = new Date('2026-11-15T08:01:00Z')
-  await runDaily()
+  await daily()
   assert.deepEqual(pushed, ['Nonet #319 is out'])
   const off = await post<{notify: boolean}>(Endpoint.Notify, {on: false})
   assert.equal(off.body.notify, false)
@@ -770,4 +835,95 @@ test('challenges explain what is wrong', async () => {
 
   as(undefined)
   assert.equal((await post(Endpoint.Challenge, {name: 'bob'})).status, 401)
+})
+
+test('streak flair from three days in a row, then the best once it lapses', async () => {
+  // cat has flair from the mods, which stays
+  flairs.set('t2_cat', 'Puzzle mod')
+  for (const day of ['14', '15', '16']) {
+    now = new Date(`2026-11-${day}T12:00:00Z`)
+    as('t2_ann', 'ann')
+    await playDay(1, run())
+    as('t2_cat', 'cat')
+    await playDay(1, run())
+    if (day === '15') assert.equal(flairs.get('t2_ann'), undefined)
+  }
+  assert.equal(flairs.get('t2_ann'), 'Nonet · 3-day streak')
+  assert.equal(flairs.get('t2_cat'), 'Puzzle mod')
+
+  // ann misses the 17th; the job on the 18th moves her flair to her best
+  now = new Date('2026-11-17T08:01:00Z')
+  await daily()
+  assert.equal(flairs.get('t2_ann'), 'Nonet · 3-day streak')
+  now = new Date('2026-11-18T08:01:00Z')
+  await daily()
+  assert.equal(flairs.get('t2_ann'), 'Nonet · best streak 3')
+
+  // flair she changes herself is hers from then on
+  flairs.set('t2_ann', 'sudoku fan')
+  for (const day of ['18', '19', '20', '21']) {
+    now = new Date(`2026-11-${day}T12:00:00Z`)
+    as('t2_ann', 'ann')
+    await playDay(1, run())
+  }
+  assert.equal(flairs.get('t2_ann'), 'sudoku fan')
+})
+
+test("Monday's post has the Nine and the solve of the week, is pinned, and the wiki is written", async () => {
+  now = new Date('2026-11-16T12:00:00Z') // Monday, week of 16 Nov
+  const ann = await playDay(1, run())
+  as('t2_bob', 'bob')
+  const bob = await playDay(3, run({turns: 3, t1: 30, t2: 100}))
+  assert.ok(bob.body.total > ann.body.total)
+  now = new Date('2026-11-18T12:00:00Z')
+  as('t2_ann', 'ann')
+  await playDay(1, run())
+
+  now = new Date('2026-11-23T08:01:00Z') // the next Monday, just after midnight Pacific
+  await daily()
+  assert.deepEqual(posts, [
+    "Nonet: today's cube · Mon 23 Nov",
+    'Nonet · the Nine · week of Mon 16 Nov',
+  ])
+  assert.deepEqual(pins, [
+    "Nonet: today's cube · Mon 23 Nov @ 1",
+    'Nonet · the Nine · week of Mon 16 Nov @ 2',
+  ])
+  const text = texts[0] ?? ''
+  assert.match(text, /from 2 players/)
+  assert.match(
+    text,
+    new RegExp(
+      `\\*\\*Solve of the week\\.\\*\\* u/bob scored ${bob.body.total.toLocaleString('en-GB')} on Mon 16 Nov \\(cube #320\\): 3 turns, 2:10, all three ★, no misses\\.`,
+    ),
+  )
+  assert.match(text, /\[the Nonet wiki\]\(\/r\/nonetdaily\/wiki\/nonet\)/)
+
+  assert.equal(wiki.created, 1)
+  assert.match(
+    wiki.content,
+    /\| Mon 16 Nov \| u\/(ann|bob) · [\d,]+ \| u\/bob · /,
+  )
+  assert.match(
+    wiki.content,
+    /### Longest streaks\n\n1\. u\/(ann|bob) · 1 day\n2\. u\/(ann|bob) · 1 day\n/,
+  )
+
+  // the moderator menu rewrites the same page
+  const menu = await post<{showToast?: {text: string}; navigateTo?: string}>(
+    Endpoint.OnMenuWiki,
+  )
+  assert.equal(
+    menu.body.navigateTo,
+    'https://www.reddit.com/r/nonetdaily/wiki/nonet',
+  )
+  assert.equal(wiki.created, 1)
+})
+
+test('pinning can be turned off', async () => {
+  pinPosts = false
+  now = new Date('2026-11-16T08:01:00Z')
+  await daily()
+  assert.equal(posts.length, 2)
+  assert.deepEqual(pins, [])
 })
