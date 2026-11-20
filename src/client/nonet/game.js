@@ -546,7 +546,7 @@ function render(){
   $('padbox').hidden=stage!==2;
   $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;
   $('flatBtn').disabled=hintsLeft<=0||flatOn;$('flatBtn').hidden=$('hCount').hidden=$('suggest').hidden;
-  $('hCount').textContent=`${hintsLeft} helper${hintsLeft===1?'':'s'}`;
+  $('hN').textContent=`${hintsLeft}/3`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   // the walkthrough's next thing to tap
@@ -703,15 +703,15 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   // shown line has, so they say what can go on the outlined face. The note changes once they show.
   const tw=g.querySelector('.st.twin');$('netCap').textContent=tw?'The dashed squares hold the same three numbers as the three squares only this line has. Use them to work out what goes on the outlined face.':'Tap a square on the outlined face to see its lines. Dashed squares will show the numbers its line still needs.';
   net.classList.toggle('has-twin',!!tw);
-  const left=Math.max(0,flatEnd-Date.now());$('netClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
-  net.style.setProperty('--left',String(left/FLAT_MS));if(left<=0)flatStop()}
-function pickDraw(){const left=Math.max(0,pickEnd-Date.now());$('pickClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
-  $('pick').style.setProperty('--left',String(left/PICK_MS));if(left<=0)pickFace([0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0])}
+  const left=Math.max(0,flatEnd-Date.now());clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
+// one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
+function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
+function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0)pickFace([0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0])}
 function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
-  flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
+  flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
 function pickFace(fi){if(!flatOn||!$('net').hidden)return;clearInterval(flatTick);releaseClock();$('pick').hidden=true;
   flatFace=fi;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
-function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=true;render()}
+function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
 $('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
 // while picking, a tap on the cube chooses that face instead of a square
 cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;

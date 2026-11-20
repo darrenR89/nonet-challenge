@@ -97,9 +97,9 @@
       <button class="icon" id="pauseBtn" type="button" aria-label="Pause">❚❚</button>
     </div>
     <div class="helpers" id="helpers">
-      <span class="hcount" id="hCount">3 helpers</span>
       <button class="icon sugg" id="suggest" type="button">Suggest a move</button>
-      <button class="icon sugg" id="flatBtn" type="button">Flatten 0:20</button>
+      <span class="hcount" id="hCount"><span>Need help?</span><b id="hN">3/3</b></span>
+      <button class="icon sugg" id="flatBtn" type="button">Flatten cube</button>
     </div>
   </div>
   <span class="status" id="status" aria-live="polite"></span>
@@ -107,12 +107,11 @@
   <div class="stage" id="stage" aria-label="Puzzle cube. Drag to look around.">
     <div class="space" aria-hidden="true"><canvas id="room"></canvas></div>
     <div class="cube" id="cube"></div>
+    <div class="nclock" id="fclock" hidden><i></i><b id="fTime">0:05</b><button class="fback" id="netDone" type="button" aria-label="Fold back to the cube" title="Fold back to the cube"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 14 4 9l5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     <div class="pick" id="pick" hidden>
-      <span class="nclock"><i></i><b id="pickClock">0:05</b></span>
       <p>Clock stopped. Turn the cube and tap the face to flatten from.</p>
     </div>
     <div class="net" id="net" hidden>
-      <div class="nhead"><span class="nclock"><i></i><b id="netClock">0:20</b></span><button class="icon" id="netDone" type="button">Fold back</button></div>
       <div class="ngrid"></div>
       <p class="ncap" id="netCap"></p>
     </div>

@@ -432,7 +432,11 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .prow .misses{display:inline-flex;align-items:center;gap:3px}
 .prow .misses[hidden]{display:none}
 /* the helpers, under the progress bar: a suggested move for now */
-.helpers{display:flex;gap:8px;width:100%;flex:1 1 100%}
+.helpers{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:100%;flex:1 1 100%}
+.helpers #suggest{justify-self:start}.helpers #flatBtn{justify-self:end}
+.hcount{display:grid;justify-items:center;line-height:1.2;font:500 12px var(--code);color:var(--lead)}
+.hcount b{font:600 15px var(--code);color:var(--washi);font-variant-numeric:tabular-nums}
+.hcount[hidden]{display:none}
 .helpers:not(:has(>:not([hidden]))){display:none}
 .runbar[hidden]{display:none}
 
@@ -518,8 +522,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .net{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;cursor:default;
   background:color-mix(in srgb,var(--sumi) 96%,transparent);border-radius:12px;animation:netin .3s ease}
 @keyframes netin{from{opacity:0;transform:scale(.96)}}
-.nhead{display:flex;align-items:center;gap:12px}
-.nhead button{white-space:nowrap}
 .nface .arw,.nface .hintarw{display:none}
 .nclock{display:flex;align-items:center;gap:8px;font:500 15px var(--code);font-variant-numeric:tabular-nums}
 .nclock i{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),var(--edge) 0)}
@@ -533,10 +535,16 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nclock{gap:10px;padding:6px 16px 6px 8px;border-radius:999px;background:#23252b;color:#eceae3;font:500 22px var(--code)}
 .nclock i{width:30px;height:30px;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),#4a4d55 0);
   -webkit-mask:radial-gradient(circle,transparent 7px,#000 8px);mask:radial-gradient(circle,transparent 7px,#000 8px)}
-@media (prefers-color-scheme:light){.nhead button{background:#23252b;color:#eceae3;border-color:#23252b}}
+/* one clock for both steps, pinned to the top middle of the stage, with fold back inside it */
+.nclock#fclock{position:absolute;z-index:7;top:4px;left:50%;translate:-50% 0;padding-right:6px}
+.nclock#fclock[hidden]{display:none}
+.fback{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;margin-left:4px;border-radius:50%;border:0;
+  background:#3a3d45!important;color:#eceae3!important;cursor:pointer}
+.fback:hover{background:#4a4d55!important}
+.net{padding-top:60px;box-sizing:border-box}
 
 /* flatten, step one: pick a face while the clock is stopped */
-.pick{position:absolute;z-index:6;top:4px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;width:min(320px,92%);pointer-events:none;text-align:center}
+.pick{position:absolute;z-index:6;top:62px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;width:min(320px,92%);pointer-events:none;text-align:center}
 .pick p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);background:color-mix(in srgb,var(--sumi) 85%,transparent);padding:6px 10px;border-radius:8px}
 .pick .nclock{pointer-events:none}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
@@ -547,6 +555,12 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nface .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
 @keyframes twinpulse{50%{outline-color:transparent}}
 @media (prefers-reduced-motion:reduce){.nface .st.twin{animation:none}}
+/* on paper yellow is too faint: the dashes are ink over a gold wash */
+@media (prefers-color-scheme:light){
+  .nface .st.twin{outline-color:#23252b;background:color-mix(in srgb,var(--shade) 55%,#f5c12e)!important;animation-name:twinpulse-ink}
+  @keyframes twinpulse-ink{50%{outline-color:#9a6f00}}
+  .ncap::before{border-color:#23252b;background:#f6e7b8}
+}
 .net.has-twin .ncap{color:var(--washi);font-weight:500}
 .ncap::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:2px dashed var(--yellow);border-radius:3px}
 .ncap{margin:0;max-width:min(460px,92%);font:400 12px/1.45 var(--code);color:var(--lead);text-align:center}
