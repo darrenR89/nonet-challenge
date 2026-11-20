@@ -59,6 +59,7 @@ test('tunes differ in more than key: chords, swing, sounds and patterns', () => 
   assert.ok(kinds(m => m.chords.length) === 2, 'two and four chord loops')
   assert.ok(kinds(m => m.swing) >= 3, 'straight and swung')
   assert.ok(kinds(m => m.voices.pad) >= 3, 'pad sounds')
+  assert.ok(kinds(m => m.padHits.length > 0) === 2, 'held and plucked chords')
   assert.ok(kinds(m => m.voices.lead) >= 3, 'lead sounds')
   assert.ok(kinds(m => m.arpRate) === 3, 'arpeggio speeds')
   assert.ok(kinds(m => m.shaker) >= 3, 'shaker patterns')

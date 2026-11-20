@@ -60,6 +60,11 @@ export type Mood = {
   swing: number
   /** which sound plays each part */
   voices: {pad: Wave; pulse: Wave; lead: Wave}
+  /**
+   * The beats in each bar where the chords are plucked, or empty when they
+   * are held as long notes underneath
+   */
+  padHits: number[]
   pulse: number[]
   bassHits: number[]
   kicks: number[]
@@ -152,16 +157,19 @@ export function moodFor(seed: number): Mood {
     pulse: pick(r, ['tri', 'tri', 'koto'] as const),
     lead: pick(r, ['bell', 'bell', 'koto', 'flute'] as const),
   }
+  // about four in ten tunes pluck the chords on a rhythm instead of holding them
+  const padHits = pick(r, [[], [], [], [], [0, 1.5, 3], [0, 2.5], [0, 0.75, 2]])
   const tonic = NOTE_NAMES[((root % 12) + 12) % 12] ?? 'C'
   const lead = voices.lead === 'bell' ? '' : `, ${voices.lead}`
   return {
-    name: `${tonic} ${scale}, ${bpm} BPM${lead}${swing ? ', swung' : ''}`,
+    name: `${tonic} ${scale}, ${bpm} BPM${lead}${padHits.length ? ', plucked chords' : ''}${swing ? ', swung' : ''}`,
     bpm,
     root,
     scale,
     chords,
     swing,
     voices,
+    padHits,
     pulse: pick(r, [
       [0, 2, 1, 2],
       [0, 1, 2, 4],
@@ -314,6 +322,18 @@ export function renderLoop(name: LoopName, m: Mood): Float32Array<ArrayBuffer> {
 
   switch (name) {
     case 'pad': {
+      if (m.padHits.length) {
+        // short chords, strummed low to high, on the tune's rhythm
+        for (const bar of [0, 4])
+          for (const hit of m.padHits)
+            [0, 2, 4].forEach((d, k) => {
+              const at = bar + hit
+              note(at + k * 0.03, 1, hz(chord(at) + d), 0.1, 'koto', {
+                decay: 0.45,
+              })
+            })
+        break
+      }
       const span = 8 / m.chords.length
       for (let at = 0; at < 8; at += span)
         for (const d of [0, 2, 4])
