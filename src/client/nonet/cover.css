@@ -326,10 +326,9 @@
 .is-paused .cv-go .cv-home{display:none}
 .cv-go .cv-links button:disabled{opacity:.45;cursor:default}
 
-/* small phones: today's numbers stack, each figure before its label, a dotted rule between */
+/* small phones: the two numbers stay side by side, each label over its number */
 @media (max-width:380px){
-  .cv-title .cv-stats{grid-template-columns:minmax(0,1fr);row-gap:6px}
-  .cv-title .cv-stats div,.cv-title .cv-stats div:last-child:not(:first-child){padding:0;border-left:0;justify-content:flex-start;text-align:left}
-  .cv-title .cv-stats div+div{border-top:1px dotted var(--c-ink);padding-top:6px}
-  .cv-title .cv-stats div dd{order:-1}
+  .cv-title .cv-stats div{flex-direction:column;align-items:flex-start;gap:2px}
+  .cv-title .cv-stats div:first-child dd{order:0}
+  .cv-title .cv-stats div:last-child:not(:first-child){align-items:flex-end}
 }
