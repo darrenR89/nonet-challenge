@@ -8,7 +8,7 @@ import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {crewTitle,crewSummary,crewButton,crewShareLine,crewCard,crewPanelHTML,wireCrew} from '../crew.ts';
-import {context,exitExpandedMode,showLoginPrompt,showShareSheet} from '@devvit/web/client';
+import {context,exitExpandedMode,navigateTo,navigateToPost,showLoginPrompt,showShareSheet} from '@devvit/web/client';
 import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
@@ -211,8 +211,11 @@ function hideSplash(){splashUp=false;$('splash').classList.add('out');setTimeout
 function hideSplashNow(){splashUp=false;const sp=$('splash');sp.classList.add('out');sp.hidden=true}
 function showSplash(){if(stage===3)music.leave();splashUp=true;$('splash').hidden=false;requestAnimationFrame(()=>$('splash').classList.remove('out'));splashTwist();renderSplashExtras()}
 // Play and Resume: cells cover the screen, become the cube and fold together; the clock starts after
+// each daily post is fixed to its own day: an older post sends players on to today's
+function goToday(){let sub='';try{sub=context.subredditName??''}catch(e){}
+  if(D.todayPost)navigateToPost(D.todayPost);else navigateTo(`https://www.reddit.com/r/${sub}/`)}
 $('spPlay').onclick=()=>{
-  if(tx.busy)return;music.unlock();
+  if(tx.busy)return;if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();
   if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
   journey.start();
   // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
@@ -259,7 +262,7 @@ let saveT=0;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(saveRun,400
 
 // ---------- retry and give up ----------
 // one retry a day on today's cube: it starts again from the turned cube, and the day's total is ×0.8
-function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalTitle').classList.remove('vh');$('modalBody').innerHTML=body;
+function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalTitle').classList.remove('vh');$('modalBody').innerHTML=body;$('modalBody').scrollTop=0;
   $('modalActs').innerHTML='';buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;
     b.onclick=e=>{m.hidden=true;if(fn)fn(e)};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});
@@ -284,17 +287,30 @@ function updateRunButtons(){const r=$('restart');
   if(online&&daily&&!sent){r.textContent=retries?'Retry used':`Retry (×${RETRY_MULT})`;r.disabled=!!retries||stage===3}else{r.textContent='Restart';r.disabled=false}
   const sr=$('spRetry');sr.textContent=r.textContent;sr.disabled=r.disabled;
   $('pauseBtn').hidden=stage===3||!P||isPrac()}
-function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);$('modalTitle').classList.add('vh');const box=$('modalBody');r.hidden=false;box.appendChild(r)}
+function showRules(){journey.interaction('rules');const r=$('rules');ask('How to play','',[['Got it',null,'primary']]);$('modalTitle').classList.add('vh');const box=$('modalBody');r.hidden=false;box.appendChild(r);
+  // always opens on the first tab, scrolled to the top
+  rtabs[0]?.click();box.scrollTop=0;requestAnimationFrame(()=>{box.scrollTop=0})}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 // How to play has three tabs: the game, what the squares and controls look like, and scoring
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
-// Practice step 1: the cube is one turn out, and the turn that puts it back pulses
-function coachTurn(){if(!isPrac()||stage!==1)return;$('banner').hidden=false;
-  $('banner').textContent='Practice, step 1 of 2: turning. The cube has been rotated once, so a few numbers conflict. Tap the pulsing arrow to rotate it back. After this, you\'ll tap any square and use its arrows to rotate it horizontally or vertically yourself.';
-  showHint(true)}
+// Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
+// Doing it brings up the next step.
+const WALK=[
+  ['Step 1 of 4 · Rotate','The cube has been rotated once, so a few numbers conflict. Tap the pulsing arrow to rotate it back.'],
+  ['Step 2 of 4 · Pick a square','Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each line of nine across three faces. Tap the glowing square: only one number fits there.'],
+  ['Step 3 of 4 · Pencil it in','Tap the glowing number on the pad. It goes in as a pencil note.'],
+  ['Step 4 of 4 · Lock it in','Sure of it? Switch to Lock in, then tap the number again to place it.'],
+  ['Your turn','Fill the rest the same way. Start where only one number fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.']];
+let walk=-1,walkCell=-1,walkDigit=0;
+function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p]=WALK[n];
+  ask(t,`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
+function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;showHint(true);walkTo(0)}
+/** Step 2 on: the first square that only one number fits, and that number. */
+function walkFill(){const c=singlesOrder(vals).find(i=>!vals[i]);const sol=c>=0?answer():null;
+  if(c===undefined||!sol){walkTo(WALK.length-1);return}walkCell=c;walkDigit=sol[c];focusFace(faceOfNormal.get(k3(cells[c].n)));walkTo(1)}
 const nowSec=()=>Math.max(0,((paused||hold?pausedAt:performance.now())-t0)/1000);
 function holdClock(){if(!hold&&!paused){hold=true;pausedAt=performance.now()}}
 function releaseClock(){if(hold){t0+=performance.now()-pausedAt;hold=false}}
@@ -321,8 +337,9 @@ function finishStage1(){
   const fixed=(P.stars||[]).filter(i=>!vals[i]);
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
   if(P.k>0)journey.progress(.5,'aligned');
-  $('banner').hidden=!isPrac(); // a scored run goes straight on: no Stage 1 summary
-  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Lock in to place it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ lock-first squares before any others for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ lock-first squares before any others for +50 each.`;
+  if(isPrac()){$('banner').hidden=true;setTimeout(walkFill,0);return}
+  $('banner').hidden=false; // a scored run goes straight on: no Stage 1 summary
+  $('banner').textContent=P.k===0?`No turns today: fill the cube. Lock the three ★ lock-first squares before any others for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ lock-first squares before any others for +50 each.`;
 }
 function finishStage2(){
   t2=nowSec();stage=3;sel=-1;clearRun();
@@ -436,7 +453,7 @@ async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=tru
   if(b)b.disabled=false;
   if(!card){copyResult(txt);return}
   journey.interaction('share','open');
-  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: ${num(total)} points in ${fmt(t1+t2)}"><p class="meta">No digits on it, so it spoils nothing.${url?' The link lets anyone tap through and play today\'s cube.':''}</p>`,[
+  ask('Share your result',`<img class="sharecard" width="1080" height="1350" alt="Your result card: ${num(total)} points in ${fmt(t1+t2)}">`,[
     ['Copy text',ev=>copyResult(txt,ev)],
     ['Save image',()=>{journey.interaction('share','save');saveImage(card.dataUrl,`nonet-${D?D.cubeNo:'cube'}.png`)}],
     ['Share',()=>void shareOut(card.blob,title,txt,url),'primary']]);
@@ -519,7 +536,7 @@ function render(){
   if(stage<3)saveSoon();
   // one thin bar for the whole run: Dial in is the first half when there are turns, Fill in the rest
   const tot=blanks||P.start.filter(v=>!v).length,fill=stage===1?0:stage===3?1:tot?1-left/tot:0;
-  setBar('pAll',P.k===0?fill:stage===1?home/nClues/2:.5+fill/2);$('views').hidden=stage!==1;
+  setBar('pAll',P.k===0?fill:stage===1?home/nClues/2:.5+fill/2);
   // retry and give up live on the pause screen; practice has no pause, so it keeps them here
   $('runbar').hidden=stage===3||!isPrac();
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
@@ -528,6 +545,11 @@ function render(){
   $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;$('suggest').textContent=`Suggest ${hintsLeft}/3`;
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
+  // the walkthrough's next thing to tap
+  const wk=isPrac()&&stage===2?walk:-1;
+  cells.forEach((_,i)=>stickers[i].forEach(x=>x.classList.toggle('walkglow',wk===1&&i===walkCell)));
+  $('pad').querySelectorAll('button').forEach(b=>b.classList.toggle('walkglow',(wk===2&&!penMode||wk===3&&penMode)&&+b.dataset.d===walkDigit));
+  $('mPen').classList.toggle('walkglow',wk===3&&!penMode);
   stageEl.classList.toggle('aligned',stage===2);stageEl.classList.toggle('solved',stage===3);
   // the grid flashes yellow once when the cube lines up and once when it is solved; tutorials skip the align flash
   if(stage!==lastStage){if(lastStage>0&&((stage===2&&P.k>0)||stage===3)){stageEl.classList.add('gridflash');clearTimeout(flashT);flashT=setTimeout(()=>stageEl.classList.remove('gridflash'),900)}lastStage=stage}
@@ -593,17 +615,19 @@ function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=docume
 setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
-  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render()});
+  const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render();
+  if(walk===1&&c===walkCell)walkTo(2)});
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
-  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();return}
+  if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
   if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
   vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
+  if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');
 for(let d=1;d<=9;d++){const b=document.createElement('button');b.textContent=d;b.dataset.d=d;b.setAttribute('aria-label','Digit '+d);b.onclick=()=>pressDigit(d);pad.appendChild(b)}
@@ -709,10 +733,6 @@ window.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-dra
   if(Math.abs(dx)+Math.abs(dy)>6)moved=true;ry=drag.ry+dx*.5;rx=Math.max(-89,Math.min(89,drag.rx-dy*.5));apply()});
 window.addEventListener('pointerup',()=>{drag=null;cubeEl.classList.remove('dragging');setTimeout(()=>moved=false,0)});
 const tx=makeTransitions({cubeEl,faceEls,stageEl,view:()=>({rx,ry,scaleK}),apply});
-$('vl').onclick=()=>{ry-=90;apply()};
-$('vr').onclick=()=>{ry+=90;apply()};
-$('vu').onclick=()=>{rx=Math.min(62,rx+45);apply()};
-$('vd').onclick=()=>{rx=Math.max(-62,rx-45);apply()};
 
 // a cube to show behind the splash while today's loads; Play swaps in today's
 window.addEventListener('resize',setH);// the page leaves exactly the pad's height free at the bottom, so the cube centres in what is left

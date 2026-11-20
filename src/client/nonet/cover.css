@@ -33,8 +33,9 @@
    width, so a phone gets the same band as a wide screen */
 .cv-spine{flex:none;width:66px;align-self:stretch;background:var(--c-ink);color:var(--c-paper);
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
-.cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:9px 5px;margin:4px}
-.cv-kanji{font-family:var(--c-kanji);writing-mode:vertical-rl;letter-spacing:.14em;line-height:1;font-size:26px}
+.cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:6px 4px;margin:4px}
+/* upright: some webviews otherwise lay the digits on their side and out of the box */
+.cv-kanji{display:block;font-family:var(--c-kanji);writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.1em;line-height:1;font-size:22px}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
 .cv-dot{display:inline-block;margin:.6em 0}
 .cv-date{font-weight:700;font-size:13px;letter-spacing:.18em;color:#fff}
@@ -72,7 +73,7 @@
     -webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent);mask-image:radial-gradient(closest-side,#000 55%,transparent)}
 }
 .cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%}
-.cv-first[hidden]{display:none}
+.cv-first[hidden],.cv-stats[hidden]{display:none}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
 /* the issue box: a magazine's number block, double rules top and bottom */

@@ -129,6 +129,9 @@ export type DailyRsp = {
   duels: Duel[]
   /** The asker's crew and the crew invitations waiting for them. */
   crew: CrewInfo
+  /** Opened from an earlier day's post: Play goes on to today's post (its id, or empty). */
+  past?: true
+  todayPost?: string
 }
 
 /** What the feed card shows. Light: a few reads, so it's fine on every scroll past. */
@@ -149,6 +152,12 @@ export type CardRsp = {
   score: number | undefined
   /** Their place on today's board, once they've finished. */
   rank: number | undefined
+  /**
+   * Set on a daily post for an earlier day: day, no, solves and score are that day's, and
+   * the post can't be played. todayPost is today's post id, empty if there isn't one.
+   */
+  past?: true
+  todayPost?: string
 }
 
 /** Lock today's tier (0 to 3 turns, Hard up to 2) and get its cube. Only the first call each day counts. */

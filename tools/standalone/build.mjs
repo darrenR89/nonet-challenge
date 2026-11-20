@@ -48,7 +48,7 @@ const cardHtml = brand(readFileSync(join(root, 'public/splash.html'), 'utf8'))
 const attr = t => t.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
 const cardLayer = `<div class="feedcard" id="feedCard">
 <iframe id="feedFrame" title="Nonet post card, as it shows in the feed" srcdoc="${attr(cardHtml)}"></iframe>
-<div class="looks" role="group" aria-label="Prototype: card states"><span>Card</span><button type="button" data-look="" aria-pressed="true">Live</button><button type="button" data-look="first" aria-pressed="false">Quiet day</button><button type="button" data-look="played" aria-pressed="false">Played</button><button type="button" data-look="cycled" aria-pressed="false">Day 366</button></div>
+<div class="looks" role="group" aria-label="Prototype: card states"><span>Card</span><button type="button" data-look="" aria-pressed="true">Live</button><button type="button" data-look="first" aria-pressed="false">Quiet day</button><button type="button" data-look="played" aria-pressed="false">Played</button><button type="button" data-look="cycled" aria-pressed="false">Day 366</button><button type="button" data-look="past" aria-pressed="false">Old post</button></div>
 <div class="looks who" role="group" aria-label="Prototype: player"><button type="button" id="guestBtn" aria-pressed="false">Logged out</button></div>
 </div>`
 let html = brand(readFileSync(join(root, 'public/game.html'), 'utf8'))
