@@ -107,9 +107,14 @@
   <div class="stage" id="stage" aria-label="Puzzle cube. Drag to look around.">
     <div class="space" aria-hidden="true"><canvas id="room"></canvas></div>
     <div class="cube" id="cube"></div>
+    <div class="pick" id="pick" hidden>
+      <span class="nclock"><i></i><b id="pickClock">0:05</b></span>
+      <p>Clock stopped. Turn the cube and tap the face to flatten from.</p>
+    </div>
     <div class="net" id="net" hidden>
       <div class="nhead"><span class="nclock"><i></i><b id="netClock">0:20</b></span><button class="icon" id="netDone" type="button">Fold back</button></div>
       <div class="ngrid"></div>
+      <p class="ncap">The dotted lines run through the outlined face. A number already on one of them can't go on that line again, so they show what this face can still hold.</p>
     </div>
     <details class="testkit" id="testkit" hidden>
       <summary>Test</summary>

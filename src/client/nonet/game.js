@@ -681,19 +681,42 @@ function showHint(free){
       if(mm[0]===m[0]&&mm[1]===m[1]&&mm[2]===m[2]){if(!free){hintsLeft--;hintsUsed++;journey.interaction('hint')}sel=c;selFace=fi;hintArrow=[fi,ai];render();return}}}
 }
 $('suggest').onclick=()=>showHint(false);
-// flatten: the cube unfolds into a flat net for 20 seconds, on its own clock, like a sudoku sheet.
-// Tapping a square on the net picks the real square, so the pad and the line highlights work as usual.
-const FLAT_MS=20000,NET=[[4,1,0],[3,0,1],[0,1,1],[2,2,1],[1,3,1],[5,1,2]]; // face, column, row
-let flatEnd=0,flatTick=0;
+// flatten: two steps. First the main clock stops for up to 5 seconds while the player turns the cube
+// and taps the face they want to read from. Then the cube unfolds round that face for 20 seconds, on
+// its own clock: the face outlined in the middle, its four neighbours folded out beside it and the
+// far face on the end, so every row and column through the face runs straight across the net.
+const PICK_MS=5000,FLAT_MS=20000;
+let flatEnd=0,flatTick=0,flatFace=-1,pickEnd=0;
+const v3=(a,b,k=1)=>a.map((x,i)=>x+k*b[i]),neg=a=>a.map(x=>-x);
+function netLayout(fi){const f=F[fi],n=f.map(1,1),r=v3(f.map(2,1),n,-1),d=v3(f.map(1,2),n,-1);
+  // [normal, right, down, column, row]: each neighbour unfolds away from the middle face
+  return [[n,r,d,1,1,true],[neg(d),r,n,1,0],[d,r,neg(n),1,2],[neg(r),n,d,0,1],[r,neg(n),d,2,1],[neg(n),neg(r),d,3,1]]}
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';
-  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-70)/3,150));g.style.setProperty('--u',`${u}px`);
-  for(const [fi,c,r] of NET){const f=faceEls[fi].cloneNode(true);f.className='nface';f.style.transform='';f.style.gridColumn=String(c+1);f.style.gridRow=String(r+1);f.dataset.f=fi;f.style.scale=String(u/180);g.appendChild(f)}
+  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-130)/3,150)),gap=4,k=u/180;g.style.setProperty('--u',`${u}px`);
+  // the squares are copied flat and unturned, so every number reads upright on the net
+  for(const [nm,R,D,c,r,cur] of netLayout(flatFace)){const fe=document.createElement('div');fe.className=cur?'nface cur':'nface';
+    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);if(cur){fe.style.outlineWidth=`${4/k}px`;fe.style.outlineOffset=`${3/k}px`}
+    for(let j=0;j<3;j++)for(let i=0;i<3;i++){const ci=idx.get(key(nm,v3(v3(nm,R,i-1),D,j-1)));const src=stickers[ci]?.[0];if(!src)continue;
+      const st=src.cloneNode(true);st.style.left=`${i*60+5}px`;st.style.top=`${j*60+5}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
+    g.appendChild(fe)}
+  // the dotted lines: each row of the middle face runs across four faces, each column across three
+  const step=u+gap,cell=u/3;
+  const seg=(cls,x,y,len)=>{const l=document.createElement('i');l.className=`nline ${cls}`;l.style.left=`${x}px`;l.style.top=`${y}px`;l.style[cls==='h'?'width':'height']=`${len}px`;g.appendChild(l)};
+  for(let j=0;j<3;j++){const y=step+cell*(j+.5);seg('h',0,y,step-gap);seg('h',step*2,y,step*2-gap)}
+  for(let i=0;i<3;i++){const x=step+cell*(i+.5);seg('v',x,0,step-gap);seg('v',x,step*2,step-gap)}
   const left=Math.max(0,flatEnd-Date.now());$('netClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
   net.style.setProperty('--left',String(left/FLAT_MS));if(left<=0)flatStop()}
+function pickDraw(){const left=Math.max(0,pickEnd-Date.now());$('pickClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
+  $('pick').style.setProperty('--left',String(left/PICK_MS));if(left<=0)pickFace([0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0])}
 function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
-  flatOn=true;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150);render()}
-function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);$('net').hidden=true;render()}
+  flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
+function pickFace(fi){if(!flatOn||!$('net').hidden)return;clearInterval(flatTick);releaseClock();$('pick').hidden=true;
+  flatFace=fi;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
+function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=true;render()}
 $('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
+// while picking, a tap on the cube chooses that face instead of a square
+cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;
+  e.stopPropagation();pickFace(+s.dataset.f)},true);
 $('net').addEventListener('click',e=>{const s=e.target.closest('.st');if(!s)return;e.stopPropagation();
   const real=faceEls[+s.dataset.f].querySelector(`.st[data-i="${s.dataset.i}"][data-j="${s.dataset.j}"]`);moved=false;real?.click();flatDraw()});
 

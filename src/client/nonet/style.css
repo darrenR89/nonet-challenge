@@ -534,3 +534,16 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nclock i{width:30px;height:30px;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),#4a4d55 0);
   -webkit-mask:radial-gradient(circle,transparent 7px,#000 8px);mask:radial-gradient(circle,transparent 7px,#000 8px)}
 @media (prefers-color-scheme:light){.nhead button{background:#23252b;color:#eceae3;border-color:#23252b}}
+
+/* flatten, step one: pick a face while the clock is stopped */
+.pick{position:absolute;z-index:6;top:4px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;width:min(320px,92%);pointer-events:none;text-align:center}
+.pick p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);background:color-mix(in srgb,var(--sumi) 85%,transparent);padding:6px 10px;border-radius:8px}
+.pick .nclock{pointer-events:none}
+.stage:has(.pick:not([hidden])) .st{cursor:pointer}
+/* step two: the net, the chosen face outlined, dotted lines through it */
+.ngrid{position:relative}
+.nface.cur{outline:4px solid var(--washi);outline-offset:3px;z-index:1}
+.nline{position:absolute;z-index:2;pointer-events:none;border:0 dashed var(--yellow);opacity:.9}
+.nline.h{height:0;border-top-width:2px}
+.nline.v{width:0;border-left-width:2px}
+.ncap{margin:0;max-width:min(460px,92%);font:400 12px/1.45 var(--code);color:var(--lead);text-align:center}
