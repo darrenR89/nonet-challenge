@@ -204,7 +204,7 @@ void getCard().then(card => {
           : `You scored ${card.score.toLocaleString('en-GB')} on this cube.`
       missed.hidden = false
     }
-    startBtn.textContent = 'Leaderboard'
+    startBtn.textContent = 'View leaderboard'
     startBtn.dataset.open = 'pastboard'
     document.body.classList.add('is-past')
     return
