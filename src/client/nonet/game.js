@@ -97,7 +97,7 @@ function applyTwistLock(){
   document.querySelectorAll('#spTwists button').forEach(x=>{const t=+x.dataset.t;x.hidden=!tierAllowed(level,t);x.disabled=lk&&t!==twistDay;x.querySelector('b').textContent=`×${multOf(level,t)}`});
   document.querySelectorAll('#tierSeg button').forEach(x=>{const t=+x.dataset.t;x.hidden=t!==PRACTICE&&!tierAllowed(level,t);x.disabled=lk&&t!==twistDay&&t!==PRACTICE;x.setAttribute('aria-pressed',t===tier)});
 }
-// splash: your place on this week's board. One cube a day; more turns, bigger multiplier; the top nine are the Nine.
+// splash: your place on this week's board. One cube a day; more turns, bigger multiplier; the top nine go up each Monday.
 let splashUp=true;
 const ord=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
 const num=n=>Math.round(n).toLocaleString('en-GB');
@@ -385,7 +385,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!scored)rank=`<p class="why">${tkUsed?'Test tools were used, so this run is not sent.':online?"Unscored cube: only today's cube counts.":'Unscored: log in to Reddit to play for points.'}</p>`;
   else if(!r)rank=`<p class="why" id="srvMsg">Sending your score…</p>`;
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
-  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In the Nine this week':''].filter(Boolean);
+  else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
