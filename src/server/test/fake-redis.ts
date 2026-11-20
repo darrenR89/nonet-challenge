@@ -65,6 +65,11 @@ const fake = {
     zset(k).set(m, v)
     return v
   },
+  zRem: async (k: string, ms: string[]) => {
+    let n = 0
+    for (const m of ms) if (zset(k).delete(m)) n++
+    return n
+  },
   zScore: async (k: string, m: string) => zset(k).get(m),
   zRank: async (k: string, m: string) => {
     const i = sorted(k).findIndex(([x]) => x === m)

@@ -1,3 +1,4 @@
+import type {CrewInfo} from './crew.ts'
 import type {Duel} from './duel.ts'
 import type {Puzzle} from './model.js'
 import type {RunStats, ScoreBreakdown} from './scoring.ts'
@@ -126,6 +127,8 @@ export type DailyRsp = {
   notify: boolean
   /** Today's challenges the asker sent or received. */
   duels: Duel[]
+  /** The asker's crew and the crew invitations waiting for them. */
+  crew: CrewInfo
 }
 
 /** What the feed card shows. Light: a few reads, so it's fine on every scroll past. */
@@ -184,6 +187,8 @@ export type ScoreRsp = {
   stats: DayStats
   /** Today's challenges, settled where both players have finished. */
   duels: Duel[]
+  /** The asker's crew, with this run counted. */
+  crew: CrewInfo
 }
 
 /** Uses today's one retry. */
@@ -198,6 +203,17 @@ export type ChallengeReq = {name: string}
 export type ChallengeRsp = {duels: Duel[]}
 /** The challenged player accepts or declines, before they play. from is the challenger's user id. */
 export type AnswerReq = {from: string; accept: boolean}
+
+/** Starts a crew, and invites up to two players by Reddit username. */
+export type CrewCreateReq = {name: string; invite?: string[]}
+/** Invites players to the asker's crew, tagging them in a comment on this post. */
+export type CrewInviteReq = {names: string[]}
+/** Accepts or declines a crew invitation. */
+export type CrewAnswerReq = {crewId: string; accept: boolean}
+/** Nudges a crewmate who hasn't played today, by private message. to is their user id. */
+export type CrewNudgeReq = {to: string}
+/** The asker's crew afterwards. note says what didn't work, such as an invite that failed. */
+export type CrewRsp = CrewInfo & {note?: string}
 
 export type JoinTeamReq = {eventId: string; team: string}
 export type JoinTeamRsp = {event: EventState}
@@ -218,6 +234,11 @@ export const Endpoint = {
   JoinSub: 'api/join',
   Challenge: 'api/challenge',
   Answer: 'api/challenge/answer',
+  CrewCreate: 'api/crew/create',
+  CrewInvite: 'api/crew/invite',
+  CrewAnswer: 'api/crew/answer',
+  CrewLeave: 'api/crew/leave',
+  CrewNudge: 'api/crew/nudge',
   TelemetryStart: 'api/telemetry/journey/start',
   TelemetryProgress: 'api/telemetry/journey/progress',
   TelemetryInteraction: 'api/telemetry/journey/interaction',
@@ -245,6 +266,11 @@ export const EndpointMethod = {
   [Endpoint.JoinSub]: 'POST',
   [Endpoint.Challenge]: 'POST',
   [Endpoint.Answer]: 'POST',
+  [Endpoint.CrewCreate]: 'POST',
+  [Endpoint.CrewInvite]: 'POST',
+  [Endpoint.CrewAnswer]: 'POST',
+  [Endpoint.CrewLeave]: 'POST',
+  [Endpoint.CrewNudge]: 'POST',
   [Endpoint.TelemetryStart]: 'POST',
   [Endpoint.TelemetryProgress]: 'POST',
   [Endpoint.TelemetryInteraction]: 'POST',
