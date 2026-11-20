@@ -526,3 +526,11 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .ngrid{display:grid;grid-template-columns:repeat(4,var(--u));grid-template-rows:repeat(3,var(--u));gap:4px}
 .nface{position:relative;width:180px;height:180px;background:var(--body-ink);border-radius:8px;transform-origin:0 0}
 .nface .st{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible;cursor:pointer}
+/* while flat: the cube and its room step out of sight, so only the net shows */
+.stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
+.net{background:none}
+/* the 20-second clock: a solid ink pill with a yellow ring and big figures, so it stands out on paper */
+.nclock{gap:10px;padding:6px 16px 6px 8px;border-radius:999px;background:#23252b;color:#eceae3;font:500 22px var(--code)}
+.nclock i{width:30px;height:30px;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),#4a4d55 0);
+  -webkit-mask:radial-gradient(circle,transparent 7px,#000 8px);mask:radial-gradient(circle,transparent 7px,#000 8px)}
+@media (prefers-color-scheme:light){.nhead button{background:#23252b;color:#eceae3;border-color:#23252b}}
