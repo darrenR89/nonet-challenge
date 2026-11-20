@@ -692,18 +692,17 @@ function netLayout(fi){const f=F[fi],n=f.map(1,1),r=v3(f.map(2,1),n,-1),d=v3(f.m
   // [normal, right, down, column, row]: each neighbour unfolds away from the middle face
   return [[n,r,d,1,1,true],[neg(d),r,n,1,0],[d,r,neg(n),1,2],[neg(r),n,d,0,1],[r,neg(n),d,2,1],[neg(n),neg(r),d,3,1]]}
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';
-  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-130)/3,150)),gap=4,k=u/180;g.style.setProperty('--u',`${u}px`);
+  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-130)/3,150)),k=u/180;g.style.setProperty('--u',`${u}px`);
   // the squares are copied flat and unturned, so every number reads upright on the net
   for(const [nm,R,D,c,r,cur] of netLayout(flatFace)){const fe=document.createElement('div');fe.className=cur?'nface cur':'nface';
     fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);if(cur){fe.style.outlineWidth=`${4/k}px`;fe.style.outlineOffset=`${3/k}px`}
     for(let j=0;j<3;j++)for(let i=0;i<3;i++){const ci=idx.get(key(nm,v3(v3(nm,R,i-1),D,j-1)));const src=stickers[ci]?.[0];if(!src)continue;
       const st=src.cloneNode(true);st.style.left=`${i*60+5}px`;st.style.top=`${j*60+5}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
     g.appendChild(fe)}
-  // the dotted lines: each row of the middle face runs across four faces, each column across three
-  const step=u+gap,cell=u/3;
-  const seg=(cls,x,y,len)=>{const l=document.createElement('i');l.className=`nline ${cls}`;l.style.left=`${x}px`;l.style.top=`${y}px`;l.style[cls==='h'?'width':'height']=`${len}px`;g.appendChild(l)};
-  for(let j=0;j<3;j++){const y=step+cell*(j+.5);seg('h',0,y,step-gap);seg('h',step*2,y,step*2-gap)}
-  for(let i=0;i<3;i++){const x=step+cell*(i+.5);seg('v',x,0,step-gap);seg('v',x,step*2,step-gap)}
+  // the dashed squares are the key: they hold the same three numbers as the three squares only the
+  // shown line has, so they say what can go on the outlined face. The note changes once they show.
+  const tw=g.querySelector('.st.twin');$('netCap').textContent=tw?'The dashed squares hold the same three numbers as the three squares only this line has. Use them to work out what goes on the outlined face.':'Tap a square on the outlined face to see its lines. Dashed squares will show the numbers its line still needs.';
+  net.classList.toggle('has-twin',!!tw);
   const left=Math.max(0,flatEnd-Date.now());$('netClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
   net.style.setProperty('--left',String(left/FLAT_MS));if(left<=0)flatStop()}
 function pickDraw(){const left=Math.max(0,pickEnd-Date.now());$('pickClock').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;
