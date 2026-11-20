@@ -2,6 +2,7 @@
 import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ringOf,ringCells,isOverlap,shuffle,solveCount,rotV,rotCell,turnArr,randomTurn,TIERS,sameLayer,makePuzzle,singlesOrder,PRACTICE,setLayout} from '../../shared/model.js';
 import './style.css';
 import {makeTransitions} from './transitions.js';
+import {makeRoom} from './room.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
@@ -647,9 +648,9 @@ let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
 // the room behind the cube turns with the view but doesn't lean in when a face is focused
-const roomEl=document.getElementById('room');
+const room=makeRoom(document.getElementById('room'));
 const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
-  roomEl.style.transform=`scale(${scaleK}) rotateX(${rx}deg) rotateY(${ry}deg)`;roomEl.parentElement.style.setProperty('--ry',String(ry));shadeFaces()};
+  room.set(rx,ry,scaleK,cubeEl.classList.contains('dragging'));shadeFaces()};
 // tap to focus: a square tapped on a steep face turns the view until that face is in front,
 // kept a little off square so the cube still reads as a cube, and the view leans in a touch
 let zoom=1;
