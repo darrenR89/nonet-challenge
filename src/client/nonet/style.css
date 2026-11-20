@@ -143,6 +143,11 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .rules h2{font-family:var(--display);font-weight:400;font-size:24px;line-height:1.2;margin:0 0 8px}
 .rules ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
 .rules p{margin:10px 0 0;color:var(--lead);font-size:13px}
+.rules p.lead{margin:0 0 10px;color:inherit;font-size:14px}
+.rules table.pts{width:100%;border-collapse:collapse;margin:12px 0 0;font-size:13px;font-variant-numeric:tabular-nums}
+.rules .pts th,.rules .pts td{padding:3px 0;border-bottom:1px solid var(--edge);text-align:right}
+.rules .pts th{font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--lead)}
+.rules .pts th:first-child,.rules .pts td:first-child{text-align:left}
 
 /* splash: the cube comes apart into the name, then today's cube */
 .splash{position:fixed;inset:0;z-index:40;background:var(--sumi);display:grid;place-items:center;
@@ -446,3 +451,4 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the share card's preview in the share dialog */
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
 .modal .body p.meta{font-size:13px;color:var(--lead)}
+.modal .body .rules p:not(.lead){margin:10px 0 0;font-size:13px;color:var(--lead)}

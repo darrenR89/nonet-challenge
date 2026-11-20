@@ -107,7 +107,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 // the start screen, and the pause screen: a cover read from the right. The spine has the cube number and date;
 // the issue box has the number, the most a run can score today and the difficulty; the Play block picks the rotations.
 const longDate=d=>new Date(d+'T00:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
-const rotName=t=>`${t} rotation${t===1?'':'s'}`;
+const rotName=t=>`${t} turn${t===1?'':'s'}`;
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],WDAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 // the most a run can score today: every point on offer at the most rotations, all three ★
 const maxScore=lv=>{const t=maxTurns(lv);return scoreRun(lv,t,{turns:t,t1:0,t2:0,blanks:1,wrong:0,hintsUsed:0,starsWon:3}).total};
@@ -128,12 +128,12 @@ function splashTwist(){
     let el=x.querySelector('.ts');if(!el){el=document.createElement('span');el.className='ts';x.appendChild(el)}
     el.textContent=!D?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
   const lk=twistDay!==null;
-  $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Rotation multiplier';
+  $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Turn multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
   $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':'Play today\'s cube';
   let sub='';
-  if(guest)sub='Play free, no account needed. Sign up at the end to save your score and start a streak.';
+  if(guest)sub='Play free, no account needed. Sign up at the end to save your score, join a crew, and start a streak.';
   else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
@@ -148,7 +148,7 @@ function splashTwist(){
 function untilNext(){const m=msUntilNextDay(),h=Math.floor(m/3600000),mi=Math.floor(m%3600000/60000);return h?`${h}h ${mi}m`:`${mi}m`}
 // a face-by-face look at a cube's clues: six 3×3 faces, digits where the clues are
 function cluesNet(given){let h='<div class="net">';for(let f=0;f<6;f++){h+='<div class="nf">';for(let k=0;k<9;k++){const v=given[f*9+k];h+=`<span>${v||''}</span>`}h+='</div>'}return h+'</div>'}
-function peekHTML(p){return `<h3>Tomorrow's clues</h3><p>You locked all three ★ first, so here's tomorrow's cube with its clues home. Tomorrow it starts turned.</p>${cluesNet(p.given)}`}
+function peekHTML(p){return `<h3>Tomorrow's clues</h3><p>You locked all three ★ lock-first squares, so here's tomorrow's cube, already sorted. Tomorrow it starts turned.</p>${cluesNet(p.given)}`}
 function eventHTML(es){const e=es.event,teams=es.teams;
   let h=`<h3>${esc(e.title)}</h3>${e.tagline?`<p>${esc(e.tagline)}</p>`:''}<p class="meta">Day ${es.dayOf} of ${es.days}${e.bonusMult>1?` · ×${e.bonusMult} event points`:''}</p>`;
   if(teams.length){
@@ -290,7 +290,7 @@ function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();pa
   hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice step 1: the cube is one turn out, and the turn that puts it back pulses
 function coachTurn(){if(!isPrac()||stage!==1)return;$('banner').hidden=false;
-  $('banner').textContent='Practice, step 1 of 2: turning. One row or column of this cube is turned out of place, so the bold clues are scattered. Press the pulsing arrow to turn it back. On your own, tap any square and its arrows turn its row or column.';
+  $('banner').textContent='Practice, step 1 of 2: turning. The cube has been rotated once, so a few numbers conflict. Tap the pulsing arrow to rotate it back. After this, you\'ll tap any square and use its arrows to rotate it horizontally or vertically yourself.';
   showHint(true)}
 const nowSec=()=>Math.max(0,((paused||hold?pausedAt:performance.now())-t0)/1000);
 function holdClock(){if(!hold&&!paused){hold=true;pausedAt=performance.now()}}
@@ -319,12 +319,12 @@ function finishStage1(){
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
   if(P.k>0)journey.progress(.5,'aligned');
   $('banner').hidden=!isPrac(); // a scored run goes straight on: no Stage 1 summary
-  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Pen to lock it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ squares first for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ squares first for +50 each.`;
+  $('banner').textContent=isPrac()?`Practice, step 2 of 2: filling. Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each coloured line of nine across three faces. Tap an empty square and pick a digit to pencil it in, then switch to Lock in to place it. Start where only one digit fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.`:P.k===0?`No turns today: fill the cube. Lock the three ★ lock-first squares before any others for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ lock-first squares before any others for +50 each.`;
 }
 function finishStage2(){
   t2=nowSec();stage=3;sel=-1;clearRun();
   $('banner').hidden=true;updateRunButtons();
-  if(isPrac()){journey.end(true,true,0);$('results').hidden=false;$('results').innerHTML=`<h2>Practice complete</h2><p>You turned the cube home and filled it${wrong?` with ${wrong} wrong lock${wrong===1?'':'s'}`:' with no wrong locks'}. Today's cube works the same way, with fewer clues. Pick how many turns scramble it, or none and just fill it in.</p><button id="toEasy" class="primary">Try today's cube</button>`;
+  if(isPrac()){journey.end(true,true,0);$('results').hidden=false;$('results').innerHTML=`<h2>Practice complete</h2><p>You cleared the conflicts and filled the cube${wrong?` with ${wrong} wrong lock${wrong===1?'':'s'}`:' with no wrong locks'}. Today's cube works the same way, with fewer clues. Pick how many turns scramble it, or none and just fill it in.</p><button id="toEasy" class="primary">Try today's cube</button>`;
     $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash()};return}
   runScore=score();lastScore=null;
   if(!daily||tkUsed)journey.end(true,true,daily?0:runScore.total);
@@ -364,7 +364,7 @@ function signupHTML(total){
   const b=D&&D.boards&&D.boards.day,above=b?b.top.filter(x=>x.score>total).length:0,inTop=b&&above<b.top.length;
   const place=!b||!b.players?'You\'d be first on today\'s board.':inTop?`You'd be <b>#${above+1}</b> today.`:`You'd join ${num(b.players)} players on today's board.`;
   const items=['A place on today\'s board and the weekly top nine','A streak, starting today','Challenges with friends',
-    starWon.size===3?'Tomorrow\'s clues, unlocked by your three ★':'Tomorrow\'s clues early, when you lock all three ★ first','A ping when the next cube is out'];
+    starWon.size===3?'Tomorrow\'s clues, unlocked by your three ★ lock-first squares':'Tomorrow\'s clues early, when you lock all three ★ lock-first squares','A ping when the next cube is out'];
   return `<div class="signup"><h3>Save your score</h3><p>${place} Sign in to keep it, and get:</p>
     <ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul>
     <button id="eSignup" class="primary">Save my score</button>
@@ -378,7 +378,7 @@ async function claimPending(r){const p=readPending();if(!p)return;
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
-  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let crewOpen=false;
 // the top of the end card, set like the cover: the issue row between double rules, then the
 // numbers in columns, label over value
@@ -399,7 +399,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
   const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
-  const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
+  const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ lock-first squares to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
     <div class="acts"><button id="eComment" class="primary">Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
@@ -574,8 +574,8 @@ function updateStatus(){
 // wrong locks: an outlined padlock and a count. Each wrong lock costs 25 points: a "-25pts" shudders up
 // from the square, and a beat later the padlock shudders and the count goes up.
 // tips: no helper text in a scored run (it's all under ?). Practice shows one tip at a time, rotating.
-const TIPS={1:['Tap a square, then use the arrows on its edges to turn its row or column.','A clue back home gets a short yellow bar.','A row or column of a face glows once every clue in it is home.','Fewest turns scores best, so look before you turn.'],
-  2:['Digits go in as pencil marks. Switch to the check to lock one in.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines. Tap again where two lines overlap to switch.','Blue squares sit in both lines of a ring, so each line\'s other three squares hold the same digits as the dashed three across the cube.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
+const TIPS={1:['Tap a square, then use the arrows on its edges to rotate it horizontally or vertically.','Spot the same number twice on a face or a line? That\'s a conflict to correct.','Lines glow once nothing in it conflicts.','Fewest turns scores best, so look before you turn.'],
+  2:['Pencil digits in as notes, or switch to Lock in when you\'re sure.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines. Tap again where two lines overlap to switch.','Blue squares sit in both lines of a ring, so each line\'s other three squares hold the same digits as the dashed three across the cube.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
 let tipN=0,tipStage=0;
 function showTip(){const h=$('hint'),list=isPrac()&&stage<3?TIPS[stage]:null;h.hidden=!list;if(!list)return;
   if(tipStage!==stage){tipStage=stage;tipN=0}h.textContent=`Tip · ${list[tipN%list.length]}`}
@@ -640,7 +640,7 @@ function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
   if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
   stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
-  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to the pen to lock it.':'Only one digit fits in this square.'}
+  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to Lock in to place it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
@@ -658,7 +658,7 @@ document.addEventListener('click',e=>{if(moved||sel<0)return;if(!e.target.isConn
 document.addEventListener('keydown',e=>{if(sel<0||tx.busy)return;if(/^[1-9]$/.test(e.key))pressDigit(+e.key);else if(e.key==='Backspace'||e.key==='0')pressDigit(0)});
 
 // ---------- turn arrows drawn on the selected face, in 3D ----------
-const ARW=[['row',-1,'◀','Turn this row left'],['row',1,'▶','Turn this row right'],['col',-1,'▲','Turn this column up'],['col',1,'▼','Turn this column down']];
+const ARW=[['row',-1,'◀','Rotate left'],['row',1,'▶','Rotate right'],['col',-1,'▲','Rotate up'],['col',1,'▼','Rotate down']];
 const arrowEls=[];
 document.querySelectorAll('#cube .face').forEach((el,fi)=>{
   arrowEls[fi]=ARW.map(([kind,dir,g,label])=>{const a=document.createElement('button');a.className='arw';a.textContent=g;a.setAttribute('aria-label',label);a.hidden=true;
@@ -739,7 +739,7 @@ $('tkAlign').onclick=()=>{if(stage!==1){tkMsg('Already aligned.');return}let m,g
 $('tkCell').onclick=()=>{if(needSel())lockFill([sel])};
 $('tkLine').onclick=()=>{if(needSel())lockFill(shownLine())};
 $('tkFace').onclick=()=>{if(needSel())lockFill(groups[faceOfNormal.get(k3(cells[sel].n))])};
-$('tkStars').onclick=()=>{if(!stars.size){tkMsg('No opening squares on this cube.');return}lockFill([...stars])};
+$('tkStars').onclick=()=>{if(!stars.size){tkMsg('No lock-first squares on this cube.');return}lockFill([...stars])};
 $('tkWrong').onclick=()=>{if(!needSel())return;if(stage!==2||vals[sel]){tkMsg('Pick an empty square in Fill in.');return}const sol=answer();if(!sol)return;
   const d=sol[sel]%9+1;const was=penMode;penMode=true;pressDigit(d);penMode=was;render();tkMsg(`Tried ${d}. That cost 25 points.`)};
 $('tkPencil').onclick=()=>{if(!needSel()||stage!==2)return;const sol=answer();if(!sol)return;let n=0;for(const c of shownLine())if(!vals[c]){pm[c]=1<<sol[c];n++}render();tkMsg(`Pencilled ${n} square${n===1?'':'s'} with the right digits.`)};

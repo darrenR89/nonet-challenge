@@ -50,16 +50,16 @@
   <div class="su-in">
     <p class="su-top"><span>No.<b id="suNo">–</b></span><span id="suDate"></span></p>
     <p class="su-lv"><span class="cv-pips" id="spPips" aria-hidden="true"><i></i><i></i><i></i></span><span class="cv-tag" id="spLevel"></span><span class="cv-max"><span>Max</span><b id="spMax"></b></span></p>
-    <h2 id="suHead">How many rotations?</h2>
-    <p class="su-lead">More rotations scramble the cube further and multiply your score. You pick once a day.</p>
-    <p class="su-guest" id="suGuest" hidden>You're playing without an account. Your score is shown at the end, and you can sign up then to save it.</p>
+    <h2 id="suHead">How many turns?</h2>
+    <p class="su-lead">More turns scramble the cube further and multiply your score. You pick once a day.</p>
+    <p class="su-guest" id="suGuest" hidden>No account? No problem, jump right in. If you like your score, you can sign up at the end and keep it.</p>
     <div class="cv-scr">
-      <p class="cv-cap" id="spScrCap">Rotation multiplier</p>
-      <div class="cv-twists" id="spTwists" role="group" aria-label="How many rotations scramble today's cube">
-        <button type="button" data-t="0" aria-pressed="false"><b>×1</b><small>0 rotations</small></button>
-        <button type="button" data-t="1" aria-pressed="true"><b>×1.25</b><small>1 rotation</small></button>
-        <button type="button" data-t="2" aria-pressed="false"><b>×1.5</b><small>2 rotations</small></button>
-        <button type="button" data-t="3" aria-pressed="false"><b>×2</b><small>3 rotations</small></button>
+      <p class="cv-cap" id="spScrCap">Turn multiplier</p>
+      <div class="cv-twists" id="spTwists" role="group" aria-label="How many turns scramble today's cube">
+        <button type="button" data-t="0" aria-pressed="false"><b>×1</b><small>0 turns</small></button>
+        <button type="button" data-t="1" aria-pressed="true"><b>×1.25</b><small>1 turn</small></button>
+        <button type="button" data-t="2" aria-pressed="false"><b>×1.5</b><small>2 turns</small></button>
+        <button type="button" data-t="3" aria-pressed="false"><b>×2</b><small>3 turns</small></button>
       </div>
     </div>
     <div class="su-extra">
@@ -149,22 +149,38 @@
 
   <section class="rules" id="rules" hidden>
     <h2>How to play</h2>
+    <p class="lead">Nonet is a daily sudoku challenge with a twist: it's a 3D cube. Nonet is the sudoku word for a group of nine, and every face of the cube is one. One new cube a day, the same for everyone.</p>
     <div class="diag">
-      <figure><figcaption><b>1 · Dial in</b></figcaption><svg viewBox="0 0 200 150" role="img" aria-labelledby="dgA"><title id="dgA">Dial in: a clue in the middle row sits one square to the right of home. Turn the row left to bring it home, and a yellow bar shows under it.</title><rect x="40" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="40" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="40" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="50" width="27" height="27" rx="3" fill="none" stroke="var(--yellow)" stroke-dasharray="3 3"/><text x="113.5" y="69" text-anchor="middle" font-size="16" font-weight="700" fill="var(--washi)">5</text><path d="M136 63h22" stroke="var(--yellow)" stroke-width="2"/><path d="M134 63l7-5v10z" fill="var(--yellow)"/><text x="100" y="128" text-anchor="middle" font-size="11" fill="var(--lead)">turn the row: the clue goes home</text><text x="100" y="143" text-anchor="middle" font-size="11" fill="var(--lead)">and gets a yellow bar</text></svg></figure>
+      <figure><figcaption><b>1 · Dial in</b></figcaption><svg viewBox="0 0 200 150" role="img" aria-labelledby="dgA"><title id="dgA">Dial in: the 5 in the middle conflicts with another 5. Rotate it horizontally to the left until no number repeats on its face or line.</title><rect x="40" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="20" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="40" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="50" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="40" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="100" y="80" width="27" height="27" rx="3" fill="var(--tile)"/><rect x="70" y="50" width="27" height="27" rx="3" fill="none" stroke="var(--yellow)" stroke-dasharray="3 3"/><text x="113.5" y="69" text-anchor="middle" font-size="16" font-weight="700" fill="var(--washi)">5</text><path d="M136 63h22" stroke="var(--yellow)" stroke-width="2"/><path d="M134 63l7-5v10z" fill="var(--yellow)"/><text x="100" y="128" text-anchor="middle" font-size="11" fill="var(--lead)">rotate lines until</text><text x="100" y="143" text-anchor="middle" font-size="11" fill="var(--lead)">no numbers conflict</text></svg></figure>
       <figure><figcaption><b>2 · Fill in</b></figcaption><svg viewBox="0 0 300 150" role="img" aria-labelledby="dgB"><title id="dgB">Fill in: each face holds 1 to 9 once, and each line of nine running across three faces in a row holds 1 to 9 once.</title><rect x="12" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="40" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="68" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="12" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="40" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="68" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="12" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="40" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="68" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="104" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="132" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="160" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="104" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="132" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="160" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="104" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="132" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="160" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="196" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="224" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="252" y="20" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="196" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="224" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="252" y="48" width="25" height="25" rx="3" fill="rgba(245,193,46,.35)"/><rect x="196" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="224" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="252" y="76" width="25" height="25" rx="3" fill="var(--tile)"/><rect x="10" y="46" width="272" height="29" rx="5" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><rect x="194" y="18" width="85" height="85" rx="5" fill="none" stroke="var(--washi)" stroke-dasharray="3 3"/><text x="150" y="128" text-anchor="middle" font-size="11" fill="var(--lead)">yellow: one line of nine across three faces</text><text x="150" y="143" text-anchor="middle" font-size="11" fill="var(--lead)">dashed: one face. Each holds 1 to 9 once</text></svg></figure>
     </div>
     <ul>
-      <li><b>Stage 1, Dial in.</b> The bold clues start twisted out of place. Tap a square and use the arrows on its edges to turn its row or column. A clue back home gets a short yellow bar. When the clues reach any arrangement that can be solved, the cube's grid flashes yellow and Fill in starts.</li>
-      <li><b>Stage 2, Fill in.</b> Every face holds 1 to 9 once. Every ring crosses 4 faces, and two lines of 9 run along it, each across three faces in a row; each line holds 1 to 9 once.</li>
-      <li>Digits go in as pencil marks. Switch to Pen to lock one in. A wrong lock shakes, doesn't stay, and costs 25 points.</li>
-      <li>★ Opening squares are bonus squares: your first moves. Lock each one before you lock any other square for +50. Once you lock a normal square, the rest are gone.</li>
-      <li>Tap a square to light up its two lines. If that line is finished, it fills pale yellow instead. While dialling in, so does a line whose clues are all home. Nothing is highlighted until you tap a square. Tap again where two lines overlap to switch.</li>
-      <li><b>Blue squares.</b> Every ring of 12 squares holds two lines of 9, and both lines share the six squares on two opposite faces, tinted blue. Since each line holds 1 to 9 once, the three squares a line adds beyond the blue ones must hold the same three digits as the three that the other line adds on the opposite face, shown dashed. Use it to carry digits across the cube.</li>
-      <li>Drag anywhere to look around.</li>
+      <li><b>1 · Dial in.</b> The cube starts scrambled, so some bold clues conflict: the same number twice on a face or a line. Tap a square and use its arrows to rotate it horizontally or vertically until nothing conflicts. The grid flashes yellow, and you're on to Fill in.</li>
+      <li><b>2 · Fill in.</b> Each face holds 1 to 9 once, and so does each line of nine: a long row running straight across three faces. Tap a square to light up its two lines.</li>
+      <li><b>Pencil or Lock in.</b> Pencil digits in as notes, or switch to Lock in when you're sure. A wrong lock shakes, won't stay, and costs 25 points.</li>
+      <li><b>★ Lock-first squares.</b> Lock all three before any other square for +50 each, and a look at tomorrow's clues.</li>
+      <li><b>Blue squares.</b> The six squares your lit line shares with its twin turn blue. The line's other three squares hold the same numbers as the dashed three on the far side.</li>
+      <li><b>Easy-day hint.</b> On Easy cubes, the back face is a copy of the front.</li>
+      <li>Drag anywhere to rotate the cube.</li>
     </ul>
-    <p>Scoring: Dial in up to 300 for turns (fewest turns ÷ turns used) and 200 for speed. Fill in up to 300 for speed and 200 for accuracy. +50 for each ★ opening square locked before any other square. +100 if you use no suggested turns. With no turns there is no Dial in, so only Fill in and the ★ squares score. Then × a multiplier for how far you had it turned, which grows faster on harder days, because fewer clues make a scramble harder to read. Easy: no turns ×1, 1 turn ×1.25, 2 turns ×1.5, 3 turns ×2. Medium: ×1, ×1.5, ×2, ×3. Hard: ×1, ×2, ×3, and no 3-turn option. Everyone gets the same cube each day; you choose how many turns it is scrambled, once, before you play, and it stays set until tomorrow. Practice is a guided walkthrough: one turn to undo, then a half-filled cube to finish, with no timer or score. Practice cubes never match a daily cube. Speed points are full at the target time and reach zero at three times it. A clean solve is fewest turns, target times and no misses.</p>
-    <p>Each day's cube has a difficulty set by how many clues it starts with: Easy (20 to 22) on Monday and Tuesday, Medium (16 to 19) on Wednesday, Thursday and Sunday, Hard (13 to 15) on Friday and Saturday. Every cube can be filled by finding squares where only one digit fits.</p>
-    <p>One cube a day, the same for everyone, new at midnight Pacific time. Your first finished run each day counts. Scores add up on the weekly board, and each Monday the weekly top nine are posted to the subreddit. Play on days in a row to build a streak. Lock all three ★ opening squares and you get a look at tomorrow's clues. During an event, your points also count on its board and, if it has sides, for the side you pick. Nonet is the sudoku word for a group of nine.</p>
+    <table class="pts">
+      <tr><th>Points</th><th>Up to</th></tr>
+      <tr><td>Dial in: fewest turns</td><td>300</td></tr>
+      <tr><td>Dial in: speed</td><td>200</td></tr>
+      <tr><td>Fill in: speed</td><td>300</td></tr>
+      <tr><td>Fill in: accuracy</td><td>200</td></tr>
+      <tr><td>★ Lock-first squares</td><td>150</td></tr>
+      <tr><td>No suggestions used</td><td>100</td></tr>
+    </table>
+    <table class="pts mult">
+      <tr><th>Turns</th><th>Easy</th><th>Medium</th><th>Hard</th></tr>
+      <tr><td>0</td><td>×1</td><td>×1</td><td>×1</td></tr>
+      <tr><td>1</td><td>×1.25</td><td>×1.5</td><td>×2</td></tr>
+      <tr><td>2</td><td>×1.5</td><td>×2</td><td>×3</td></tr>
+      <tr><td>3</td><td>×2</td><td>×3</td><td>–</td></tr>
+    </table>
+    <p>Your total is multiplied by the turns you pick, once a day, before you play. Easy is Monday and Tuesday, Medium Wednesday, Thursday and Sunday, and Hard Friday and Saturday, with fewer clues.</p>
+    <p>A new cube comes out at midnight Pacific time, and your first finished run counts. Scores add up on the weekly board, and each Monday the weekly top nine are posted. Play daily to build a streak, and team up with up to two friends in a Nonet Crew <span class="crew-mark" lang="ja">連</span>: your scores add up.</p>
   </section>
 </div>
 

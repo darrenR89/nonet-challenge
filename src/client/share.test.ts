@@ -18,22 +18,19 @@ test('the post link is built from the post id, with or without the subreddit', (
 
 test('the share text carries the result, the dare and the link', () => {
   const t = shareText(
-    'Nonet No.323 · 1 rotation',
+    'Nonet No.323 · 1 turn',
     'https://www.reddit.com/comments/a/',
   )
   assert.equal(
     t,
-    "Nonet No.323 · 1 rotation\nCan you beat it? Play today's cube: https://www.reddit.com/comments/a/",
+    "Nonet No.323 · 1 turn\nCan you beat it? Play today's cube: https://www.reddit.com/comments/a/",
   )
   assert.equal(shareText('r', undefined), 'r\nCan you beat it?')
 })
 
 test('the detail line reads cleanly', () => {
-  const d = {levelName: 'Medium', mode: '1 rotation', wrong: 0, hints: 1}
-  assert.equal(
-    detailLine(d),
-    'Medium · 1 rotation · no wrong locks · 1 suggestion',
-  )
+  const d = {levelName: 'Medium', mode: '1 turn', wrong: 0, hints: 1}
+  assert.equal(detailLine(d), 'Medium · 1 turn · no wrong locks · 1 suggestion')
 })
 
 test('the crew band lists each member and the crew points', () => {

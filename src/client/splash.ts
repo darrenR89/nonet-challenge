@@ -76,7 +76,7 @@ function showDay(day: string, no: number | undefined): void {
     const li = el('li', t === maxTurns(level) ? 'max' : '', '')
     li.append(
       el('b', '', `×${multOf(level, t)}`),
-      el('small', '', `${t} rotation${t === 1 ? '' : 's'}`),
+      el('small', '', `${t} turn${t === 1 ? '' : 's'}`),
     )
     cells.push(li)
   }

@@ -8,7 +8,7 @@ export type ShareCard = {
   /** Fill level 0 to 2 and its name. */
   level: number
   levelName: string
-  /** "1 rotation", "No rotations", "Practice"... */
+  /** "1 turn", "0 turns", "Practice"... */
   mode: string
   points: number
   /** Solve time, e.g. "4:07". */
