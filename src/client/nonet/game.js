@@ -2,6 +2,7 @@
 import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ringOf,ringCells,isOverlap,shuffle,solveCount,rotV,rotCell,turnArr,randomTurn,TIERS,sameLayer,makePuzzle,singlesOrder,PRACTICE,setLayout} from '../../shared/model.js';
 import './style.css';
 import {makeTransitions} from './transitions.js';
+import {makeRoom} from './room.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
@@ -334,10 +335,11 @@ async function finale(){
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
     const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
     stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    if(f>0)stageEl.classList.add('leaving'); // the progress bar goes up and away with the cube
     if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
   stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
 // the cube comes back when the result card is closed, or a new cube starts
-function landCube(){stageEl.classList.remove('flown');apply()}
+function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
@@ -593,14 +595,17 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
-// a Fill in suggestion points at a square where only one digit fits, without filling it in
-function hintSquare(){const order=singlesOrder(vals);let c=order[0];
-  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+// a Fill in suggestion finds a square where only one digit fits and pencils that digit in for you;
+// it skips squares already pencilled with the right digit, and you still lock it in yourself
+function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
+  const order=singlesOrder(vals).filter(i=>!done(i));let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]&&!done(i)){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
   if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
+  if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
   stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
-  $('status').textContent='Only one digit fits in this square.'}
+  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to the pen to lock it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
@@ -646,7 +651,10 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
 function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
-const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;shadeFaces()};
+// the room behind the cube turns with the view but doesn't lean in when a face is focused
+const room=makeRoom(document.getElementById('room'));
+const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  room.set(rx,ry,scaleK,cubeEl.classList.contains('dragging'));shadeFaces()};
 // tap to focus: a square tapped on a steep face turns the view until that face is in front,
 // kept a little off square so the cube still reads as a cube, and the view leans in a touch
 let zoom=1;
