@@ -753,7 +753,11 @@ test("an older day's post keeps its date, and links to today's post", async () =
   assert.ok((old.score ?? 0) > 0, 'how you did that day')
   assert.match(old.todayPost ?? '', /^t3_/, "today's auto post")
   const game = (await get<DailyRsp>(Endpoint.Daily)).body
-  assert.equal(game.past, true, "the game in an old post won't start today's cube")
+  assert.equal(
+    game.past,
+    true,
+    "the game in an old post won't start today's cube",
+  )
   assert.equal(game.todayPost, old.todayPost)
   later(86400)
   as('t2_new', 'new')
