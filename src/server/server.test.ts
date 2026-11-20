@@ -839,7 +839,11 @@ test('a crew: start one, invite by name, join, and scores add up', async () => {
     crewId: inv?.crewId,
     accept: true,
   })
-  assert.equal(joined.body.crew?.members.length, 2)
+  assert.deepEqual(
+    joined.body.crew?.members.map(m => m.name),
+    ['ann', 'bob'],
+    'in the order they joined',
+  )
   assert.deepEqual(joined.body.invites, [])
   const bob = await playDay(0, run({wrong: 2}))
   const crew = bob.body.crew.crew

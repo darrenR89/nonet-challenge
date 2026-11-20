@@ -1,0 +1,40 @@
+/* Nonet Crew: the crew row on the cover and the crew box on the end card. Dark by default
+   (the end card), re-inked for the paper cover below. */
+.crew-mark{font-family:"DotGothic16","M PLUS 1 Code",monospace;font-weight:400;font-size:1.1em;line-height:1;display:inline-block;padding:2px 4px;margin-right:2px;background:var(--yellow);color:var(--sumi);border-radius:3px;vertical-align:-1px}
+.crew{display:grid;gap:10px}
+.crew-meta{margin:0;font-family:var(--code);font-size:12px;color:var(--lead)}
+.crewList{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.crewList li{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:0 10px;border:1px solid var(--edge);border-radius:var(--r);font-size:14px}
+.crewList li small{font-family:var(--code);font-size:12px;color:var(--lead)}
+.crewList li b{font-family:var(--code);font-weight:500}
+.crewList li.seat{border-style:dashed;color:var(--lead)}
+.crewList li button{min-height:32px;padding:0 12px;font-size:13px}
+.crewForm{display:flex;flex-wrap:wrap;gap:8px}
+.crewForm input{flex:1 1 120px;min-width:0;min-height:40px;box-sizing:border-box;padding:0 10px;font:inherit;font-family:var(--code);font-size:14px;color:var(--washi);background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r)}
+.crewForm input:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+.crewStart input[name="name"]{flex-basis:100%}
+.crewInvites{display:flex;gap:8px;flex:1 1 100%}
+.crewForm button{min-height:40px;padding:0 16px}
+.crewStart button{flex:1 1 100%}
+.crew-msg{margin:0;font-size:13px;color:var(--lead)}
+.crew-leave{justify-self:start;min-height:32px;padding:0 12px;font-size:13px;background:transparent;color:var(--lead);border:1px solid var(--edge)}
+.crewOffer{display:grid;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--edge)}
+.crewOffer p{margin:0}
+.results .crewBox{display:grid;gap:10px;padding:14px;border:1px solid var(--edge);border-left:3px solid var(--yellow);border-radius:var(--r)}
+.results .crewBox h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px}
+/* on the paper cover */
+.cv .crew-mark{background:var(--c-ink);color:var(--c-paper)}
+.cv .crew-meta,.cv .crew-msg,.cv .crewList li small{color:var(--c-lead)}
+.cv .crewList li{border-color:var(--c-ink);background:rgba(255,255,255,.45)}
+.cv .crewList li.seat{border-color:var(--c-hair);color:var(--c-lead);background:none}
+.cv .crewForm input{color:var(--c-ink);background:rgba(255,255,255,.7);border-color:var(--c-ink)}
+.cv .crewForm input:focus-visible{outline-color:var(--c-ink)}
+.cv .crew button{background:transparent;color:var(--c-ink);border:1px solid var(--c-ink)}
+.cv .crew button[type="submit"],.cv .crew button[data-accept="1"]{background:var(--c-ink);color:var(--c-paper)}
+.cv .crew .crew-leave{color:var(--c-lead);border-color:var(--c-hair)}
+.cv .crewOffer{border-color:var(--c-hair)}
+.cv-crew .dn-acts{border-top:1px solid var(--c-ink)}
+/* the cover's open rows size to their content; keep the crew forms inside the row */
+.dn-row>.more:has(.crew){grid-template-columns:minmax(0,1fr)}
+.crew,.crewForm,.crewInvites{min-width:0}
+.crewInvites input{flex:1 1 0}

@@ -14,7 +14,7 @@ import {addDays, weekKey} from '../shared/scoring.ts'
 import {DAY_TTL, getDayRecord, namesOf} from './board.ts'
 
 const crewKey = (id: string): string => `crew:${id}`
-/** A crew's members: user id → the day they joined. */
+/** A crew's members: user id → their place in joining order, zero-padded. */
 const membersKey = (id: string): string => `crew:${id}:m`
 /** Member scores that counted for a crew on a day: user id → score. */
 const crewDayKey = (id: string, day: string): string => `crew:${id}:d:${day}`
@@ -102,7 +102,8 @@ export async function createCrew(
 }
 
 async function join(day: string, id: string, uid: string): Promise<void> {
-  await redis.hSet(membersKey(id), {[uid]: day})
+  const n = await redis.hIncrBy(crewKey(id), 'joins', 1)
+  await redis.hSet(membersKey(id), {[uid]: String(n).padStart(4, '0')})
   await redis.hSet(crewOfKey, {[uid]: id})
   await redis.hDel(invitesKey(uid), [id])
   // a run finished before joining counts, unless it already counted for another crew
@@ -210,7 +211,7 @@ async function crewFor(day: string, uid: string): Promise<Crew | undefined> {
   if (!id) return
   const h = await redis.hGetAll(crewKey(id))
   const joined = await redis.hGetAll(membersKey(id))
-  // longest-standing members first
+  // in the order they joined
   const ids = Object.keys(joined).sort(
     (a, b) =>
       (joined[a] ?? '').localeCompare(joined[b] ?? '') || a.localeCompare(b),

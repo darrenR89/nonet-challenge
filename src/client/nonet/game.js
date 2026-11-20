@@ -6,6 +6,7 @@ import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastErro
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
+import {crewTitle,crewSummary,crewButton,crewShareLine,crewPanelHTML,wireCrew} from '../crew.ts';
 import {exitExpandedMode,showLoginPrompt} from '@devvit/web/client';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
@@ -167,7 +168,7 @@ function renderSplashExtras(){
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
   {const h=online&&D?splashDuelsHTML(D.duels||[]):'';let el=$('spDuels');if(!el&&h){el=document.createElement('section');el.id='spDuels';el.className='duelsSplash';$('spPeek').after(el)}if(el){el.hidden=!h;el.innerHTML=h;wireAnswers(el,d=>{if(D)D.duels=d;journey.interaction('answer_challenge',String(d.length));renderSplashExtras()})}}
   $('spPeek').hidden=!(D&&D.preview);
-  renderDone();
+  renderDone();renderCrewRow();
   if(D&&D.preview){$('spPeek').innerHTML=`<button class="chip" type="button" aria-expanded="false"><b>Tomorrow's clues</b><span>unlocked with all three ★</span></button><div class="more" hidden>${cluesNet(D.preview.given)}</div>`;wireChip($('spPeek'))}
 }
 // once today is done the cover turns to how you did, and what to do next: challenge someone,
@@ -180,13 +181,22 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
   const sent=(D.duels||[]).filter(d=>d.sent).length;
   el.innerHTML=`<div class="dn-res"><div class="dn-main"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p></div>${side?`<div class="dn-side">${side}</div>`:''}</div>
     <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
-    ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`)
-      :dnRow('team','Team challenge','Coming soon','<p class="meta">Play as a team of three on one cube. We\'ll let you know when it opens.</p>')}
+    ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`):''}
+    ${D.crew?dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew)):''}
     ${dnRow('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week',boardsHTML({boards:D.boards}))}</div>
     <p class="dn-next">Next cube in <b>${untilNext()}</b></p>`;
   el.querySelectorAll('.dn-chip').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
     b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
-  wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el)}
+  wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el);wireCrew(el,crewChanged)}
+// your crew on the cover before today is done: one row, open to see who has played, nudge, invite or leave
+function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undefined,show=online&&D&&D.crew&&!done;el.hidden=!show;if(!show)return;
+  const open=!!el.querySelector('.dn-chip[aria-expanded="true"]');
+  el.innerHTML=`<div class="dn-acts">${dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew))}</div>`;
+  const b=el.querySelector('.dn-chip'),m=b.nextElementSibling;if(open||D.crew.invites.length&&!D.crew.crew){m.hidden=false;b.setAttribute('aria-expanded','true')}
+  b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_crew')};
+  wireCrew(el,crewChanged)}
+// any change to the crew, from the cover or the end card: keep it and redraw both
+function crewChanged(info,what){if(!D)return;D.crew=info;journey.interaction(what);renderSplashExtras();if(runScore&&!$('results').hidden)renderEndCard()}
 // the feed card's buttons ask for one of those to be open when the game comes up
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
   if(!k)return;if(k==='rules'){showRules();return}if(k==='practice'){$('spPractice').click();return}
@@ -340,7 +350,7 @@ async function finale(){
 function landCube(){stageEl.classList.remove('flown');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
-const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}`;
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
 // where you stand among the people you've challenged today, once any of them has played
 function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
   const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
@@ -362,11 +372,11 @@ async function claimPending(r){const p=readPending();if(!p)return;
   const s=await sendScore({day:p.day,tier:p.tier,stats:p.stats,guest:p.guest},journey.id());clearPending();
   if(!s){ask('Run not saved',`<p>${esc(lastError||'Could not reach the server.')} Today's cube is still yours to play.</p>`,[['OK',null,'primary']]);return}
   journey.interaction('guest_claimed');
-  D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;twistDay=p.tier;applyTwistLock();
+  D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
   ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
-let teamAsk=false;
+let crewOpen=false;
 // the top of the end card, set like the cover: the issue row between double rules, then the
 // numbers in columns, label over value
 function resHead(total,time,rank,name,pen){
@@ -389,9 +399,9 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ first to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
-    <div class="acts"><button id="eComment" class="primary">Share to the thread</button><button id="eTeam" aria-pressed="${teamAsk?'true':'false'}">${teamAsk?'Thanks: we\'ll tell you when teams open':'Play as a team <small>coming soon</small>'}</button>${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+    <div class="acts"><button id="eComment" class="primary">Share to the thread</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
-    <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>`;
+    <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
   el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
@@ -405,8 +415,9 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eComment'))$('eComment').onclick=ev=>{const txt=resultText(s);journey.interaction('share','comment');
     const done=()=>{$('eComment').textContent='Copied. Paste it in the thread';try{exitExpandedMode(ev)}catch(e){}};
     navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})};
-  // team play isn't built yet: the button counts who would use it
-  if($('eTeam'))$('eTeam').onclick=()=>{if(teamAsk)return;teamAsk=true;journey.interaction('team_interest');renderEndCard()};
+  // the crew box opens under What next: start one, or see who has played
+  if($('eCrew'))$('eCrew').onclick=()=>{crewOpen=!crewOpen;if(crewOpen)journey.interaction('end_crew');renderEndCard()};
+  if($('eCrewBox'))wireCrew($('eCrewBox'),crewChanged);
   if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
@@ -437,7 +448,7 @@ async function submitRun(){
   journey.endedByServer();
   if(!r){const m=$('srvMsg');if(m)m.textContent=`Not counted: ${lastError||'could not reach the server'}`;return}
   lastScore=r;
-  if(D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:starWon.size};D.streak=r.streak;D.boards=r.boards;D.event=r.event;D.preview=r.preview;D.stats=r.stats;D.duels=r.duels;renderSplashExtras();splashTwist()}
+  if(D){D.my={...D.my,tier:P.tier,score:r.total,starsWon:starWon.size};D.streak=r.streak;D.boards=r.boards;D.event=r.event;D.preview=r.preview;D.stats=r.stats;D.duels=r.duels;D.crew=r.crew;renderSplashExtras();splashTwist()}
   renderEndCard();
 }
 
