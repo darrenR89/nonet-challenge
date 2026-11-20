@@ -1,4 +1,4 @@
-/* The post card in the feed: the cover, filling the card. The cover itself is in cover.css. */
+/* The post card in the feed: the black intro, then the cover filling the card. The cover itself is in cover.css. */
 html,
 body {
   height: 100%;
@@ -6,4 +6,136 @@ body {
 }
 body.cv {
   overflow-y: auto;
+}
+
+/* The intro: the card opens black, the Nonet cube comes apart into the wordmark, then the
+   wordmark flies onto the cover's own, the black lifts off the paper, and the cover comes in
+   around it: the spine from the right, the print fading up, then the issue box, the numbers
+   and Play. Tapping the black skips to the cover. */
+.fd-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px 20px;
+  background: #121316;
+  cursor: pointer;
+  transition: background-color 1.4s ease;
+}
+.fd-fold {
+  width: min(100%, 900px);
+  max-height: 100%;
+  overflow: visible;
+  transform-origin: 0 0;
+  transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.fd-fold > rect {
+  transition: fill 1.2s ease;
+}
+/* lifting off: the black clears and the cells take the cover's ink, the yellow cell stays yellow */
+.fd-intro.fd-lift {
+  background-color: rgb(18 19 22 / 0);
+  pointer-events: none;
+}
+.fd-lift .fd-fold > rect:not([fill='rgb(245,193,46)']) {
+  fill: #23252b;
+}
+
+/* the cover waits behind the black, each part a step back from where it lands */
+.fd-pre .cv-mark,
+.fd-hold .cv-mark,
+.fd-pre .cv-issue,
+.fd-pre .cv-stats,
+.fd-pre .cv-first,
+.fd-pre .cv-done,
+.fd-pre .cv-go,
+.fd-pre .cv-links,
+.fd-pre .cv-streak {
+  opacity: 0;
+}
+.fd-pre .cv-spine {
+  transform: translateX(100%);
+}
+.fd-pre .cv-issue,
+.fd-pre .cv-stats,
+.fd-pre .cv-first,
+.fd-pre .cv-done {
+  transform: translateY(10px);
+}
+.fd-pre .cv-go {
+  transform: translateY(24px) scale(0.96);
+}
+.fd-pre .cv-links {
+  transform: translateY(8px);
+}
+.fd-pre .cv-streak {
+  transform: rotate(-14deg) scale(0.6);
+}
+.fd-pre.cv::before,
+.fd-pre .cv-mid::before {
+  opacity: 0;
+}
+/* coming in, in order: spine and print with the lift, then the issue box, numbers, Play, links, streak */
+.fd-in .cv-spine {
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s;
+}
+.fd-in.cv::before,
+.fd-in .cv-mid::before {
+  transition: opacity 1.4s ease 0.3s;
+}
+.fd-in .cv-issue {
+  transition:
+    opacity 0.5s ease 0.85s,
+    transform 0.5s ease 0.85s;
+}
+.fd-in .cv-stats,
+.fd-in .cv-first,
+.fd-in .cv-done {
+  transition:
+    opacity 0.5s ease 1s,
+    transform 0.5s ease 1s;
+}
+.fd-in .cv-go {
+  transition:
+    opacity 0.45s ease 1.15s,
+    transform 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) 1.15s;
+}
+.fd-in .cv-links {
+  transition:
+    opacity 0.4s ease 1.4s,
+    transform 0.4s ease 1.4s;
+}
+.fd-in .cv-streak {
+  transition:
+    opacity 0.3s ease 1.6s,
+    transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) 1.6s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-intro {
+    display: none;
+  }
+  .fd-pre .cv-mark,
+  .fd-hold .cv-mark,
+  .fd-pre .cv-issue,
+  .fd-pre .cv-stats,
+  .fd-pre .cv-first,
+  .fd-pre .cv-done,
+  .fd-pre .cv-go,
+  .fd-pre .cv-links,
+  .fd-pre .cv-streak,
+  .fd-pre.cv::before,
+  .fd-pre .cv-mid::before {
+    opacity: 1;
+  }
+  .fd-pre .cv-spine,
+  .fd-pre .cv-issue,
+  .fd-pre .cv-stats,
+  .fd-pre .cv-first,
+  .fd-pre .cv-done,
+  .fd-pre .cv-go,
+  .fd-pre .cv-links,
+  .fd-pre .cv-streak {
+    transform: none;
+  }
 }

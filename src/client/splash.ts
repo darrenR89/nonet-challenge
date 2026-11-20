@@ -12,11 +12,82 @@ import {
   scoreRun,
 } from '../shared/scoring.ts'
 import {getCard} from './api.ts'
+import {foldIntro} from './nonet/splash.js'
 
 // The feed card: the cover, with today's number, difficulty, the most a run can score,
 // the rotation multipliers, and how today is going. Play opens the game.
+// It opens on black: the cube comes apart into the wordmark, which then lands on the cover's.
 
 const $ = (id: string): HTMLElement | null => document.getElementById(id)
+
+const wait = (ms: number): Promise<void> =>
+  new Promise(res => {
+    setTimeout(res, ms)
+  })
+
+/** Where the intro's wordmark sits in its SVG: 1000 by 184 at (50, 168) in a 1100 by 520 box. */
+const MARK = {x: 50, y: 168, w: 1000, box: [1100, 520]} as const
+
+/** Moves the intro's wordmark onto the cover's, and resolves when it lands. */
+function flyToCover(svg: SVGSVGElement, target: Element): Promise<void> {
+  const r = svg.getBoundingClientRect()
+  const t = target.getBoundingClientRect()
+  // the SVG is letterboxed in its box: work out where its own wordmark is on screen
+  const s = Math.min(r.width / MARK.box[0], r.height / MARK.box[1])
+  const ox = (r.width - MARK.box[0] * s) / 2
+  const oy = (r.height - MARK.box[1] * s) / 2
+  const k = t.width / (MARK.w * s)
+  const dx = t.left - r.left - k * (ox + MARK.x * s)
+  const dy = t.top - r.top - k * (oy + MARK.y * s)
+  return new Promise(res => {
+    let done = false
+    const end = (): void => {
+      if (done) return
+      done = true
+      res()
+    }
+    svg.addEventListener('transitionend', e => e.target === svg && end())
+    setTimeout(end, 1600)
+    svg.style.transform = `translate(${dx}px, ${dy}px) scale(${k})`
+  })
+}
+
+/** The intro, then the cover. Tapping the black, or reduced motion, goes straight to the cover. */
+async function intro(): Promise<void> {
+  const body = document.body
+  const box = $('intro')
+  const svg = document.getElementById('foldsvg') as SVGSVGElement | null
+  const mark = document.querySelector('.cv-mark img')
+  const show = (): void => {
+    body.classList.remove('fd-pre', 'fd-hold')
+    box?.remove()
+  }
+  if (
+    !box ||
+    !svg ||
+    !mark ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    show()
+    return
+  }
+  let skipped = false
+  box.addEventListener('click', () => {
+    skipped = true
+    show()
+  })
+  const formed = foldIntro(svg)
+  // while the letters are still landing, the black lifts, the cells turn to ink, the cover
+  // starts to come in, and the forming wordmark flies onto the cover's
+  await wait(1700)
+  if (skipped) return
+  box.classList.add('fd-lift')
+  body.classList.add('fd-in', 'fd-hold')
+  body.classList.remove('fd-pre')
+  await Promise.all([formed, flyToCover(svg, mark)])
+  if (!skipped) show()
+}
+void intro()
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
 const WDAYS = 'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
 

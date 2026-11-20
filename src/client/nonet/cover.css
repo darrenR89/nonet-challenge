@@ -29,11 +29,12 @@
     -webkit-mask-image:linear-gradient(to right,#000 72%,transparent 96%);mask-image:linear-gradient(to right,#000 72%,transparent 96%)}
 }
 
-/* the spine: number boxed at the top, "Daily cube" and the date down the foot */
-.cv-spine{flex:none;align-self:stretch;background:var(--c-ink);color:var(--c-paper);
+/* the spine: number boxed at the top, "Daily cube" and the date down the foot. Always the same
+   width, so a phone gets the same band as a wide screen */
+.cv-spine{flex:none;width:66px;align-self:stretch;background:var(--c-ink);color:var(--c-paper);
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
 .cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:9px 5px;margin:4px}
-.cv-kanji{font-family:var(--c-kanji);writing-mode:vertical-rl;letter-spacing:.14em;line-height:1;font-size:clamp(20px,4.6vw,26px)}
+.cv-kanji{font-family:var(--c-kanji);writing-mode:vertical-rl;letter-spacing:.14em;line-height:1;font-size:26px}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
 .cv-dot{display:inline-block;margin:.6em 0}
 .cv-date{font-weight:700;font-size:13px;letter-spacing:.18em;color:#fff}
@@ -325,3 +326,10 @@
 .is-paused .cv-go .cv-pause{display:grid}
 .is-paused .cv-go .cv-home{display:none}
 .cv-go .cv-links button:disabled{opacity:.45;cursor:default}
+
+/* small phones: the two numbers stay side by side, each label over its number */
+@media (max-width:380px){
+  .cv-title .cv-stats div{flex-direction:column;align-items:flex-start;gap:2px}
+  .cv-title .cv-stats div:first-child dd{order:0}
+  .cv-title .cv-stats div:last-child:not(:first-child){align-items:flex-end}
+}
