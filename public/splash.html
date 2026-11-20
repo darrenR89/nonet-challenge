@@ -7,28 +7,115 @@
     <link rel="modulepreload" href="splash.js">
     <link rel="stylesheet" href="splash.css">
   </head>
-  <body class="fd">
-    <main class="fd-card">
-      <svg
-        class="fd-fold"
-        id="foldsvg"
-        viewBox="0 0 1100 520"
-        role="img"
-        aria-label="Nonet"
-      ></svg>
-      <h1 class="fd-sr">
-        A sudoku cube, one a day, the same for everyone on Reddit.
-      </h1>
-      <div class="fd-foot">
-        <div class="fd-info">
-          <p class="fd-day" id="day">Today's cube</p>
-          <p class="fd-live" id="live" aria-live="polite"></p>
+  <body class="cv fd-pre">
+    <main class="cv-cover">
+      <div class="cv-spine" aria-hidden="true">
+        <div class="cv-vol">
+          <span class="cv-kanji" id="kanji">〇〇〇</span>
         </div>
-        <button class="fd-play" id="start-btn" type="button">
-          Play today's cube
-        </button>
+        <span class="cv-imprint"
+          >Daily cube<span class="cv-dot">·</span
+          ><b class="cv-date" id="date"></b></span
+        >
+      </div>
+      <div class="cv-body">
+        <div class="cv-title">
+          <p class="cv-streak" id="streak" hidden>
+            <svg viewBox="0 0 16 20" aria-hidden="true">
+              <path
+                d="M8 1c.6 3-1.2 4.6-2.6 6.2C4 8.8 3 10.4 3 12.6 3 16 5.3 19 8 19s5-3 5-6.4c0-2.3-1-3.9-2-5-.2 1.5-.9 2.6-2 3.1.4-2.6.2-6.4-1-9.7Z"
+                fill="#23252b"
+              />
+              <path
+                d="M8 18c-1.4 0-2.4-1.2-2.4-2.7 0-1.4.9-2.3 1.7-3.2.1 1 .6 1.6 1.3 1.8.1-.9.5-1.6 1.1-2.1.6.9 1 1.9 1 3.3C10.7 16.7 9.5 18 8 18Z"
+                fill="#f5c12e"
+              />
+            </svg><span id="streak-n"></span>
+          </p>
+          <div class="cv-mark">
+            <img
+              src="/brand/nonet-wordmark-ink.svg"
+              alt="Nonet"
+              width="1000"
+              height="184"
+            >
+          </div>
+          <div class="cv-issue" id="issue">
+            <div class="cv-row">
+              <span class="cv-no" aria-hidden="true"
+                ><span class="cv-daily" lang="ja">日刊</span>
+                No.<b id="no">–</b></span
+              >
+              <span class="cv-level"
+                ><span class="cv-pips" id="pips" aria-hidden="true"
+                  ><i></i><i></i><i></i></span
+                ><span class="cv-tag" id="level"></span></span
+              >
+            </div>
+          </div>
+          <dl class="cv-stats" id="stats" hidden></dl>
+          <p class="cv-first" id="first" hidden>
+            No one has played yet. Be the first to set the pace.
+          </p>
+          <h1 class="cv-head cv-sr">
+            A sudoku cube, one a day, the same for everyone on Reddit.
+          </h1>
+        </div>
+        <div class="cv-mid">
+          <section
+            class="cv-done"
+            id="done"
+            hidden
+            aria-label="How you did today"
+          >
+            <div class="dn-res">
+              <div class="dn-main">
+                <p class="dn-cap">Your cube today</p>
+                <p class="dn-score"><b id="dnScore"></b> points</p>
+              </div>
+              <div class="dn-side">
+                <span class="dn-rank" id="dnRank" hidden></span>
+                <span class="dn-streak" id="dnStreak" hidden></span>
+              </div>
+            </div>
+            <div class="dn-acts">
+              <button type="button" class="dn-chip dn-go" data-open="challenge">
+                <b>Challenge someone</b
+                ><span>Dare them to beat your score</span>
+              </button>
+              <button type="button" class="dn-chip dn-go" data-open="team">
+                <b>Team challenge</b><span>Play for a side</span>
+              </button>
+              <button type="button" class="dn-chip dn-go" data-open="boards">
+                <b>Leaderboards</b
+                ><span id="dnBoards">Today and this week</span>
+              </button>
+            </div>
+          </section>
+          <div class="cv-go">
+            <p class="cv-sub" id="live" aria-live="polite"></p>
+            <button class="cv-play" id="start-btn" type="button">
+              Play today's cube
+            </button>
+            <ul class="cv-links">
+              <li>
+                <button type="button" data-open="rules">How to play</button>
+              </li>
+              <li>
+                <button type="button" data-open="practice">
+                  Practice cube
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </main>
+    <div class="fd-intro" id="intro" aria-hidden="true">
+      <svg class="fd-fold" id="foldsvg" viewBox="0 0 1100 520">
+        <title>Nonet</title>
+      </svg>
+    </div>
     <script src="splash.js" type="module"></script>
   </body>
 </html>

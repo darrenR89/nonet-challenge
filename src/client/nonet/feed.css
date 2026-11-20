@@ -1,130 +1,141 @@
-/* The post card in the feed: the cube comes apart into the name, then Play opens the game. */
-:root {
-  --sumi: #121316;
-  --washi: #eceae3;
-  --lead: #8d919b;
-  --yellow: #f5c12e;
-  color-scheme: dark;
-}
+/* The post card in the feed: the black intro, then the cover filling the card. The cover itself is in cover.css. */
 html,
 body {
   height: 100%;
   margin: 0;
 }
-body.fd {
-  background: var(--sumi);
-  color: var(--washi);
-  font-family: 'IBM Plex Sans JP', system-ui, sans-serif;
-  overflow: hidden;
+body.cv {
+  overflow-y: auto;
 }
-body.fd::after {
-  content: '';
+
+/* The intro: the card opens black, the Nonet cube comes apart into the wordmark, then the
+   wordmark flies onto the cover's own, the black lifts off the paper, and the cover comes in
+   around it: the spine from the right, the print fading up, then the issue box, the numbers
+   and Play. Tapping the black skips to the cover. */
+.fd-intro {
   position: fixed;
   inset: 0;
-  pointer-events: none;
-  opacity: 0.4;
-  mix-blend-mode: overlay;
-  background: url(/brand/paper-overlay.webp) 0 0 / 540px 540px;
-}
-/* the cube-to-wordmark fills the card; the date and Play sit along the bottom */
-.fd-card {
-  height: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 20px 20px;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px 20px;
+  background: #121316;
+  cursor: pointer;
+  transition: background-color 0.8s ease;
 }
 .fd-fold {
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  display: block;
+  width: min(100%, 900px);
+  max-height: 100%;
+  overflow: visible;
+  transform-origin: 0 0;
+  transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1);
 }
-.fd-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.fd-fold > rect {
+  transition: fill 0.8s ease;
 }
-.fd-foot {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 20px;
-  flex-wrap: wrap;
+/* lifting off: the black clears and the cells take the cover's ink, the yellow cell stays yellow */
+.fd-intro.fd-lift {
+  background-color: rgb(18 19 22 / 0);
+  pointer-events: none;
 }
-.fd-info {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
+.fd-lift .fd-fold > rect:not([fill='rgb(245,193,46)']) {
+  fill: #23252b;
 }
-.fd-day,
-.fd-live {
-  margin: 0;
+
+/* the cover waits behind the black, each part a step back from where it lands */
+.fd-pre .cv-mark,
+.fd-hold .cv-mark,
+.fd-pre .cv-issue,
+.fd-pre .cv-stats,
+.fd-pre .cv-first,
+.fd-pre .cv-done,
+.fd-pre .cv-go,
+.fd-pre .cv-links,
+.fd-pre .cv-streak {
+  opacity: 0;
 }
-.fd-day {
-  font:
-    400 12px 'M PLUS 1 Code',
-    ui-monospace,
-    monospace;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--lead);
+.fd-pre .cv-spine {
+  transform: translateX(100%);
 }
-.fd-day .kanji {
-  font-family: 'DotGothic16', 'M PLUS 1 Code', monospace;
-  letter-spacing: 0.12em;
-  text-transform: none;
+.fd-pre .cv-issue,
+.fd-pre .cv-stats,
+.fd-pre .cv-first,
+.fd-pre .cv-done {
+  transform: translateY(10px);
 }
-/* the live line: solves today, your streak, your score. Space is kept so nothing jumps. */
-.fd-live {
-  min-height: 18px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  font-size: 13px;
-  line-height: 18px;
+.fd-pre .cv-go {
+  transform: translateY(24px) scale(0.96);
 }
-.fd-live .streak {
-  font-family: 'M PLUS 1 Code', ui-monospace, monospace;
-  font-size: 12px;
-  color: var(--yellow);
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  padding: 0 8px;
+.fd-pre .cv-links {
+  transform: translateY(8px);
 }
-.fd-play {
-  font:
-    500 14px 'M PLUS 1 Code',
-    ui-monospace,
-    monospace;
-  background: var(--yellow);
-  color: var(--sumi);
-  border: 1px solid var(--yellow);
-  border-radius: 7px;
-  min-height: 48px;
-  min-width: 200px;
-  padding: 0 20px;
-  cursor: pointer;
+.fd-pre .cv-streak {
+  transform: rotate(-14deg) scale(0.6);
 }
-.fd-play:focus-visible {
-  outline: 2px solid var(--washi);
-  outline-offset: 2px;
+.fd-pre.cv::before,
+.fd-pre .cv-mid::before {
+  opacity: 0;
 }
-/* narrow cards stack: the date and live line centred over a full-width Play */
-@media (max-width: 480px) {
-  .fd-foot {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
+/* coming in, in order: spine and print with the lift, then the issue box, numbers, Play, links, streak */
+.fd-in .cv-spine {
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s;
+}
+.fd-in.cv::before,
+.fd-in .cv-mid::before {
+  transition: opacity 1.4s ease 0.3s;
+}
+.fd-in .cv-issue {
+  transition:
+    opacity 0.5s ease 0.85s,
+    transform 0.5s ease 0.85s;
+}
+.fd-in .cv-stats,
+.fd-in .cv-first,
+.fd-in .cv-done {
+  transition:
+    opacity 0.5s ease 1s,
+    transform 0.5s ease 1s;
+}
+.fd-in .cv-go {
+  transition:
+    opacity 0.45s ease 1.15s,
+    transform 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) 1.15s;
+}
+.fd-in .cv-links {
+  transition:
+    opacity 0.4s ease 1.4s,
+    transform 0.4s ease 1.4s;
+}
+.fd-in .cv-streak {
+  transition:
+    opacity 0.3s ease 1.6s,
+    transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) 1.6s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fd-intro {
+    display: none;
   }
-  .fd-live {
-    justify-content: center;
+  .fd-pre .cv-mark,
+  .fd-hold .cv-mark,
+  .fd-pre .cv-issue,
+  .fd-pre .cv-stats,
+  .fd-pre .cv-first,
+  .fd-pre .cv-done,
+  .fd-pre .cv-go,
+  .fd-pre .cv-links,
+  .fd-pre .cv-streak,
+  .fd-pre.cv::before,
+  .fd-pre .cv-mid::before {
+    opacity: 1;
+  }
+  .fd-pre .cv-spine,
+  .fd-pre .cv-issue,
+  .fd-pre .cv-stats,
+  .fd-pre .cv-first,
+  .fd-pre .cv-done,
+  .fd-pre .cv-go,
+  .fd-pre .cv-links,
+  .fd-pre .cv-streak {
+    transform: none;
   }
 }
