@@ -5,9 +5,10 @@
 // when is in music-layers.ts. Short sounds for turns and locks are made here.
 // Browsers only allow audio after a tap, so nothing starts until Play.
 import {
+  freshMood,
   LOOP_BEATS,
   type LoopName,
-  moodFor,
+  moodKey,
   RATE,
   renderLoop,
   scaleSteps,
@@ -15,6 +16,7 @@ import {
 import {fromStart, layersFor, type MusicState} from './music-layers.ts'
 
 const STORE = 'nonet-sound'
+const LAST_MOOD = 'nonet-last-mood'
 // the mix: music sits well under the sound effects
 const MUSIC_LEVEL = 0.45
 const SFX_LEVEL = 2.6
@@ -47,6 +49,17 @@ function readMuted(): boolean {
   } catch {
     return false
   }
+}
+
+/** Reads a stored value, or stores one when `value` is given. */
+function remember(key: string, value?: string): string | undefined {
+  try {
+    if (value === undefined) return localStorage.getItem(key) ?? undefined
+    localStorage.setItem(key, value)
+  } catch {
+    // private window: nothing is kept
+  }
+  return value
 }
 
 /** The next point on the beat grid, `div` steps to a beat. */
@@ -83,7 +96,8 @@ function startTune(): void {
     t.src.stop(c.currentTime + 2)
   }
   tracks = new Map()
-  const mood = moodFor(Math.floor(Math.random() * 2 ** 31))
+  const mood = freshMood(Math.random, remember(LAST_MOOD))
+  remember(LAST_MOOD, moodKey(mood))
   for (const b of buttons) b.title = `Music and sound · ${mood.name}`
   beat = 60 / mood.bpm
   root = mood.root
