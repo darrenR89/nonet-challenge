@@ -554,7 +554,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* step two: the net, the chosen face outlined, dotted lines through it */
 .ngrid{position:relative}
 /* the faces touch, so the net reads as one unfolded cube; the chosen face is ringed in the seams round it */
-.nface.cur{outline:10px solid #eceae3;outline-offset:-5px;z-index:1}
+.nface.cur{outline:4px solid var(--washi);outline-offset:3px;z-index:1}
 /* on the net the dashed squares are the point: a thick yellow dashed outline that pulses */
 .nface .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
 @keyframes twinpulse{50%{outline-color:transparent}}
@@ -573,3 +573,5 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
 /* on paper the cube body is black, so the ring is yellow there and the wash is stronger */
 @media (prefers-color-scheme:light){.nface .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}}
+/* the net's faces touch, so on paper the chosen face's ink ring sits on a cream band, to show against the black body */
+@media (prefers-color-scheme:light){.nface.cur{outline-color:#23252b;box-shadow:0 0 0 var(--gap,6px) #f6f5f0}}
