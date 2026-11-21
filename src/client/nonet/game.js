@@ -829,7 +829,9 @@ const tx=makeTransitions({cubeEl,faceEls,stageEl,view:()=>({rx,ry,scaleK}),apply
 
 // a cube to show behind the splash while today's loads; Play swaps in today's
 window.addEventListener('resize',setH);// the page leaves exactly the pad's height free at the bottom, so the cube centres in what is left
-const padRoom=()=>{const b=$('padbox');document.documentElement.style.setProperty('--padH',`${b.hidden?0:b.offsetHeight}px`)};
+const padRoom=()=>{const b=$('padbox'),r=$('stage').getBoundingClientRect(),h=b.hidden?0:b.offsetHeight,css=document.documentElement.style;css.setProperty('--padH',`${h}px`);
+  // on wide screens the pad stands beside the board: centred on the board's area, never above its top
+  css.setProperty('--padMid',`${Math.round(Math.max(r.top+r.height/2,r.top+h/2+28))}px`)};
 if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};

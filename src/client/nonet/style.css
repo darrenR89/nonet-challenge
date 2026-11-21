@@ -461,7 +461,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
    as a 3 by 3 keypad with clear underneath. The board keeps its width and the pair is centred together. */
 @media (min-width:880px) and (min-aspect-ratio:5/4){
   .wrap:has(.padbox:not([hidden])){max-width:884px;padding-right:324px;padding-bottom:48px}
-  .padbox{left:calc(50% + 142px);right:auto;top:50%;bottom:auto;translate:0 -50%;width:300px;margin:0;
+  /* the header, progress bar and helpers run the full width, over the pad's column too */
+  .wrap:has(.padbox:not([hidden]))>:is(header,.modes){margin-right:-324px}
+  .padbox{left:calc(50% + 142px);right:auto;top:var(--padMid,50%);bottom:auto;translate:0 -50%;width:300px;margin:0;
     border-bottom:1px solid var(--edge);border-radius:0 var(--r) var(--r) var(--r);padding-bottom:8px;box-shadow:0 12px 30px rgb(0 0 0 / .3)}
   .pad{grid-template-columns:repeat(3,1fr)}
   .pad button,body:has(.net:not([hidden])) .pad button{min-height:min(72px,13vh)}
