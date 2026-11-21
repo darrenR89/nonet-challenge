@@ -86,6 +86,7 @@ import {
   boardKey,
   bumpStreak,
   claimComment,
+  clearDay,
   getDayRecord,
   getDayStats,
   getMyDay,
@@ -437,8 +438,9 @@ async function routeDaily(): Promise<DailyRsp> {
   const day = today()
   const past = pastDayOf(context.postData, day)
   const uid = await who()
+  const asNew = past ? undefined : await asNewSince(uid)
   const my = uid
-    ? await getMyDay(day, uid)
+    ? await getMyDay(day, runId(uid, asNew))
     : {tier: undefined, score: undefined, starsWon: undefined, retries: 0}
   return {
     day,
@@ -447,12 +449,12 @@ async function routeDaily(): Promise<DailyRsp> {
     level: levelOf(day),
     puzzle: my.tier !== undefined ? await dayPuzzle(day, my.tier) : undefined,
     my,
-    streak: uid ? await getStreak(day, uid) : NO_STREAK,
-    preview: await previewFor(day, uid),
+    streak: uid && !asNew ? await getStreak(day, uid) : NO_STREAK,
+    preview: asNew ? undefined : await previewFor(day, uid),
     boards: await dayBoards(day, uid),
     event: await eventFor(day, uid),
     loggedIn: !!uid,
-    ...(uid && (await redis.get(tryNewKey(uid))) ? {asNew: true} : {}),
+    ...(asNew ? {asNew} : {}),
     cubeNo: cubeNumber(day),
     stats: await getDayStats(day),
     subreddit: context.subredditName ?? '',
@@ -483,9 +485,10 @@ async function routeCard(): Promise<CardRsp> {
   // no rememberName here: the card is read on every scroll past
   const uid = context.userId
   // demo mode: the card looks as it would to a new player on a busy day
-  const asNew = !past && !!uid && !!(await redis.get(tryNewKey(uid)))
-  const score = uid && !asNew ? (await getMyDay(day, uid)).score : undefined
+  const asNew = past ? undefined : await asNewSince(uid)
+  const score = uid ? (await getMyDay(day, runId(uid, asNew))).score : undefined
   const st = asNew ? DEMO_STATS : await getDayStats(day)
+  const streak = uid && !asNew ? await getStreak(now, uid) : NO_STREAK
   return {
     day,
     no: cubeNumber(day),
@@ -493,12 +496,20 @@ async function routeCard(): Promise<CardRsp> {
     solves: st.solves,
     played: (st.tiers ?? []).reduce((n, t) => n + t.picks, 0),
     fastest: st.fastest,
-    streak: uid && !asNew ? (await getStreak(now, uid)).current : 0,
+    streak: streak.current,
     score,
     rank:
       uid && score !== undefined
-        ? await rankOn(boardKey.day(day), uid)
+        ? asNew
+          ? (await demoDaily(await demoMe(uid, day, score)))?.boards.day.me
+              ?.rank
+          : await rankOn(boardKey.day(day), uid)
         : undefined,
+    // never played: the card offers the guided practice first, as the game does
+    ...(uid && !past && score === undefined && !streak.played
+      ? {firstTime: true}
+      : {}),
+    ...(asNew ? {asNew} : {}),
     ...(past
       ? {past: true, todayPost: (await redis.hGet(DAILY_POSTS, now)) ?? ''}
       : {}),
@@ -550,7 +561,14 @@ async function routeStart(req: StartReq): Promise<StartRsp> {
     const guest = await startGuest(day, req.tier, clock.now().getTime())
     return {tier: req.tier, puzzle: await dayPuzzle(day, req.tier), guest}
   }
-  const tier = await lockTier(day, uid, req.tier, clock.now().getTime())
+  const asNew = await asNewSince(uid)
+  const tier = await lockTier(
+    day,
+    runId(uid, asNew),
+    req.tier,
+    clock.now().getTime(),
+    !asNew,
+  )
   return {tier, puzzle: await dayPuzzle(day, tier)}
 }
 
@@ -595,6 +613,8 @@ async function routeScore(
   const day = today()
   if (req.day !== day)
     throw new HttpError(409, "That was yesterday's cube. Today's is ready.")
+  const asNew = await asNewSince(uid)
+  if (asNew) return scoreDemoRun(req, uid, day)
   let rec = await getDayRecord(day, uid)
   // a run played logged out, claimed after signing up: it takes today's place as if
   // started at the logged-out start, so the timing checks still hold
@@ -688,6 +708,57 @@ async function routeScore(
     event: event ? await eventState(event, day, uid) : undefined,
     preview: await previewFor(day, uid),
     duels: shown?.duels ?? (await duelsFor(day, uid)),
+    crew: shown?.crew ?? (await crewInfo(day, uid)),
+  }
+}
+
+/**
+ * A run played in demo mode: scored like any other and kept on the demo copy of the day, with
+ * the sample boards, crew and challenges. The real boards, streak and day's numbers stay as they are.
+ */
+async function scoreDemoRun(
+  req: ScoreReq,
+  uid: string,
+  day: string,
+): Promise<ScoreRsp> {
+  const id = runId(uid, 1)
+  const rec = await getDayRecord(day, id)
+  if (rec.tier === undefined) throw new HttpError(409, 'Press Play first.')
+  const tier = Number(rec.tier)
+  if (req.tier !== tier)
+    throw new HttpError(
+      409,
+      `Today is set to ${tier} turn${tier === 1 ? '' : 's'}.`,
+    )
+  const level = levelOf(day)
+  const penalty = Number(rec.retries ?? 0) > 0 ? RETRY_MULT : 1
+  const run = req.forfeit
+    ? ZERO_RUN
+    : checkStats(
+        req.stats,
+        blanksOf(await dayPuzzle(day, tier)),
+        (clock.now().getTime() - Number(rec.started ?? 0)) / 1000,
+      )
+  const breakdown = scoreRun(level, tier, run)
+  const total = req.forfeit ? 0 : Math.round(breakdown.total * penalty)
+  const counted = await markScored(day, id, total, run.starsWon)
+  const score = counted ? total : Number(rec.score ?? total)
+  const shown = await demoDaily(await demoMe(uid, day, score))
+  const boards = shown?.boards ?? (await dayBoards(day, uid))
+  const me = boards.day.me
+  return {
+    counted: counted && !req.forfeit,
+    breakdown,
+    total: score,
+    rawTotal: req.forfeit ? 0 : breakdown.total,
+    penalty,
+    beatPct: me ? beatPct(me.rank, boards.day.players) : 0,
+    stats: DEMO_STATS,
+    streak: req.forfeit ? NO_STREAK : {current: 1, best: 1, played: 1},
+    boards,
+    event: undefined,
+    preview: undefined,
+    duels: shown?.duels ?? [],
     crew: shown?.crew ?? (await crewInfo(day, uid)),
   }
 }
@@ -989,7 +1060,7 @@ async function routeResultComment(): Promise<ResultCommentRsp> {
 
 /** Uses today's one retry. The run restarts on the same cube and tier. */
 async function routeRetry(): Promise<RetryRsp> {
-  const uid = await needUser()
+  const uid = runId(await needUser(), await asNewSince(context.userId))
   const day = today()
   const rec = await getDayRecord(day, uid)
   if (rec.tier === undefined) throw new HttpError(409, 'Press Play first.')
@@ -1350,6 +1421,23 @@ async function routeMenuCubes(): Promise<UiResponse> {
 /** Demo mode also shows the game as a new player would see it, for the same hour. */
 const tryNewKey = (uid: string): string => `trynew:${uid}`
 
+/**
+ * When demo mode started for this player, or undefined when it is off. While it is on they
+ * play today's cube as a new player: on a day record of its own, apart from their real one,
+ * so their real score, streak and the boards are left alone.
+ */
+async function asNewSince(
+  uid: string | undefined,
+): Promise<number | undefined> {
+  if (!uid) return
+  const v = await redis.get(tryNewKey(uid))
+  if (!v) return
+  return Number(v) || 1
+}
+/** The id today's run is kept under: the demo copy while demo mode is on. */
+const runId = (uid: string, asNew: number | undefined): string =>
+  asNew ? `demo-new:${uid}` : uid
+
 /** The asker as demo mode needs them: their name, and their real scores today and this week. */
 async function demoMe(
   uid: string,
@@ -1380,7 +1468,8 @@ async function demo(
   const uid = context.userId
   if (!uid) return
   const day = today()
-  const me = await demoMe(uid, day, (await getMyDay(day, uid)).score)
+  const id = runId(uid, await asNewSince(uid))
+  const me = await demoMe(uid, day, (await getMyDay(day, id)).score)
   return (await demoRoute(endpoint, body, me)) as AnyRsp | undefined
 }
 
@@ -1389,8 +1478,10 @@ async function routeMenuDemo(): Promise<UiResponse> {
   const uid = await who()
   if (!uid) return {showToast: 'Log in to turn on demo mode.'}
   const day = today()
-  await startDemo(uid, day, (await getMyDay(day, uid)).score)
-  await redis.set(tryNewKey(uid), '1', {
+  await startDemo(uid, day, undefined)
+  // a fresh start each time: the demo copy of today's run is cleared
+  await clearDay(day, runId(uid, 1))
+  await redis.set(tryNewKey(uid), String(Date.now()), {
     expiration: new Date(Date.now() + DEMO_SECONDS * 1000),
   })
   const post = await redis.hGet(DAILY_POSTS, day)

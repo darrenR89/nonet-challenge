@@ -94,7 +94,7 @@ async function loadDaily(){
   else if(r){D=r;guest=true;online=false;today=r.day;level=r.level??levelOf(today);twistDay=offlineTwist()}
   else{online=false;level=levelOf(today);twistDay=offlineTwist()}
   if(online)void claimPending(r);
-  if(D&&D.asNew)try{localStorage.removeItem(PRACTICED)}catch(e){}
+  if(D&&D.asNew)asNewOnce(D.asNew);
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
   // a first visit starts on 0 turns, just the fill-in, so the first scored cube teaches one thing at a time
   if(twistDay===null&&!(D&&D.streak&&D.streak.played))tier=0;
@@ -237,8 +237,9 @@ function goToday(){let sub='';try{sub=context.subredditName??''}catch(e){}
 const PRACTICED='nonet-practiced';
 function practiced(){try{return !!localStorage.getItem(PRACTICED)}catch(e){return false}}
 function notePracticed(){try{localStorage.setItem(PRACTICED,'1')}catch(e){}}
-function firstTimer(){if(D&&D.asNew)return !practiced()&&!paused; // a mod trying it as a new player
-  return !practiced()&&twistDay===null&&!paused&&!(daily&&P)&&!(D&&(D.past||D.my&&D.my.score!==undefined||D.streak&&D.streak.played))}
+// demo mode: each time a mod turns it on, they start over as a new player, practice and all
+function asNewOnce(at){try{if(localStorage.getItem('nonet-as-new-at')!==String(at)){localStorage.removeItem(PRACTICED);localStorage.setItem('nonet-as-new-at',String(at))}}catch(e){}}
+function firstTimer(){return !practiced()&&twistDay===null&&!paused&&!(daily&&P)&&!(D&&(D.past||D.my&&D.my.score!==undefined||D.streak&&D.streak.played))}
 $('spSkip').onclick=()=>{notePracticed();journey.interaction('skip_practice');splashTwist();$('spPlay').click()};
 $('spPlay').onclick=()=>{
   if(tx.busy)return;if(firstTimer()){journey.interaction('first_practice');$('spPractice').click();return}if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();

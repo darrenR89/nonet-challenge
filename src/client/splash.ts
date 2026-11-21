@@ -184,6 +184,36 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
     requestExpandedMode(ev, 'game')
   })
 
+/**
+ * Whether this device has had the guided practice, as the game keeps it. In demo mode a
+ * moderator starts over each time they turn it on, so an earlier practice doesn't count.
+ */
+function practiced(asNew: number | undefined): boolean {
+  try {
+    if (asNew && localStorage.getItem('nonet-as-new-at') !== String(asNew))
+      return false
+    return !!localStorage.getItem('nonet-practiced')
+  } catch {
+    return false
+  }
+}
+
+/** A new player: Play starts the one-minute guided practice, like the game's own cover. */
+function showFirstTime(): void {
+  startBtn.textContent = 'Learn to play · 1 min'
+  startBtn.dataset.open = 'practice'
+  const live = $('live')
+  if (live)
+    live.textContent =
+      'New to Nonet? A guided practice cube shows you how to play, one step at a time.'
+  const practice = document.querySelector<HTMLElement>(
+    '[data-open="practice"]:not(#start-btn)',
+  )
+  practice?.closest('li')?.setAttribute('hidden', '')
+  const rules = document.querySelector<HTMLElement>('[data-open="rules"]')
+  if (rules) rules.textContent = 'Instructions'
+}
+
 /** A stat: a small label over a number. */
 function stat(label: string, value: string): HTMLElement {
   const d = document.createElement('div')
@@ -210,6 +240,7 @@ void getCard().then(card => {
     document.body.classList.add('is-past')
     return
   }
+  if (card.firstTime && !practiced(card.asNew)) showFirstTime()
   if (card.streak > 1) {
     $('streak-n')?.replaceChildren(`${card.streak}-day streak`)
     $('streak')?.removeAttribute('hidden')
