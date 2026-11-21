@@ -195,9 +195,13 @@ export async function onReq(
       )
       return
     }
-    const msg = `server error; ${err instanceof Error ? err.stack : err}`
-    console.error(msg)
-    writeJson<ErrorRsp>(500, {error: msg, status: 500}, rspMsg)
+    // the stack goes to the log, not to the browser
+    console.error(`server error; ${err instanceof Error ? err.stack : err}`)
+    writeJson<ErrorRsp>(
+      500,
+      {error: 'Something went wrong. Try again.', status: 500},
+      rspMsg,
+    )
   }
 }
 
@@ -1702,11 +1706,16 @@ async function readJson<T>(reqMsg: IncomingMessage): Promise<T> {
   await once(reqMsg, 'end')
   const text = `${Buffer.concat(chunks)}`
   if (!text) return {} as T
+  let body: unknown
   try {
-    return JSON.parse(text) as T
+    body = JSON.parse(text)
   } catch {
     throw new HttpError(400, 'bad JSON')
   }
+  // every request body is an object; null, a list or a bare value is never one we sent
+  if (typeof body !== 'object' || body === null || Array.isArray(body))
+    throw new HttpError(400, 'bad request')
+  return body as T
 }
 
 function writeJson<T extends PartialJsonValue>(

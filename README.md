@@ -60,7 +60,24 @@ You need Node 24 or newer and a Reddit developer account.
 npm install
 npm run dev     # playtest on your test subreddit; prints its link
 npm test        # types, lint, unit tests and the build
+npm run upload  # npm test, then the sweep, then devvit upload; stops at the first failure
 ```
+
+### Before every upload
+
+`npm run upload` won't upload unless the sweep passes. The sweep (`npm run check:ui`, in `tools/check/sweep.mjs`) opens every screen of the game at phone, small phone, sideways phone, tablet and desktop sizes, in dark and light mode, in Chrome's engine and Safari's. It fails on any of these:
+
+- console errors, uncaught exceptions, missing files and broken images
+- a page or panel that scrolls sideways, or content pushed off the screen
+- a button or link that's off screen with nothing to scroll to it
+- serious or critical accessibility problems (axe-core, WCAG 2.2 AA), such as low contrast or missing labels
+- layout shift after a screen has settled
+
+Before it starts, it runs its checks on a page built with each of these problems, and stops if any of them is missed. Smaller issues, like tap targets under 24px or text that may be clipped, are listed as warnings. Screenshots and `report.json` go to `dist/sweep/`. On a new machine, run `npm run check:setup` once to install the two browsers.
+
+`npm test` also checks that every entrypoint, card button, brand image and font resolves (`src/client/links.test.ts`). It also sends every endpoint junk input, logged in and logged out, and expects a 4xx back, never a crash (`server.test.ts`).
+
+After an upload, open the post on a real phone in the Reddit app and tap each of the card's buttons once.
 
 Once it's installed, the app makes the first post. You can also use the subreddit menu item "Nonet: new daily cube post".
 
@@ -73,3 +90,4 @@ Once it's installed, the app makes the first post. You can also use the subreddi
 | `src/client/`       | The feed card (`splash.ts`) and the game (`game.ts`, `nonet/`).                                                              |
 | `public/`           | HTML entry points, self-hosted fonts and brand images.                                                                       |
 | `tools/standalone/` | Builds a single offline HTML file of the game against a mock server, for demos.                                              |
+| `tools/check/`      | The pre-upload sweep of every screen.                                                                                        |
