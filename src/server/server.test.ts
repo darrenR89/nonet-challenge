@@ -48,6 +48,7 @@ const flairs = new Map<string, string>()
 const wiki = {content: '', created: 0}
 let autoPost: boolean | undefined = true
 let pinPosts: boolean | undefined = true
+let crewFlair = false
 const SUB = 'nonetdaily'
 /** Journey events the server sent to Devvit, in order. */
 const journeys: {kind: string; body: unknown}[] = []
@@ -104,7 +105,13 @@ before(async () => {
     return madePost('t3_text', 'https://reddit.com/y', o.title)
   }
   s.get = async (name: string) =>
-    name === 'pinPosts' ? pinPosts : name === 'autoPost' ? autoPost : true
+    name === 'pinPosts'
+      ? pinPosts
+      : name === 'autoPost'
+        ? autoPost
+        : name === 'crewFlair'
+          ? crewFlair
+          : true
   r.getUserById = async (id: string) => ({
     getUserFlairBySubreddit: async () => ({flairText: flairs.get(id)}),
   })
@@ -213,6 +220,7 @@ beforeEach(() => {
   wiki.content = ''
   wiki.created = 0
   pinPosts = true
+  crewFlair = false
   journeys.length = 0
   pushed.length = 0
   comments.length = 0
@@ -943,7 +951,7 @@ test('a crew: start one, invite by name, join, and scores add up', async () => {
   const crew = bob.body.crew.crew
   assert.equal(crew?.today, ann.body.total + bob.body.total)
   assert.equal(crew?.week, crew?.today)
-  assert.equal(crew?.rank, 1)
+  assert.equal(crew?.rank, undefined, 'no ranks until there are 5 crews')
   assert.equal(crew?.streak, 1, 'everyone in the crew played')
 
   // cat declines; the invite goes
@@ -978,14 +986,142 @@ test('a crew: start one, invite by name, join, and scores add up', async () => {
   const bob2 = await playDay(0, run())
   assert.equal(bob2.body.crew.crew?.streak, 2)
 
-  // Monday's post lists the top crews
+  // with one crew, Monday's post leaves the crew board out
+  now = new Date('2026-11-16T08:01:00Z')
+  await daily()
+  const weekPost = texts.find(t => t.startsWith("The week's top nine"))
+  assert.doesNotMatch(weekPost ?? '', /top crews/)
+})
+
+/** Signs in as a player, accepts their first crew invitation, and returns the crew. */
+async function joinFirstInvite(id: string, name: string) {
+  as(id, name)
+  const d = await get<DailyRsp>(Endpoint.Daily)
+  const r = await post<CrewRsp>(Endpoint.CrewAnswer, {
+    crewId: d.body.crew.invites[0]?.crewId,
+    accept: true,
+  })
+  return r.body.crew
+}
+
+test('the crew board ranks and posts once there are five crews', async () => {
+  const players = ['ann', 'bob', 'cat', 'dan', 'eve']
+  for (const [i, name] of players.entries()) {
+    as(`t2_${name}`, name)
+    await post<CrewRsp>(Endpoint.CrewCreate, {name: `Crew ${i + 1}`})
+    const r = await playDay(0, run({wrong: i}))
+    if (i < 4) assert.equal(r.body.crew.crew?.rank, undefined)
+    else assert.ok(r.body.crew.crew?.rank, 'the fifth crew brings ranks in')
+  }
   now = new Date('2026-11-16T08:01:00Z')
   await daily()
   const weekPost = texts.find(t => t.startsWith("The week's top nine"))
   assert.match(
     weekPost ?? '',
-    /The top crews:\n\n1\. 連 Night Owls · [\d,]+ \(u\/ann, u\/bob\)/,
+    /The top crews:\n\n1\. 連 Crew 1 · [\d,]+ \(u\/ann\)/,
   )
+})
+
+test("joining an older crew mid-week counts from Monday, so the week's line-up is fixed", async () => {
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Owls'}) // Saturday 14th
+  now = new Date('2026-11-18T12:00:00Z') // the next Wednesday
+  as('t2_ann', 'ann')
+  await post<CrewRsp>(Endpoint.CrewInvite, {names: ['bob']})
+  const joined = await joinFirstInvite('t2_bob', 'bob')
+  const bobRow = joined?.members.find(m => m.name === 'bob')
+  assert.equal(bobRow?.countsFrom, '2026-11-23')
+  const bob = await playDay(0, run())
+  assert.equal(bob.body.crew.crew?.today, 0, "bob's run waits for Monday")
+  as('t2_ann', 'ann')
+  const ann = await playDay(0, run())
+  assert.equal(ann.body.crew.crew?.today, ann.body.total)
+  assert.equal(
+    ann.body.crew.crew?.streak,
+    1,
+    'the streak only needs members who count',
+  )
+
+  now = new Date('2026-11-23T12:00:00Z')
+  as('t2_bob', 'bob')
+  const monday = await playDay(0, run())
+  const crew = monday.body.crew.crew
+  assert.equal(crew?.members.find(m => m.name === 'bob')?.countsFrom, undefined)
+  assert.equal(crew?.today, monday.body.total, 'from Monday bob counts')
+})
+
+test('a crewmate quiet for three days can have their seat opened, and is told', async () => {
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Owls', invite: ['bob']})
+  await joinFirstInvite('t2_bob', 'bob')
+  await playDay(0, run())
+  as('t2_ann', 'ann')
+  await playDay(0, run())
+  // bob misses the 15th and 16th: not yet
+  now = new Date('2026-11-17T12:00:00Z')
+  const d = await get<DailyRsp>(Endpoint.Daily)
+  const bobRow = d.body.crew.crew?.members.find(m => m.name === 'bob')
+  assert.equal(bobRow?.missed, 2)
+  const early = await post<ErrorRsp>(Endpoint.CrewSeat, {to: bobRow?.id})
+  assert.equal(early.status, 409)
+  // and the 17th: now his seat can open
+  now = new Date('2026-11-18T12:00:00Z')
+  const opened = await post<CrewRsp>(Endpoint.CrewSeat, {to: bobRow?.id})
+  assert.equal(opened.status, 200)
+  assert.deepEqual(
+    opened.body.crew?.members.map(m => m.name),
+    ['ann'],
+  )
+  assert.deepEqual(messages, [['bob', 'Your seat in 連 Owls is open']])
+  as('t2_bob', 'bob')
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.crew.crew, undefined)
+})
+
+test('nudges can be turned off, and the crew posts its result once everyone has played', async () => {
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Owls', invite: ['bob']})
+  comments.length = 0
+  const crew = await joinFirstInvite('t2_bob', 'bob')
+  const off = await post<CrewRsp>(Endpoint.CrewNudges, {on: false})
+  assert.equal(off.body.crew?.members.find(m => m.me)?.nudgesOff, true)
+  as('t2_ann', 'ann')
+  const bobId = crew?.members.find(m => m.name === 'bob')?.id
+  const nudge = await post<ErrorRsp>(Endpoint.CrewNudge, {to: bobId})
+  assert.equal(nudge.status, 409)
+  assert.match(nudge.body.error, /turned crew nudges off/)
+  assert.equal(messages.length, 0)
+
+  await playDay(0, run())
+  const early = await post<ErrorRsp>(Endpoint.CrewPost)
+  assert.equal(early.status, 409, 'not until bob has played')
+  as('t2_bob', 'bob')
+  await playDay(0, run())
+  const posted = await post<CrewRsp>(Endpoint.CrewPost)
+  assert.equal(posted.status, 200)
+  assert.equal(posted.body.crew?.posted, true)
+  assert.equal(comments.length, 1)
+  assert.match(
+    comments[0]?.[1] ?? '',
+    /^連 Owls: 2 of 2 played · [\d,]+ crew points\.$/,
+  )
+  as('t2_ann', 'ann')
+  assert.equal(
+    (await post<ErrorRsp>(Endpoint.CrewPost)).status,
+    409,
+    'once a day',
+  )
+})
+
+test('crew flair, when the subreddit turns it on, shows the crew with the streak', async () => {
+  crewFlair = true
+  await post<CrewRsp>(Endpoint.CrewCreate, {name: 'Owls'})
+  await playDay(1, run())
+  assert.equal(flairs.get('t2_ann'), '連 Owls')
+  for (const day of ['15', '16']) {
+    now = new Date(`2026-11-${day}T12:00:00Z`)
+    await playDay(1, run())
+  }
+  assert.equal(flairs.get('t2_ann'), '連 Owls · 3-day streak')
+  now = new Date('2026-11-18T08:01:00Z')
+  await daily()
+  assert.equal(flairs.get('t2_ann'), '連 Owls · best streak 3')
 })
 
 test('one crew at a time, and leaving keeps the points with the crew', async () => {

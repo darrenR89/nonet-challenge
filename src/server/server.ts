@@ -24,7 +24,9 @@ import {
   type CrewCreateReq,
   type CrewInviteReq,
   type CrewNudgeReq,
+  type CrewNudgesReq,
   type CrewRsp,
+  type CrewSeatReq,
   type DailyRsp,
   type DayStats,
   Endpoint,
@@ -50,11 +52,15 @@ import {
   CREW_SIZE,
   type CrewInfo,
   cleanCrewName,
+  crewFlair,
   crewInviteText,
+  crewResultText,
   crewRowText,
   MAX_CREW_INVITES,
   NO_CREW,
   nudgeText,
+  QUIET_DAYS,
+  seatText,
 } from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {
@@ -94,12 +100,15 @@ import {
   addToCrew,
   answerInvite,
   type CrewError,
+  claimCrewPost,
   createCrew,
   crewInfo,
   crewOf,
   inviteToCrew,
   leaveCrew,
   nudge,
+  openSeat,
+  setNudges,
   topCrews,
 } from './crews.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
@@ -234,6 +243,15 @@ async function route(
         break
       case Endpoint.CrewNudge:
         rsp = await routeCrewNudge(await readJson<CrewNudgeReq>(reqMsg))
+        break
+      case Endpoint.CrewSeat:
+        rsp = await routeCrewSeat(await readJson<CrewSeatReq>(reqMsg))
+        break
+      case Endpoint.CrewNudges:
+        rsp = await routeCrewNudges(await readJson<CrewNudgesReq>(reqMsg))
+        break
+      case Endpoint.CrewPost:
+        rsp = await routeCrewPost()
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -673,6 +691,13 @@ const CREW_ERRORS: Record<CrewError, [number, string]> = {
   ],
   played: [409, "They've already played today."],
   nudged: [409, 'They were already nudged today.'],
+  'nudges-off': [409, 'They turned crew nudges off.'],
+  'not-quiet': [
+    409,
+    `A seat opens after ${QUIET_DAYS} days in a row without playing.`,
+  ],
+  'not-all-played': [409, 'Post the crew result once everyone has played.'],
+  posted: [409, "Your crew's result is already posted today."],
 }
 
 function crewFail(e: CrewError): never {
@@ -804,6 +829,44 @@ async function routeCrewNudge(req: CrewNudgeReq): Promise<CrewRsp> {
   return crewInfo(day, uid)
 }
 
+/** Opens a quiet crewmate's seat, and lets them know by private message. */
+async function routeCrewSeat(req: CrewSeatReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const them = String(req.to)
+  const r = await openSeat(day, uid, them)
+  if (typeof r === 'string') crewFail(r)
+  const [name] = await namesOf([them])
+  if (name)
+    await reddit
+      .sendPrivateMessage({to: name, ...seatText(r.crew)})
+      .catch(err => console.warn(`seat message failed: ${err}`))
+  return crewInfo(day, uid)
+}
+
+async function routeCrewNudges(req: CrewNudgesReq): Promise<CrewRsp> {
+  const uid = await needUser()
+  await setNudges(uid, req.on === true)
+  return crewInfo(today(), uid)
+}
+
+/** Posts the crew's result for today as a comment on this post, once a crew, once everyone has played. */
+async function routeCrewPost(): Promise<CrewRsp> {
+  const uid = await needUser()
+  const day = today()
+  const postId = context.postId
+  if (!postId) throw new HttpError(409, 'Open the daily post to share.')
+  const r = await claimCrewPost(day, uid)
+  if (typeof r === 'string') crewFail(r)
+  await reddit
+    .submitComment({
+      id: postId as `t3_${string}`,
+      text: crewResultText(r.name, r.today, r.of, r.streak),
+    })
+    .catch(err => console.warn(`crew result comment failed: ${err}`))
+  return crewInfo(day, uid)
+}
+
 /** Uses today's one retry. The run restarts on the same cube and tier. */
 async function routeRetry(): Promise<RetryRsp> {
   const uid = await needUser()
@@ -879,12 +942,23 @@ async function routeBoard(req: BoardReq): Promise<BoardRsp> {
   }
 }
 
-/** Updates the player's streak flair after a counted run. A failure never stops the score. */
+/**
+ * Updates the player's flair after a counted run: their streak, and their crew's name when the
+ * subreddit turned crew flair on. A failure never stops the score.
+ */
 async function flairSolve(day: string, uid: string, st: Streak): Promise<void> {
   const sub = context.subredditName
   const name = context.username
-  if (!sub || !name || !(await setting('streakFlair'))) return
-  await flairAfterSolve(day, uid, name, sub, st).catch(err =>
+  if (!sub || !name) return
+  const streaks = await setting('streakFlair')
+  const crewId = (await setting('crewFlair')) ? await crewOf(uid) : undefined
+  const crew = crewId ? (await crewInfo(day, uid)).crew?.name : undefined
+  if (!streaks && !crew) return
+  const shown: Streak = streaks ? st : {...st, current: 0, best: 0}
+  const wrap = crew
+    ? (text: string | undefined): string => crewFlair(crew, text)
+    : undefined
+  await flairAfterSolve(day, uid, name, sub, shown, wrap).catch(err =>
     console.warn(`flair failed: ${err}`),
   )
 }
@@ -893,9 +967,11 @@ async function flairSolve(day: string, uid: string, st: Streak): Promise<void> {
 
 /** A yes/no subreddit setting; on unless a moderator turned it off. */
 async function setting(
-  name: 'autoPost' | 'pinPosts' | 'streakFlair',
+  name: 'autoPost' | 'pinPosts' | 'streakFlair' | 'crewFlair',
 ): Promise<boolean> {
-  return (await settings.get<boolean>(name).catch(() => undefined)) !== false
+  const v = await settings.get<boolean>(name).catch(() => undefined)
+  // crew flair is opt-in; the rest are on unless a moderator turned them off
+  return name === 'crewFlair' ? v === true : v !== false
 }
 
 /** Pins a post as a community highlight, if the subreddit wants that. */

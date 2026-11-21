@@ -223,6 +223,10 @@ export type CrewInviteReq = {names: string[]}
 export type CrewAnswerReq = {crewId: string; accept: boolean}
 /** Nudges a crewmate who hasn't played today, by private message. to is their user id. */
 export type CrewNudgeReq = {to: string}
+/** Opens the seat of a crewmate who has missed several days in a row. to is their user id. */
+export type CrewSeatReq = {to: string}
+/** Turns crew nudges to the asker on or off. */
+export type CrewNudgesReq = {on: boolean}
 /** The asker's crew afterwards. note says what didn't work, such as an invite that failed. */
 export type CrewRsp = CrewInfo & {note?: string}
 
@@ -250,6 +254,9 @@ export const Endpoint = {
   CrewAnswer: 'api/crew/answer',
   CrewLeave: 'api/crew/leave',
   CrewNudge: 'api/crew/nudge',
+  CrewSeat: 'api/crew/seat',
+  CrewNudges: 'api/crew/nudges',
+  CrewPost: 'api/crew/post',
   TelemetryStart: 'api/telemetry/journey/start',
   TelemetryProgress: 'api/telemetry/journey/progress',
   TelemetryInteraction: 'api/telemetry/journey/interaction',
@@ -284,6 +291,9 @@ export const EndpointMethod = {
   [Endpoint.CrewAnswer]: 'POST',
   [Endpoint.CrewLeave]: 'POST',
   [Endpoint.CrewNudge]: 'POST',
+  [Endpoint.CrewSeat]: 'POST',
+  [Endpoint.CrewNudges]: 'POST',
+  [Endpoint.CrewPost]: 'POST',
   [Endpoint.TelemetryStart]: 'POST',
   [Endpoint.TelemetryProgress]: 'POST',
   [Endpoint.TelemetryInteraction]: 'POST',

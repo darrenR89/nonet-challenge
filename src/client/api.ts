@@ -11,7 +11,9 @@ import {
   type CrewCreateReq,
   type CrewInviteReq,
   type CrewNudgeReq,
+  type CrewNudgesReq,
   type CrewRsp,
+  type CrewSeatReq,
   type DailyRsp,
   Endpoint,
   type JoinRsp,
@@ -112,3 +114,13 @@ export const leaveCrew = (): Promise<CrewRsp | undefined> =>
 /** Nudges a crewmate who hasn't played today, by private message. */
 export const nudgeCrew = (req: CrewNudgeReq): Promise<CrewRsp | undefined> =>
   call<CrewRsp>(Endpoint.CrewNudge, req)
+/** Opens the seat of a crewmate who has missed several days in a row. */
+export const openCrewSeat = (req: CrewSeatReq): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewSeat, req)
+/** Turns crew nudges to me on or off. */
+export const setCrewNudges = (
+  req: CrewNudgesReq,
+): Promise<CrewRsp | undefined> => call<CrewRsp>(Endpoint.CrewNudges, req)
+/** Posts the crew's result for today as a comment on the daily post. */
+export const postCrewResult = (): Promise<CrewRsp | undefined> =>
+  call<CrewRsp>(Endpoint.CrewPost, {})
