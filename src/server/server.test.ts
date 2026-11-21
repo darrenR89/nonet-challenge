@@ -1433,3 +1433,14 @@ test('pinning can be turned off', async () => {
   assert.equal(posts.length, 2)
   assert.deepEqual(pins, [])
 })
+
+test('a mod can try the game as a new player; everyone else sees it as usual', async () => {
+  const before = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(before.body.asNew, undefined)
+  const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuTryNew)
+  assert.match(menu.body.showToast?.text ?? '', /new player sees/)
+  const after = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(after.body.asNew, true)
+  as('t2_bob', 'bob')
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.asNew, undefined)
+})
