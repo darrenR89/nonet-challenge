@@ -695,9 +695,9 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   const u=Math.floor(Math.min(net.clientWidth/4,(net.clientHeight-130)/3,200)),k=u/180;g.style.setProperty('--u',`${u}px`);
   // the squares are copied flat and unturned, so every number reads upright on the net
   for(const [nm,R,D,c,r,cur] of netLayout(flatFace)){const fe=document.createElement('div');fe.className=cur?'nface cur':'nface';
-    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);if(cur){fe.style.outlineWidth=`${4/k}px`;fe.style.outlineOffset=`${3/k}px`;fe.style.setProperty('--gap',`${3/k}px`)}
+    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);fe.style.setProperty('--k',String(k));
     for(let j=0;j<3;j++)for(let i=0;i<3;i++){const ci=idx.get(key(nm,v3(v3(nm,R,i-1),D,j-1)));const src=stickers[ci]?.[0];if(!src)continue;
-      const st=src.cloneNode(true);st.style.left=`${i*60+5}px`;st.style.top=`${j*60+5}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
+      const st=src.cloneNode(true);st.style.left=`${i*58+8}px`;st.style.top=`${j*58+8}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
     g.appendChild(fe)}
   // the dashed squares are the key: they hold the same three numbers as the three squares only the
   // shown line has, so they say what can go on the outlined face. The note changes once they show.

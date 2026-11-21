@@ -573,5 +573,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
 /* on paper the cube body is black, so the ring is yellow there and the wash is stronger */
 @media (prefers-color-scheme:light){.nface .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}}
-/* the net's faces touch, so on paper the chosen face's ink ring sits on a cream band, to show against the black body */
-@media (prefers-color-scheme:light){.nface.cur{outline-color:#23252b;box-shadow:0 0 0 var(--gap,6px) #f6f5f0}}
+/* one thick rounded ring round the chosen face; on paper it is cream, to show against the black body */
+/* on the net the squares sit a little further in from each face's edge, so the seams are wide enough
+   for the chosen face's ring to run along them without covering any square */
+.nface .st{width:48px;height:48px}
+.nface.cur{outline:10px solid #eceae3;outline-offset:-5px;border-radius:14px}
