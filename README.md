@@ -2,7 +2,7 @@
 
 A daily sudoku cube for Reddit. Built with Devvit Web for Reddit's Game of the Day hackathon.
 
-*Nonet* is the sudoku word for a group of nine. Each face of the cube is one. There is one cube a day, the same for everyone, and a new one goes up just after midnight Pacific time. It's posted and pinned in the subreddit.
+_Nonet_ is the sudoku word for a group of nine. Each face of the cube is one. There is one cube a day, the same for everyone, and a new one goes up just after midnight Pacific time. It's posted and pinned in the subreddit.
 
 ## How to play
 
@@ -21,11 +21,11 @@ Some extra rules and tools:
 
 The difficulty follows the week:
 
-| Days | Difficulty |
-|:--|:--|
-| Monday, Tuesday | Easy |
-| Wednesday, Thursday, Sunday | Medium |
-| Friday, Saturday | Hard |
+| Days                        | Difficulty |
+| :-------------------------- | :--------- |
+| Monday, Tuesday             | Easy       |
+| Wednesday, Thursday, Sunday | Medium     |
+| Friday, Saturday            | Hard       |
 
 ### Scoring
 
@@ -69,10 +69,10 @@ Once it's installed, the app makes the first post. You can also use the subreddi
 
 ## Code
 
-| Path | What's in it |
-|:--|:--|
-| `src/server/` | The Devvit server: daily cubes, scoring, boards, streaks, flair, challenges, crews, posts and the wiki, all stored in Redis. |
-| `src/shared/` | Types and rules shared by the server and the game. |
-| `src/client/` | The feed card (`splash.ts`) and the game (`game.ts`, `nonet/`). |
-| `public/` | HTML entry points, self-hosted fonts and brand images. |
-| `tools/standalone/` | Builds a single offline HTML file of the game against a mock server, for demos. |
+| Path                | What's in it                                                                                                                 |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------- |
+| `src/server/`       | The Devvit server: daily cubes, scoring, boards, streaks, flair, challenges, crews, posts and the wiki, all stored in Redis. |
+| `src/shared/`       | Types and rules shared by the server and the game.                                                                           |
+| `src/client/`       | The feed card (`splash.ts`) and the game (`game.ts`, `nonet/`).                                                              |
+| `public/`           | HTML entry points, self-hosted fonts and brand images.                                                                       |
+| `tools/standalone/` | Builds a single offline HTML file of the game against a mock server, for demos.                                              |
