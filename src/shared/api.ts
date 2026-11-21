@@ -60,7 +60,13 @@ export type EventState = {
   myTeam: string | undefined
 }
 
-export type Streak = {current: number; best: number; played: number}
+export type Streak = {
+  current: number
+  best: number
+  played: number
+  /** True once this week's rest day has covered a missed day. */
+  restUsed?: boolean
+}
 
 /** What the asker has done today. */
 export type MyDay = {

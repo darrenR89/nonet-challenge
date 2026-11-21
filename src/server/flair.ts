@@ -104,7 +104,7 @@ export async function flairAfterSolve(
     await redis.zAdd(liveKey, {member: uid, score: dayNo(day)})
 }
 
-/** At the start of a day: streak flair for anyone who missed yesterday moves to their best. */
+/** At the start of a day: streak flair for anyone whose streak lapsed moves to their best. */
 export async function lapseFlair(
   day: string,
   sub: string,
@@ -115,10 +115,13 @@ export async function lapseFlair(
   const gone = rows.filter(r => r.score < cutoff).map(r => r.member)
   const names = await namesOf(gone)
   for (const [i, uid] of gone.entries()) {
+    const st = await getStreak(day, uid)
+    // the week's rest day covers yesterday: the flair stays until the streak really lapses
+    if (st.current > 0) continue
     await redis.zRem(liveKey, [uid])
     const name = names[i]
     const founder = founders ? await founderOf(uid) : undefined
-    const streak = streakFlair(await getStreak(day, uid), founder)
+    const streak = streakFlair(st, founder)
     // a crew member's flair keeps the crew's name in front
     const mine = await redis.hGet(flairKey, uid)
     const crew = mine?.startsWith(`${CREW_MARK} `)

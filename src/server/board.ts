@@ -8,7 +8,20 @@ import type {
   Streak,
   TierStats,
 } from '../shared/api.ts'
-import {addDays, weekKey} from '../shared/scoring.ts'
+import {weekKey} from '../shared/scoring.ts'
+import {
+  liveStreak,
+  playStreak,
+  restUsed,
+  type StreakState,
+} from '../shared/streak.ts'
+
+/** A stored streak hash as the shared streak rules read it. */
+export const stateOf = (h: Record<string, string>): StreakState => ({
+  last: h.last ?? '',
+  count: Number(h.streak ?? 0),
+  restWeek: h.restWeek ?? '',
+})
 
 export const BOARD_TOP = 9
 
@@ -126,35 +139,32 @@ export async function addToBoards(
   await redis.zIncrBy(boardKey.all, uid, total)
 }
 
-/** A streak counts days in a row with a finished, scored cube. */
+/** A streak counts days in a row with a finished, scored cube, with one rest day a week. */
 export async function bumpStreak(day: string, uid: string): Promise<Streak> {
   const h = await redis.hGetAll(userKey(uid))
-  let current = Number(h.streak ?? 0)
   const last = h.last ?? ''
-  if (last === day) {
-    // already counted today
-  } else if (last === addDays(day, -1)) current += 1
-  else current = 1
-  const best = Math.max(current, Number(h.best ?? 0))
+  const st = playStreak(stateOf(h), day)
+  const best = Math.max(st.count, Number(h.best ?? 0))
   const played = Number(h.played ?? 0) + (last === day ? 0 : 1)
   await redis.hSet(userKey(uid), {
-    streak: String(current),
+    streak: String(st.count),
     best: String(best),
     played: String(played),
     last: day,
+    restWeek: st.restWeek,
   })
-  return {current, best, played}
+  return {current: st.count, best, played, restUsed: restUsed(st, day)}
 }
 
-/** The streak as it stands today: it lapses after a missed day. */
+/** The streak as it stands today: it lapses after a missed day the week's rest day can't cover. */
 export async function getStreak(day: string, uid: string): Promise<Streak> {
   const h = await redis.hGetAll(userKey(uid))
-  const last = h.last ?? ''
-  const alive = last === day || last === addDays(day, -1)
+  const st = stateOf(h)
   return {
-    current: alive ? Number(h.streak ?? 0) : 0,
+    current: liveStreak(st, day),
     best: Number(h.best ?? 0),
     played: Number(h.played ?? 0),
+    restUsed: restUsed(st, day),
   }
 }
 

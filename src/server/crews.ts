@@ -13,7 +13,8 @@ import {
   QUIET_DAYS,
 } from '../shared/crew.ts'
 import {addDays, weekKey} from '../shared/scoring.ts'
-import {DAY_TTL, getDayRecord, namesOf} from './board.ts'
+import {liveStreak, playStreak} from '../shared/streak.ts'
+import {DAY_TTL, getDayRecord, namesOf, stateOf} from './board.ts'
 
 const crewKey = (id: string): string => `crew:${id}`
 /** A crew's members: user id → their place in joining order, zero-padded. */
@@ -113,11 +114,12 @@ async function bumpCrewStreak(id: string, day: string): Promise<void> {
   const h = await redis.hGetAll(crewKey(id))
   const last = h.last ?? ''
   if (last === day) return
-  const streak = last === addDays(day, -1) ? Number(h.streak ?? 0) + 1 : 1
+  const st = playStreak(stateOf(h), day)
   await redis.hSet(crewKey(id), {
-    streak: String(streak),
-    best: String(Math.max(streak, Number(h.best ?? 0))),
+    streak: String(st.count),
+    best: String(Math.max(st.count, Number(h.best ?? 0))),
     last: day,
+    restWeek: st.restWeek,
   })
 }
 
@@ -357,8 +359,6 @@ async function crewFor(day: string, uid: string): Promise<Crew | undefined> {
     week === undefined || crews < CREW_BOARD_FROM
       ? undefined
       : await redis.zRank(board, id)
-  const lastDay = h.last ?? ''
-  const alive = lastDay === day || lastDay === addDays(day, -1)
   return {
     id,
     name: h.name ?? 'crew',
@@ -367,7 +367,7 @@ async function crewFor(day: string, uid: string): Promise<Crew | undefined> {
     week: Math.round(week ?? 0),
     rank: asc === undefined ? undefined : crews - asc,
     crews,
-    streak: alive ? Number(h.streak ?? 0) : 0,
+    streak: liveStreak(stateOf(h), day),
     best: Number(h.best ?? 0),
     posted: (await redis.hGet(postedKey(day), id)) !== undefined,
   }

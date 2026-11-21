@@ -50,7 +50,7 @@ export type Crew = {
   rank: number | undefined
   /** Crews with points this week. */
   crews: number
-  /** Days in a row every member played. 0 once a day is missed. */
+  /** Days in a row every member played, with one rest day a week. 0 once it lapses. */
   streak: number
   best: number
   /** True once someone in the crew posted today's crew result comment. */
