@@ -17,10 +17,12 @@ export const OPEN_ENTRIES = [
 
 const pub = join(dirname(fileURLToPath(import.meta.url)), '..', 'public')
 const game = readFileSync(join(pub, 'game.html'), 'utf8')
-// each copy carries its own name in a comment: the Devvit upload keeps only one of several
-// files with the same contents, and the others then aren't found on Reddit
+// each copy carries its own name in a meta tag in the head: the Devvit upload keeps only one
+// of several files with the same contents (after it rewrites the page, which drops comments),
+// and the others then aren't found on Reddit
+if (!game.includes('<head>')) throw new Error('game.html has no <head>')
 for (const k of OPEN_ENTRIES)
   writeFileSync(
     join(pub, `open-${k}.html`),
-    `${game.trimEnd()}\n<!-- Nonet, opened on: ${k} -->\n`,
+    game.replace('<head>', `<head>\n<meta name="nonet-entry" content="${k}">`),
   )
