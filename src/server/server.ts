@@ -63,6 +63,7 @@ import {
   seatText,
 } from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
+import {isOffensive} from '../shared/names.ts'
 import {
   addDays,
   dayKey,
@@ -765,6 +766,11 @@ async function routeCrewCreate(req: CrewCreateReq): Promise<CrewRsp> {
   const uid = await needUser()
   const day = today()
   const name = cleanCrewName(req.name)
+  if (!name && typeof req.name === 'string' && isOffensive(req.name))
+    throw new HttpError(
+      400,
+      "That crew name can't be posted here. Pick another.",
+    )
   if (!name)
     throw new HttpError(
       400,

@@ -1,0 +1,78 @@
+# Nonet
+
+A daily sudoku cube for Reddit. Built with Devvit Web for Reddit's Game of the Day hackathon.
+
+*Nonet* is the sudoku word for a group of nine. Each face of the cube is one. There is one cube a day, the same for everyone, and a new one goes up just after midnight Pacific time. It's posted and pinned in the subreddit.
+
+## How to play
+
+A day of Nonet has three steps:
+
+1. **Pick your turns.** Choose how far today's cube is scrambled: 0 to 3 turns, or up to 2 on Hard days. More turns are harder and worth more points. Your choice is locked in until tomorrow.
+2. **Dial in.** Rotate the cube's rows and columns until no number repeats on a face or along a line.
+3. **Fill in.** Fill the empty squares. Every face holds 1 to 9 once. Every line of nine, running across three faces, also holds 1 to 9 once.
+
+Some extra rules and tools:
+
+- **Lock-first squares (★).** Locking them before any other square earns +50 each. Lock all three and you get a peek at tomorrow's clues.
+- **Help.** "Suggest a move" turns the cube for you, but it costs the no-help bonus.
+- **Flatten cube.** Unfolds the cube into a flat net if you'd rather fill it in flat. On a phone the number pad sits at the bottom of the screen. On a wide screen it sits on the right.
+- **How to play.** The ? button in the game has the full rules with pictures. "Practice cube" lets you play without scoring.
+
+The difficulty follows the week:
+
+| Days | Difficulty |
+|:--|:--|
+| Monday, Tuesday | Easy |
+| Wednesday, Thursday, Sunday | Medium |
+| Friday, Saturday | Hard |
+
+### Scoring
+
+Your first finished run each day is the one that counts.
+
+- **Dialling in:** up to 300 points for turns and 200 for speed.
+- **Filling in:** up to 300 for speed and 200 for accuracy. A wrong lock costs 25.
+- **Bonuses:** +100 for using no suggested turns, and +50 for each ★ square.
+- **Multiplier:** the total is multiplied by how many turns you picked and how hard the day is.
+- **Retry:** you get one retry a day. It multiplies the day's total by 0.8.
+
+## On Reddit
+
+- **Daily posts.** The app posts each day's cube and pins it. Every Monday it also posts the week's top nine and the solve of the week. The card in the feed shows today's cube number, how many people have played, the fastest time, and your streak and rank.
+- **Streaks and flair.** From 3 days in a row, a player's user flair shows their streak, such as "Nonet · 7-day streak". Once a streak lapses, the flair shows their best instead.
+- **Boards.** There are boards for today, the week and all time, each showing where you stand.
+- **Challenges.** Once you've finished, dare another player by username to beat your score on today's cube. They accept before they play.
+- **Nonet Crews (連).** Team up with up to two other players. You play the same cube on your own time, and your scores add up.
+  - Your crew streak grows on every day that all of you play.
+  - You can nudge a crewmate who hasn't played yet.
+  - Once everyone has played, you can post the crew's result as a comment.
+  - A crew's line-up is locked for the week.
+  - If a member misses three days in a row, the others can open their seat.
+  - Crew names are checked for offensive words.
+- **Wiki.** The app writes a wiki page at `/wiki/nonet` with the rules, the scoring table and records, and rewrites it every Monday.
+- **Subreddit settings.** Mods can turn off auto-posting, pinning, streak flair and crew flair (crew flair is off by default). The mod menu can also make a post by hand, post the week's board, update the wiki, or send the mod the list of recent cubes and their answers.
+
+The game works in light and dark mode, on phones and desktops, and inside the Reddit app.
+
+## Run it
+
+You need Node 24 or newer and a Reddit developer account.
+
+```bash
+npm install
+npm run dev     # playtest on your test subreddit; prints its link
+npm test        # types, lint, unit tests and the build
+```
+
+Once it's installed, the app makes the first post. You can also use the subreddit menu item "Nonet: new daily cube post".
+
+## Code
+
+| Path | What's in it |
+|:--|:--|
+| `src/server/` | The Devvit server: daily cubes, scoring, boards, streaks, flair, challenges, crews, posts and the wiki, all stored in Redis. |
+| `src/shared/` | Types and rules shared by the server and the game. |
+| `src/client/` | The feed card (`splash.ts`) and the game (`game.ts`, `nonet/`). |
+| `public/` | HTML entry points, self-hosted fonts and brand images. |
+| `tools/standalone/` | Builds a single offline HTML file of the game against a mock server, for demos. |
