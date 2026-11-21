@@ -46,8 +46,8 @@ const texts: string[] = []
 const pins: string[] = []
 /** User flair in the subreddit, by user id. */
 const flairs = new Map<string, string>()
-/** The wiki page as the app last wrote it, and how many times it was created. */
-const wiki = {content: '', created: 0}
+/** The wiki pages as the app last wrote them, and how many pages were created. */
+const wiki = {pages: new Map<string, string>(), created: 0}
 let autoPost: boolean | undefined = true
 let pinPosts: boolean | undefined = true
 let crewFlair = false
@@ -141,16 +141,17 @@ before(async () => {
   r.setPostFlair = async (o: {postId: string; flairTemplateId: string}) => {
     postFlairs.push([o.postId, o.flairTemplateId])
   }
-  r.getWikiPage = async () => {
-    if (!wiki.created) throw new Error('PAGE_NOT_FOUND')
-    return {content: wiki.content}
+  r.getWikiPage = async (_sub: string, page: string) => {
+    const content = wiki.pages.get(page)
+    if (content === undefined) throw new Error('PAGE_NOT_FOUND')
+    return {content}
   }
-  r.createWikiPage = async (o: {content: string}) => {
+  r.createWikiPage = async (o: {page: string; content: string}) => {
     wiki.created++
-    wiki.content = o.content
+    wiki.pages.set(o.page, o.content)
   }
-  r.updateWikiPage = async (o: {content: string}) => {
-    wiki.content = o.content
+  r.updateWikiPage = async (o: {page: string; content: string}) => {
+    wiki.pages.set(o.page, o.content)
   }
   r.updateWikiPageSettings = async () => ({})
   // every name is a Reddit user except "ghost"
@@ -245,7 +246,7 @@ beforeEach(() => {
   texts.length = 0
   pins.length = 0
   flairs.clear()
-  wiki.content = ''
+  wiki.pages.clear()
   wiki.created = 0
   pinPosts = true
   crewFlair = false
@@ -1395,14 +1396,14 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.match(text, /\[the Nonet wiki\]\(\/r\/nonetdaily\/wiki\/nonet\)/)
 
-  assert.equal(wiki.created, 1)
+  assert.equal(wiki.created, 7, 'the home page and six more')
   assert.match(
-    wiki.content,
+    wiki.pages.get('nonet/records') ?? '',
     /\| Mon 16 Nov \| u\/(ann|bob) · [\d,]+ \| u\/bob · /,
   )
   assert.match(
-    wiki.content,
-    /### Longest streaks\n\n1\. u\/ann · 2 days\n2\. u\/bob · 1 day\n/,
+    wiki.pages.get('nonet/records') ?? '',
+    /## Longest streaks\n\n1\. u\/ann · 2 days\n2\. u\/bob · 1 day\n/,
   )
 
   // the moderator menu rewrites the same page
@@ -1413,7 +1414,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     menu.body.navigateTo,
     'https://www.reddit.com/r/nonetdaily/wiki/nonet',
   )
-  assert.equal(wiki.created, 1)
+  assert.equal(wiki.created, 7, 'the menu rewrites the same pages')
 })
 
 test('a mod can message themselves the cube list; players never get it', async () => {
@@ -1431,4 +1432,15 @@ test('pinning can be turned off', async () => {
   await daily()
   assert.equal(posts.length, 2)
   assert.deepEqual(pins, [])
+})
+
+test('a mod can try the game as a new player; everyone else sees it as usual', async () => {
+  const before = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(before.body.asNew, undefined)
+  const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuTryNew)
+  assert.match(menu.body.showToast?.text ?? '', /new player sees/)
+  const after = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(after.body.asNew, true)
+  as('t2_bob', 'bob')
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.asNew, undefined)
 })

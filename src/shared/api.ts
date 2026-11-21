@@ -126,6 +126,8 @@ export type DailyRsp = {
   event: EventState | undefined
   /** False when nobody is logged in; scores are not kept. */
   loggedIn: boolean
+  /** A moderator asked to see the game as a new player: the start screen offers the guided practice. */
+  asNew?: boolean
   /** Today's cube number, counting from the first cube in this subreddit. */
   cubeNo: number
   stats: DayStats
@@ -280,6 +282,7 @@ export const Endpoint = {
   OnMenuWeekPost: 'internal/on/menu/week-post',
   OnMenuWiki: 'internal/on/menu/wiki',
   OnMenuCubes: 'internal/on/menu/cubes',
+  OnMenuTryNew: 'internal/on/menu/try-new',
   OnFormNewEvent: 'internal/form/new-event',
   OnFormEndEvent: 'internal/form/end-event',
   OnCronDaily: 'internal/cron/daily',
@@ -318,6 +321,7 @@ export const EndpointMethod = {
   [Endpoint.OnMenuWeekPost]: 'POST',
   [Endpoint.OnMenuWiki]: 'POST',
   [Endpoint.OnMenuCubes]: 'POST',
+  [Endpoint.OnMenuTryNew]: 'POST',
   [Endpoint.OnFormNewEvent]: 'POST',
   [Endpoint.OnFormEndEvent]: 'POST',
   [Endpoint.OnCronDaily]: 'POST',

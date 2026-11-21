@@ -30,7 +30,7 @@
       },
       {
         "label": "Nonet: update the wiki",
-        "description": "Rewrite the Nonet wiki page: rules, scoring and records.",
+        "description": "Rewrite the Nonet wiki pages: rules, scoring and records.",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/on/menu/wiki"
@@ -41,6 +41,13 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/on/menu/cubes"
+      },
+      {
+        "label": "Nonet: try it as a new player",
+        "description": "For the next hour, today's post shows you the start screen and guided practice a first-time player sees. Your scores and streak are untouched.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/try-new"
       }
     ]
   },

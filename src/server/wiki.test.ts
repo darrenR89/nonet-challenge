@@ -4,7 +4,7 @@ import type {Board} from '../shared/api.ts'
 import {crewFlair} from '../shared/crew.ts'
 import {streakFlair} from './flair.ts'
 import {clockTime, spotText} from './records.ts'
-import {wikiText} from './wiki.ts'
+import {pageName, WIKI_PAGES, wikiPages} from './wiki.ts'
 
 const board = (rows: [string, number][]): Board => ({
   key: 'k',
@@ -73,52 +73,88 @@ test('founder flair goes in front of the streak', () => {
   )
 })
 
-test('the wiki has the week, the multipliers and the records', () => {
-  const md = wikiText({
-    day: '2026-11-23',
-    flair: true,
-    founders: true,
-    streaks: board([['ann', 12]]),
-    all: board([]),
-    weeks: [
-      {
-        week: '2026-W47',
-        from: '2026-11-16',
-        players: 1204,
-        winner: {name: 'bob', score: 14000},
-        spot: {
-          name: 'ann',
-          score: 2850,
-          day: '2026-11-20',
-          tier: 3,
-          time: 200,
-          stars: 3,
-          wrong: 0,
-        },
+const data = {
+  day: '2026-11-23',
+  flair: true,
+  founders: true,
+  streaks: board([['ann', 12]]),
+  all: board([]),
+  weeks: [
+    {
+      week: '2026-W47',
+      from: '2026-11-16',
+      players: 1204,
+      winner: {name: 'bob', score: 14000},
+      spot: {
+        name: 'ann',
+        score: 2850,
+        day: '2026-11-20',
+        tier: 3,
+        time: 200,
+        stars: 3,
+        wrong: 0,
       },
-    ],
-  })
-  assert.match(md, /\| Easy \| 2 \| 0 to 3 \|/)
+    },
+  ],
+}
+
+test('the wiki is a home page and a page for each part, all linked', () => {
+  const pages = wikiPages(data, 'nonetdaily')
+  assert.deepEqual(
+    [...pages.keys()],
+    ['nonet', ...WIKI_PAGES.map(([p]) => `nonet/${p}`)],
+  )
+  for (const [name, md] of pages) {
+    assert.match(md, /^# /, `${name} starts with a title`)
+    for (const [p] of WIKI_PAGES)
+      assert.ok(
+        md.includes(`(/r/nonetdaily/wiki/nonet/${p})`),
+        `${name} links to ${p}`,
+      )
+    assert.match(md, /last updated Mon 23 Nov/)
+  }
+  const home = pages.get(pageName()) ?? ''
+  assert.match(home, /\| Easy \| 2 \| 0 to 3 \|/)
+  assert.match(home, /guided practice cube/)
+})
+
+test('scoring has the multipliers, the week and a worked example that adds up', () => {
+  const md = wikiPages(data, 's').get(pageName('scoring')) ?? ''
   assert.match(md, /\| Medium \| 3 \| 0 to 3 \|/)
   assert.match(md, /\| Hard \| 2 \| 0 to 2 \|/)
   assert.match(md, /\| 3 \| ×2 \| ×3 \| not offered \|/)
-  assert.match(md, /Nonet · 3-day streak/)
-  assert.match(md, /first 100 players .* "Nonet founder #1"/)
-  assert.match(md, /1\. u\/ann · 12 days/)
-  assert.match(md, /### All-time points\n\nNobody yet\./)
+  const rows = [...md.matchAll(/^\| [^|*]+ \| ([\d,]+) \|$/gm)].map(m =>
+    Number(m[1]?.replace(/,/g, '')),
+  )
+  const raw = rows.pop() ?? 0
+  assert.equal(
+    rows.reduce((a, b) => a + b, 0),
+    raw,
+    'the example lines add up',
+  )
+  const total = Number(
+    md
+      .match(/\*\*×2 for 2 turns on Medium\*\* \| \*\*([\d,]+)\*\*/)?.[1]
+      ?.replace(/,/g, ''),
+  )
+  assert.equal(total, raw * 2)
+})
+
+test('streaks, flair, crews and records each have their page', () => {
+  const pages = wikiPages(data, 's')
+  const streaks = pages.get(pageName('streaks')) ?? ''
+  assert.match(streaks, /one day off a week/)
+  assert.match(streaks, /Nonet · 3-day streak/)
+  assert.match(streaks, /first 100 players .* "Nonet founder #1"/)
+  assert.match(pages.get(pageName('challenges-and-crews')) ?? '', /crew of 3/)
+  const rec = pages.get(pageName('records')) ?? ''
+  assert.match(rec, /1\. u\/ann · 12 days/)
+  assert.match(rec, /## All-time points\n\nNobody yet\./)
   assert.match(
-    md,
+    rec,
     /\| Mon 16 Nov \| u\/bob · 14,000 \| u\/ann · 2,850 on Fri 20 Nov \| 1,204 \|/,
   )
-  assert.match(md, /last updated Mon 23 Nov/)
-  assert.doesNotMatch(
-    wikiText({
-      day: '2026-11-23',
-      flair: false,
-      streaks: board([]),
-      all: board([]),
-      weeks: [],
-    }),
-    /flair/,
-  )
+  const quiet = wikiPages({...data, flair: false, founders: false}, 's')
+  for (const md of quiet.values())
+    assert.doesNotMatch(md, /flair here|founder #/)
 })

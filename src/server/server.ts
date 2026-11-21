@@ -314,6 +314,9 @@ async function route(
       case Endpoint.OnMenuCubes:
         rsp = await routeMenuCubes()
         break
+      case Endpoint.OnMenuTryNew:
+        rsp = await routeMenuTryNew()
+        break
       case Endpoint.OnFormNewEvent:
         rsp = await routeFormNewEvent(await readJson<unknown>(reqMsg))
         break
@@ -426,6 +429,7 @@ async function routeDaily(): Promise<DailyRsp> {
     boards: await dayBoards(day, uid),
     event: await eventFor(day, uid),
     loggedIn: !!uid,
+    ...(uid && (await redis.get(tryNewKey(uid))) ? {asNew: true} : {}),
     cubeNo: cubeNumber(day),
     stats: await getDayStats(day),
     subreddit: context.subredditName ?? '',
@@ -1277,6 +1281,30 @@ async function routeMenuCubes(): Promise<UiResponse> {
   } catch (err) {
     console.warn(`cube list failed: ${err}`)
     return {showToast: "The cube list couldn't be sent."}
+  }
+}
+
+/** A moderator trying the game as a new player, for an hour. */
+const tryNewKey = (uid: string): string => `trynew:${uid}`
+export const TRY_NEW_SECONDS = 60 * 60
+
+async function routeMenuTryNew(): Promise<UiResponse> {
+  const uid = await who()
+  if (!uid) return {showToast: 'Log in to try it as a new player.'}
+  await redis.set(tryNewKey(uid), '1')
+  await redis.expire(tryNewKey(uid), TRY_NEW_SECONDS)
+  const post = await redis.hGet(DAILY_POSTS, today())
+  const sub = context.subredditName
+  return {
+    showToast: {
+      text: "For the next hour, today's post shows you what a new player sees.",
+      appearance: 'success',
+    },
+    ...(post && sub
+      ? {
+          navigateTo: `https://www.reddit.com/r/${sub}/comments/${post.replace(/^t3_/, '')}/`,
+        }
+      : {}),
   }
 }
 

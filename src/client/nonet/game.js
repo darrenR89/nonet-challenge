@@ -85,12 +85,16 @@ async function playDaily(t){
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
   restart();
 }
+// today's cube as you left it: every square filled and locked, the clock off. Nothing is sent.
+function showSolvedDay(){P=D.puzzle;daily=true;sent=true;tier=P.tier;restart();vals=P.sol.slice();locked=vals.map(Boolean);stage=3;sel=-1;render();updateRunButtons();
+  const b=$('showRes');b.textContent='Back to today';b.hidden=false}
 async function loadDaily(){
   const r=await getDaily();
   if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}
   else if(r){D=r;guest=true;online=false;today=r.day;level=r.level??levelOf(today);twistDay=offlineTwist()}
   else{online=false;level=levelOf(today);twistDay=offlineTwist()}
   if(online)void claimPending(r);
+  if(D&&D.asNew)try{localStorage.removeItem(PRACTICED)}catch(e){}
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
   // a first visit starts on 0 turns, just the fill-in, so the first scored cube teaches one thing at a time
   if(twistDay===null&&!(D&&D.streak&&D.streak.played))tier=0;
@@ -98,7 +102,7 @@ async function loadDaily(){
   applyTwistLock();
   // locked in earlier today: today's cube waits behind the start screen, paused,
   // and picks up where you left it if this device saved a run
-  if(online&&r.puzzle){P=r.puzzle;daily=true;sent=r.my.score!==undefined;restart();if(!sent){restoreRun();pauseNow()}}
+  if(online&&r.puzzle){if(r.my.score!==undefined)showSolvedDay();else{P=r.puzzle;daily=true;sent=false;restart();restoreRun();pauseNow()}}
   renderSplashExtras();splashTwist();openFromCard();
   $('spPlay').disabled=false;
   journey.ready();
@@ -139,7 +143,7 @@ function splashTwist(){
     el.textContent=!D?'':!ts||!ts.picks?'No one yet':ts.solves?`${num(ts.picks)} picked · avg ${fmt(ts.avgTime)} · best ${num(ts.best)}`:`${num(ts.picks)} picked · no solves yet`});
   const lk=twistDay!==null;
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Turn multiplier';
-  const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
+  const done=online&&D&&D.my.score!==undefined&&!firstTimer(),isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
   const first=firstTimer();$('spSkip').hidden=!first;$('spPractice').parentElement.hidden=first; // Learn to play stands in for Practice
   $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':first?'Learn to play · 1 min':'Play today\'s cube';
@@ -176,7 +180,7 @@ function wireChip(root){const c=root.querySelector('.chip');if(c)c.onclick=()=>{
 function wireSides(root){root.querySelectorAll('.sides button').forEach(b=>b.onclick=async()=>{b.disabled=true;
   const r=await joinTeam({eventId:D.event.event.id,team:b.dataset.team});if(r){D.event=r.event;journey.interaction('pick_team',b.dataset.team);renderSplashExtras();if(lastScore)renderEndCard()}else{b.disabled=false;b.textContent=lastError||'Try again'}})}
 function renderSplashExtras(){
-  const s=D&&D.streak;$('spStreak').hidden=!(online&&s&&s.current);
+  const s=D&&!firstTimer()&&D.streak;$('spStreak').hidden=!(online&&s&&s.current);
   if(online&&s&&s.current)$('spStreak').innerHTML=`<svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1c.6 3-1.2 4.6-2.6 6.2C4 8.8 3 10.4 3 12.6 3 16 5.3 19 8 19s5-3 5-6.4c0-2.3-1-3.9-2-5-.2 1.5-.9 2.6-2 3.1.4-2.6.2-6.4-1-9.7Z" fill="#23252b"/><path d="M8 18c-1.4 0-2.4-1.2-2.4-2.7 0-1.4.9-2.3 1.7-3.2.1 1 .6 1.6 1.3 1.8.1-.9.5-1.6 1.1-2.1.6.9 1 1.9 1 3.3C10.7 16.7 9.5 18 8 18Z" fill="#f5c12e"/></svg><span>${s.current}-day streak</span>`,$('spStreak').title=`${s.current} day${s.current===1?'':'s'} in a row · best ${s.best}`;
   const ev=D&&D.event;$('spEvent').hidden=!ev;
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
@@ -189,7 +193,7 @@ function renderSplashExtras(){
 // the team challenge, the boards. Each opens in place; the feed card can ask for one.
 function dnLink(k,label,sub){return `<div class="dn-row"><button type="button" class="dn-chip dn-go" data-dn="${k}"><b>${label}</b><span>${sub}</span></button></div>`}
 function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="button" class="dn-chip" data-dn="${k}" aria-expanded="false"><b>${label}</b><span>${sub}</span></button><div class="more" hidden>${body}</div></div>`}
-function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined;el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
+function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined&&!firstTimer();el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
   const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
   const me=D.boards.day.me,st=D.streak,ev=D.event,mine=ev&&ev.teams.find(t=>t.team.id===ev.myTeam);
   const side=(me?`<span class="dn-rank">#${me.rank} today</span>`:'')+(st&&st.current?`<span class="dn-streak">${st.current}-day streak</span>`:'')+(D.my.starsWon?`<span class="dn-streak">${'★'.repeat(D.my.starsWon)}</span>`:'');
@@ -205,7 +209,7 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
     b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
   wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el);wireCrew(el,crewChanged)}
 // your crew on the cover before today is done: one row, open to see who has played, nudge, invite or leave
-function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undefined,show=online&&D&&D.crew&&!done;el.hidden=!show;if(!show)return;
+function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undefined,show=online&&D&&D.crew&&!done&&!firstTimer();el.hidden=!show;if(!show)return;
   const open=!!el.querySelector('.dn-chip[aria-expanded="true"]');
   el.innerHTML=`<div class="dn-acts">${dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew))}</div>`;
   const b=el.querySelector('.dn-chip'),m=b.nextElementSibling;if(open||D.crew.invites.length&&!D.crew.crew){m.hidden=false;b.setAttribute('aria-expanded','true')}
@@ -233,11 +237,14 @@ function goToday(){let sub='';try{sub=context.subredditName??''}catch(e){}
 const PRACTICED='nonet-practiced';
 function practiced(){try{return !!localStorage.getItem(PRACTICED)}catch(e){return false}}
 function notePracticed(){try{localStorage.setItem(PRACTICED,'1')}catch(e){}}
-function firstTimer(){return !practiced()&&twistDay===null&&!paused&&!(daily&&P)&&!(D&&(D.past||D.my&&D.my.score!==undefined||D.streak&&D.streak.played))}
+function firstTimer(){if(D&&D.asNew)return !practiced()&&!paused; // a mod trying it as a new player
+  return !practiced()&&twistDay===null&&!paused&&!(daily&&P)&&!(D&&(D.past||D.my&&D.my.score!==undefined||D.streak&&D.streak.played))}
 $('spSkip').onclick=()=>{notePracticed();journey.interaction('skip_practice');splashTwist();$('spPlay').click()};
 $('spPlay').onclick=()=>{
   if(tx.busy)return;if(firstTimer()){journey.interaction('first_practice');$('spPractice').click();return}if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();
-  if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
+  if(daily&&P&&P.tier===tier){void tx.enter({count:stage!==3,before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
+  // today is done but this visit hasn't loaded the cube: show it solved, not a fresh run
+  if(online&&D&&D.my.score!==undefined&&D.puzzle){void tx.enter({count:false,before:hideSplashNow,ready:()=>{showSolvedDay();return new Promise(r=>setTimeout(r,60))}});return}
   journey.start();
   // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
   const locked=twistDay!==null;
@@ -316,7 +323,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
-  hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
+  hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;$('showRes').textContent='Show result';penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
 const WALK=[
@@ -504,7 +511,7 @@ const pageUrl=()=>/^https?:$/.test(location.protocol)?location.href.split('#')[0
 function copyResult(txt,ev){journey.interaction('share','comment');
   const done=()=>{const b=$('eComment');if(b)b.textContent='Copied. Paste it in the thread';try{if(ev)exitExpandedMode(ev)}catch(e){}};
   navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})}
-$('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
+$('showRes').onclick=()=>{if(!runScore){void tx.leave({covered:showSplash});return}$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
    ${s.tut?'':`<tr><td>Dial in turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
@@ -651,7 +658,7 @@ function updateStatus(){
   if(!P)return;const T=TIERS[P.tier];
   const nClues=P.given.filter(Boolean).length,home=locked.reduce((n,l,i)=>n+(l&&P.given[i]===vals[i]?1:0),0);
   const t=stage===3?t1+t2:nowSec();
-  $('timer').textContent=fmt(t);$('timer').hidden=isPrac();$('reveal').disabled=stage===3;
+  $('timer').textContent=fmt(t);$('timer').hidden=isPrac()||stage===3&&!t1&&!t2;$('reveal').disabled=stage===3;
   $('status').textContent=gaveUp?'Answer shown · not scored':'';
   $('status').classList.toggle('win',stage===3);
   showMisses();

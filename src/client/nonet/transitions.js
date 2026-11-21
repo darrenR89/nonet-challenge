@@ -103,12 +103,13 @@ export function makeTransitions({cubeEl, faceEls, stageEl, view, apply}) {
   // that starts it. hold: shown over the yellow before the cube comes in; it resolves true to go
   // on, or false to go back, which shrinks the yellow away again.
   const start = r => (typeof r === 'function' ? r() : r);
-  async function enter({hold, before, ready, done} = {}) {
+  // count: false skips the countdown, for a cube that is already solved and only being looked at
+  async function enter({hold, before, ready, done, count = true} = {}) {
     if (busy) return;
     if (reduce()) {
       busy = true;
       if (hold && !(await hold())) { busy = false; return }
-      before?.(); await start(ready); await countdown(); busy = false; done?.(); return;
+      before?.(); await start(ready); if (count) await countdown(); busy = false; done?.(); return;
     }
     busy = true;
     const L = layer(), S = slots(), Y = yellow();
@@ -164,7 +165,7 @@ export function makeTransitions({cubeEl, faceEls, stageEl, view, apply}) {
     L.remove();
     setTimeout(() => cubeEl.classList.remove('tx-digits'), 900);
     await wait(500);
-    await countdown();
+    if (count) await countdown();
     busy = false;
     done?.();
   }

@@ -316,6 +316,14 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         notify: s.notify,
         duels: duels(day, s),
         crew: s.played ? crewSample(day, s) : undefined,
+        // the mods' "try it as a new player": set nonet-as-new in sessionStorage
+        asNew: (() => {
+          try {
+            return sessionStorage.getItem('nonet-as-new') === '1' || undefined
+          } catch {
+            return undefined
+          }
+        })(),
       })
     case 'api/card': {
       // the prototype's card-state switcher can stand in for a quiet day or a finished one
