@@ -35,7 +35,7 @@
   display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px 10px 20px}
 .cv-vol{border:1px solid currentColor;outline:1px solid currentColor;outline-offset:3px;padding:5px 4px;margin:4px;width:max-content}
 /* one character per line, written across: vertical text spilled out of the box on iOS */
-.cv-kanji{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--c-kanji);line-height:1;font-size:22px}
+.cv-kanji{display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--c-kanji);line-height:1;font-size:22px}
 .cv-kanji>span{display:block;width:1em;text-align:center}
 .cv-imprint{writing-mode:vertical-rl;font-family:var(--c-code);font-size:11px;letter-spacing:.24em;text-transform:uppercase}
 .cv-dot{display:inline-block;margin:.6em 0}
@@ -336,4 +336,82 @@
   .cv-title .cv-stats div{flex-direction:column;align-items:flex-start;gap:2px}
   .cv-title .cv-stats div:first-child dd{order:0}
   .cv-title .cv-stats div:last-child:not(:first-child){align-items:flex-end}
+}
+
+/* a wide but short window, like a Reddit post on desktop (about 512px tall): the cover fills the
+   frame's height instead of a framed page, with tighter space so Play and both links fit */
+@media (min-width:600px) and (max-height:720px){
+  .cv{padding:0}
+  .splash.cv{padding:0}
+  .cv-cover{--H:100svh;width:max(calc(var(--H) * .9),440px)}
+  .cv-spine{padding:12px 10px 14px}
+  .cv-title{--top:48px;gap:10px}
+  .cv-mark{margin:0 auto;width:min(100%,300px);align-self:center}
+  .cv-no b{font-size:46px}
+  .cv-issue .cv-level .cv-tag{font-size:14px;padding:4px 10px 3px}
+  .cv-title .cv-stats,.cv-title .cv-first{margin-top:-10px;padding:8px 12px 9px}
+  .cv-body{gap:24px;padding-bottom:12px}
+  .cv-play{height:44px}
+  .cv-go .cv-links button{height:38px}
+  .is-done .cv-title{--top:36px}
+  .is-done .cv-mid{gap:12px;padding-top:12px}
+  .is-done .cv-play{height:38px}
+  .dn-res{padding:6px 12px 8px}
+  .dn-score b{font-size:34px}
+  .dn-chip{padding-block:6px}
+  .dn-chip span{display:none}
+}
+
+/* every width: the spine sits hard against the right edge at full height, and the title block and
+   Play are centred across the space left of it */
+/* in the game too: no frame round the cover, so the spine runs from the very top to the very bottom */
+.splash.cv{padding:0}
+@media (min-width:600px){
+  .cv,.splash.cv{padding:0}
+  .cv-cover{--H:100svh;width:100%}
+  .cv-title,.cv-mid{width:min(100%,400px);align-self:center}
+}
+@media (min-width:600px) and (max-height:720px){
+  .cv-cover{width:100%}
+  .cv-title,.cv-mid{width:min(100%,340px)}
+}
+
+/* dark: the same cover turned over. The body goes sumi black with washi type and rules, and the
+   spine becomes the paper, with the ink type on it. Yellow stays yellow, with dark type on it. */
+@media (prefers-color-scheme:dark){
+  .cv{--c-ink:#eceae3;--c-paper:#121316;--c-lead:#9a9ea8;--c-hair:rgba(236,234,227,.25);
+    color-scheme:dark;background:#121316}
+  /* the spine: paper, ink type */
+  .cv-spine{background:#e9ece9 url(/brand/paper.jpg) center/cover;color:#23252b}
+  .cv-date{color:#23252b}
+  .cv-date .cv-dm{color:#23252b;text-decoration:underline 3px var(--c-yellow);text-underline-offset:4px}
+  .cv-date .cv-yr{color:rgb(35 37 43 / .62)}
+  /* the print, as light lines on black */
+  .cv::before,.cv-body::before,.cv-mid::before{filter:invert(1);mix-blend-mode:screen}
+  .cv-mark img{content:url(/brand/nonet-wordmark.svg)}
+  /* dark type on every yellow */
+  .cv-play,.cv-streak,.dn-res,.dn-res .dn-cap,.dn-res .dn-meta{color:#121316}
+  .cv-streak svg path:first-child{fill:#121316}
+  .dn-res .dn-rank{background:#121316;color:#eceae3}
+  .is-done .cv-play{color:var(--c-ink)}
+  .cv .event,.cv .peek,.su-guest{background:rgba(255,255,255,.06)}
+  /* the setup screen keeps its yellow page with ink type */
+  .cv.setup{--c-ink:#23252b;--c-paper:#f3f2ec;--c-lead:#5b5f69;color-scheme:light}
+}
+
+/* short screens (a small phone, a desktop post): the played card and the setup page tighten up
+   so nothing scrolls */
+@media (max-height:700px){
+  .is-done .cv-mid{gap:20px}
+  .is-done .cv-title{--top:28px}
+}
+@media (max-height:700px){
+  .cv.setup{padding-top:12px;padding-bottom:12px}
+  .su-in{gap:8px}
+  .su-lead{display:none}
+  .setup h2{font-size:24px;margin-top:0}
+  .setup .cv-twists{gap:6px}
+  .setup .cv-twists>*{min-height:44px;padding:6px 14px}
+  .setup .cv-twists b{font-size:18px}
+  .su-go{margin-top:2px}
 }

@@ -98,10 +98,12 @@ export function makeRoom(canvas) {
     raf = t < 1 ? requestAnimationFrame(frame) : 0;
   };
   // eases to the new view like the cube's .35s transition, or jumps there while dragging
+  let pending = false;
   function set(rx, ry, k, instant) {
     cancelAnimationFrame(raf); raf = 0;
     to = {rx, ry, k};
-    if (instant || reduce()) { view = to; draw(); return; }
+    // while dragging, many pointer moves can land in one frame: draw once per frame, at the latest view
+    if (instant || reduce()) { view = to; if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; draw(); }); } return; }
     from = view; t0 = performance.now(); raf = requestAnimationFrame(frame);
   }
   new ResizeObserver(() => draw()).observe(canvas);

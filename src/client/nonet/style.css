@@ -73,6 +73,8 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
   backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:background .8s ease-out}
 /* the gaps between cells flash yellow once when the cube lines up and once when it is solved */
 .stage.gridflash .face{background:var(--yellow);transition:background .12s}
+.core{position:absolute;inset:4px;background:var(--body-ink);backface-visibility:hidden;-webkit-backface-visibility:hidden;pointer-events:none}
+.stage.gridflash .core{background:var(--yellow);transition:background .12s}
 .st{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(.5px);width:50px;height:50px;
   display:grid;place-items:center;border-radius:9px;color:var(--ai);cursor:pointer;transition:background .15s}
 .st .dg{height:26px;width:auto;display:block;pointer-events:none}
@@ -91,7 +93,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .st.starwon::before{content:"★+50";color:var(--yellow)}
 /* squares shared by both lines of a ring: soft ai blue, under the yellow line outline */
 .st.ov{background:rgb(143 176 255 / .26)!important}
-.st.twin{outline:2px dashed var(--lead);outline-offset:-5px}
+.st.twin{outline:3px dashed var(--washi);outline-offset:-5px}
 .st.flash{animation:flash .45s ease}
 @keyframes flash{from{filter:brightness(1.4)}to{filter:none}}
 .st.shake{animation:shake .4s ease}
@@ -431,12 +433,19 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .prow .timer{font-variant-numeric:tabular-nums}
 .prow .misses{display:inline-flex;align-items:center;gap:3px}
 .prow .misses[hidden]{display:none}
+/* the helpers row, under the progress bar: Suggest a move, the helpers left, Flatten cube */
+.helpers{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:100%;flex:1 1 100%}
+.helpers #suggest{justify-self:start}.helpers #flatBtn{justify-self:end}
+.hcount{display:grid;justify-items:center;line-height:1.2;font:500 12px var(--code);color:var(--lead)}
+.hcount b{font:600 15px var(--code);color:var(--washi);font-variant-numeric:tabular-nums}
+.hcount[hidden]{display:none}
+.helpers:not(:has(>:not([hidden]))){display:none}
 .runbar[hidden]{display:none}
 
-/* Suggest sits with Help and music at the top right */
-.hdr .sugg{width:auto;padding:0 12px;font:500 13px var(--code);letter-spacing:.02em;white-space:nowrap}
-.hdr .sugg[hidden]{display:none}
-.hdr .sugg:disabled{opacity:.4}
+/* the helper buttons */
+.sugg{width:auto;padding:0 12px;font:500 13px var(--code);letter-spacing:.02em;white-space:nowrap}
+.sugg[hidden]{display:none}
+.sugg:disabled{opacity:.4}
 /* the number pad in a frame, with pencil and lock-in as tabs on its top edge */
 .padbox{border:1px solid var(--edge);border-radius:0 var(--r) var(--r) var(--r);padding:8px;background:var(--slate);position:relative;margin-top:36px}
 .padbox[hidden]{display:none}
@@ -451,6 +460,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the cube's area takes all the height left between the top bar and the pad, and the cube sits in
    its middle, so it stays centred whatever the screen height */
 .wrap{min-height:100svh;box-sizing:border-box}
+/* the room's faint grid fades out past the cube; it must never make the page taller than the screen */
+.wrap{overflow:visible clip}
 .stage{flex:1 1 auto;height:auto;min-height:min(80vw,320px)}
 /* the share card's preview in the share dialog */
 .modal .body img.sharecard{display:block;width:auto;max-width:100%;height:auto;max-height:min(56vh,525px);margin:0 auto 10px;border-radius:10px;border:1px solid var(--edge)}
@@ -473,3 +484,99 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* practice walkthrough: the next thing to tap pulses yellow */
 .st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:pulse 1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+
+/* light: the board on paper. The page takes the cover's paper and faint print, and the cube is
+   black lacquer with cream stickers and ink numbers. Dark keeps the graphite board above. */
+@media (prefers-color-scheme:light){
+  :root{--sumi:#f3f2ec;--slate:#e6e4dc;--tile:#e9e7df;--edge:#cfccc2;--washi:#23252b;--lead:#5b5f69;
+    --peer:#dde3f2;--done:#f6e7b8;--ai:#3d5fb8;--beni:#b8423f;
+    --body-ink:#23252b;--cell-top:#f6f5f0;--cell-right:#e4e2da;--cell-left:#d6d3c9;color-scheme:light}
+  body{background:#e9ece9 url(/brand/paper.jpg) center/cover fixed;color:#23252b}
+  body::after{opacity:.25;mix-blend-mode:multiply}
+  body::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-30vw;bottom:-6vh;height:96vh;aspect-ratio:1000/1342;
+    background:url(/brand/harunobu-line.jpg) center/contain no-repeat;mix-blend-mode:multiply;opacity:.14}
+  h1 img{content:url(/brand/nonet-wordmark-ink.svg)}
+  /* lanes: opaque tints over each sticker's own shade, so the black body never shows through */
+  .st.ov{background:color-mix(in srgb,var(--shade) 72%,#5b7fd6)!important}
+  .st.la,.st.lb{box-shadow:inset 0 0 0 2px #d9a514}
+  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2px #d9a514}
+  .st.wrong{color:#fff!important}
+  .arw:hover{background:#fff}
+  .testkit{background:rgba(243,242,236,.94)}
+  .modal{background:rgba(35,37,43,.45)}
+  .penalty{text-shadow:0 2px 0 #f3f2ec}
+  .moment b{text-shadow:0 2px 0 #121316,0 0 18px rgba(0,0,0,.6)}
+  /* dark type on every yellow */
+  .results button,.splash .play,button.primary,.results .more button.primary,.progress .pstage.on,.results .signup{color:#121316}
+  @keyframes sweep{0%{background:var(--tile)}25%{background:var(--yellow);color:#121316}100%{}}
+  /* the interface buttons are solid ink on the paper */
+  header button,.modes button,.modal button:not(.primary):not([aria-selected]):not([aria-pressed]){background:#23252b;color:#eceae3;border-color:#23252b}
+  header button:hover,.modes button:hover{border-color:#5b5f69}
+  /* the run's progress bar gets an ink outline so it reads on paper */
+  .prow .pbar{height:8px;border-radius:3px;background:#f3f2ec;box-shadow:0 0 0 1.5px #23252b}
+  .prow .pbar i{border-radius:0}
+  /* yellow type is too faint on paper: a deep gold instead */
+  .rules .diag figcaption,.rules .callout b,.tx-count b,.pstage.done .plbl::before{color:#9a6f00}
+}
+/* short windows (a desktop post): the cube's area may shrink so the page never scrolls */
+@media (max-height:600px){
+  .stage{min-height:200px}
+  .wrap{padding-block:12px 16px;gap:10px}
+}
+/* ---------- flatten helper ----------
+   Step one: the main clock stops for 5 seconds while the player turns the cube and taps a square.
+   Step two: a cross of that square's two lines of nine, with every face they cross shown whole,
+   on a 20-second clock of its own. The cube, its room and the number pad step away meanwhile. */
+.stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
+body:has(.net:not([hidden])) .padbox{display:none}
+.wrap:has(.net:not([hidden])){padding-bottom:16px}
+.stage:has(.pick:not([hidden])) .st{cursor:pointer}
+
+/* one clock for both steps: an ink pill with a yellow ring, pinned to the top middle, with fold back inside */
+.nclock{position:absolute;z-index:7;top:4px;left:50%;translate:-50% 0;display:flex;align-items:center;gap:10px;
+  padding:6px 6px 6px 8px;border-radius:999px;background:#23252b;color:#eceae3;font:500 22px var(--code);font-variant-numeric:tabular-nums}
+.nclock[hidden]{display:none}
+.nclock i{width:30px;height:30px;border-radius:50%;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),#4a4d55 0);
+  -webkit-mask:radial-gradient(circle,transparent 7px,#000 8px);mask:radial-gradient(circle,transparent 7px,#000 8px)}
+.fback{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;margin-left:4px;border-radius:50%;border:0;
+  background:#3a3d45!important;color:#eceae3!important;cursor:pointer}
+.fback:hover{background:#4a4d55!important}
+
+/* step one's note, under the clock */
+.pick{position:absolute;z-index:6;top:62px;left:50%;translate:-50% 0;width:min(320px,92%);pointer-events:none;text-align:center}
+.pick p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);background:color-mix(in srgb,var(--sumi) 85%,transparent);padding:6px 10px;border-radius:8px}
+
+/* step two: the cross. Faces join edge to edge with slightly rounded corners; squares are copies of the cube's */
+.net{position:absolute;inset:0;z-index:6;box-sizing:border-box;padding-top:60px;display:flex;flex-direction:column;gap:12px;
+  align-items:center;justify-content:center;cursor:default;animation:netin .3s ease}
+@keyframes netin{from{opacity:0;transform:scale(.96)}}
+.ngrid{position:relative;flex:none}
+.xband{position:absolute;background:var(--body-ink);border-radius:6px}
+.xcell{position:absolute;width:60px;height:60px;transform-origin:0 0}
+.xcell .st{left:5px;top:5px;transform:none;backface-visibility:visible;-webkit-backface-visibility:visible;cursor:pointer}
+.xcell .arw,.xcell .hintarw{display:none}
+.xcell .st.twin{outline:5px dashed var(--washi);outline-offset:-7px}
+/* the tapped square: lifted, ringed and washed yellow so it is the first thing you see */
+.xcell .st.sel{z-index:2;scale:1.14;outline:7px solid var(--washi);outline-offset:3px;
+  background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
+/* the picked face: one thick rounded ring (cream on paper too, with a drop shadow to lift it off the page) */
+.xface{outline:4px solid var(--washi);outline-offset:2px;border-radius:10px}
+@media (prefers-color-scheme:light){
+  .xcell .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}
+  .xface{outline:0;box-shadow:0 0 0 2px var(--body-ink),0 0 0 6px #f6f5f0,0 0 0 7px rgb(0 0 0 / .25),0 4px 12px 7px rgb(0 0 0 / .55)}
+}
+
+/* under the cross: the numbers the matching dashed squares allow, and the "i" that explains them */
+.ncands{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:min(460px,96%);flex-wrap:wrap}
+.ncands p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);text-align:center}
+.ndigits{display:flex;gap:6px}
+.ndigits:empty{display:none}
+.ndigits i{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:var(--yellow);color:#121316}
+.ndigits .dg{height:20px;width:auto;fill:currentColor}
+.ninfo{flex:none;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;font:600 14px/1 var(--code);font-style:italic}
+.nwhy{position:absolute;z-index:8;left:50%;bottom:8px;translate:-50% 0;width:min(360px,92%);box-sizing:border-box;padding:14px 16px;
+  border-radius:12px;background:var(--slate);border:1px solid var(--edge);box-shadow:0 12px 30px rgb(0 0 0 / .35);text-align:left}
+.nwhy[hidden]{display:none}
+.nwhy b{display:block;font:600 14px var(--code);color:var(--washi)}
+.nwhy p{margin:8px 0 0;font:400 13px/1.45 var(--code);color:var(--washi)}
+.nwhy button{margin-top:12px;width:100%}
