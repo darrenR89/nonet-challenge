@@ -4,3 +4,4 @@
 /.env
 /public/*.css*
 /_site/
+/public/open-*.html

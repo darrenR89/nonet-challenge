@@ -431,3 +431,33 @@
 .cv-go .cv-links:has(li[hidden]) li{grid-column:1/-1}
 /* the game cover: the wordmark sits within the issue box width */
 #splash .cv-mark{margin:0;width:100%;align-self:stretch}
+
+/* loading: until today's numbers are in, the issue box draws itself in ink, line by line, and
+   the rest of the page waits blank. The contents fade up once the numbers land. */
+.cv-issue>*,.cv-go,.cv-title .cv-stats,.cv-title .cv-first,.cv-streak{transition:opacity .35s ease}
+.is-loading .cv-issue>*,.is-loading .cv-go,.is-loading .cv-title .cv-stats,.is-loading .cv-title .cv-first,
+.is-loading .cv-done,.is-loading .cv-streak{opacity:0;pointer-events:none}
+.is-loading .cv-title .cv-issue{position:relative;border-color:transparent;min-height:118px}
+.is-loading .cv-title .cv-issue::before,.is-loading .cv-title .cv-issue::after{content:"";position:absolute;pointer-events:none}
+/* the frame: top left to right, down the right, back along the bottom, up the left */
+.is-loading .cv-title .cv-issue::before{inset:-3px;
+  background:linear-gradient(var(--c-ink),var(--c-ink)) left top/0 3px no-repeat,
+    linear-gradient(var(--c-ink),var(--c-ink)) right top/3px 0 no-repeat,
+    linear-gradient(var(--c-ink),var(--c-ink)) right bottom/0 3px no-repeat,
+    linear-gradient(var(--c-ink),var(--c-ink)) left bottom/3px 0 no-repeat;
+  animation:cv-draw 1.8s cubic-bezier(.65,0,.35,1) infinite}
+/* then the rule across the middle, where the number and level sit */
+.is-loading .cv-title .cv-issue::after{left:12px;right:12px;top:50%;height:1px;background:var(--c-ink);
+  transform:scaleX(0);transform-origin:left;animation:cv-rule 1.8s cubic-bezier(.65,0,.35,1) infinite}
+@keyframes cv-draw{
+  0%{background-size:0 3px,3px 0,0 3px,3px 0;opacity:1}
+  22%{background-size:100% 3px,3px 0,0 3px,3px 0}
+  40%{background-size:100% 3px,3px 100%,0 3px,3px 0}
+  62%{background-size:100% 3px,3px 100%,100% 3px,3px 0}
+  80%{background-size:100% 3px,3px 100%,100% 3px,3px 100%;opacity:1}
+  100%{background-size:100% 3px,3px 100%,100% 3px,3px 100%;opacity:0}
+}
+@keyframes cv-rule{0%,62%{transform:scaleX(0);opacity:1}80%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .is-loading .cv-title .cv-issue::before,.is-loading .cv-title .cv-issue::after{animation:none;opacity:.4;background-size:100% 3px,3px 100%,100% 3px,3px 100%;transform:none}
+}

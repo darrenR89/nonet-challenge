@@ -167,22 +167,32 @@ function showDay(day: string, no: number | undefined): void {
 showDay(dayKey(), undefined)
 
 const startBtn = $('start-btn') as HTMLButtonElement
-startBtn.addEventListener('click', ev => {
-  // an older day's post has one button: that day's leaderboard
-  if (startBtn.dataset.open)
+/**
+ * Opens the game on one thing: Play, or a next step. Each has its own entrypoint (a copy of the
+ * game, see tools/entries.mjs), as Reddit's app keeps the card's storage apart from the game's.
+ * The note in localStorage is for the prototype, where the two share it.
+ */
+const OPEN_ENTRIES = new Set([
+  'practice',
+  'rules',
+  'challenge',
+  'crew',
+  'boards',
+  'pastboard',
+])
+function openGame(ev: MouseEvent, what: string | undefined): void {
+  if (what)
     try {
-      localStorage.setItem('nonet-open', startBtn.dataset.open)
+      localStorage.setItem('nonet-open', what)
     } catch {}
-  requestExpandedMode(ev, 'game')
-})
-// the next steps open the game with that one ready, passed through this device's storage
-for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open]'))
-  b.addEventListener('click', ev => {
-    try {
-      localStorage.setItem('nonet-open', b.dataset.open ?? '')
-    } catch {}
-    requestExpandedMode(ev, 'game')
-  })
+  requestExpandedMode(ev, what && OPEN_ENTRIES.has(what) ? what : 'game')
+}
+// Play, or on an older day's post its one button: that day's leaderboard
+startBtn.addEventListener('click', ev => openGame(ev, startBtn.dataset.open))
+for (const b of document.querySelectorAll<HTMLButtonElement>(
+  '[data-open]:not(#start-btn)',
+))
+  b.addEventListener('click', ev => openGame(ev, b.dataset.open))
 
 /**
  * Whether this device has had the guided practice, as the game keeps it. In demo mode a
@@ -223,6 +233,8 @@ function stat(label: string, value: string): HTMLElement {
 
 // The live numbers: filled in when the server answers, left as they are if it can't.
 void getCard().then(card => {
+  // the numbers are in (or won't come): the drawn frame gives way to the cover
+  document.body.classList.remove('is-loading')
   if (!card) return
   showDay(card.day, card.no)
   // an older day's post keeps its own date, can't be played, and only shows its leaderboard
