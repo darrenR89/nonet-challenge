@@ -177,6 +177,46 @@ const SCREENS = [
       await page.waitForTimeout(2500)
     },
   },
+  // a run finished and counted: the cube drops back in over the finished cover, then the result panel
+  {
+    name: 'finish',
+    sizes: ['phone-se', 'phone', 'desktop'],
+    go: async page => {
+      await toGame(page)
+      await page.locator('#spPlay').click()
+      const start = page.locator('#suStart')
+      await start.waitFor({timeout: 5000}).catch(() => {})
+      if (await start.isVisible()) await start.click()
+      await page.waitForFunction(
+        () => window.__test?.P && window.__test.stage >= 1,
+        null,
+        {timeout: 15000},
+      )
+      await page.waitForTimeout(6500)
+      await page.evaluate(async () => {
+        const t = window.__test
+        for (let g = 0; t.stage === 1 && g < 60; g++) {
+          const m = t.nextHomeMove()
+          if (!m) break
+          t.doTurn(m)
+        }
+        await new Promise(r => setTimeout(r, 600))
+        t.setPen(true)
+        t.P.sol.forEach((d, c) => {
+          if (t.vals[c]) return
+          t.select(c, undefined)
+          t.pressDigit(d)
+        })
+      })
+      await page.waitForSelector(
+        '#splash:not([hidden]) #spDone:not([hidden])',
+        {timeout: 15000},
+      )
+      await page.waitForTimeout(4000)
+      await page.locator('[data-dn="result"]').click()
+      await modal(page)
+    },
+  },
   {
     name: 'practice',
     go: async page => {
@@ -355,7 +395,9 @@ const runs = []
 for (const scheme of schemes)
   for (const size of sizes)
     if (scheme === 'dark' || size.name === 'phone' || size.name === 'desktop')
-      for (const sc of screens) runs.push({scheme, size, sc, motion: false})
+      for (const sc of screens)
+        if (!sc.sizes || sc.sizes.includes(size.name))
+          runs.push({scheme, size, sc, motion: false})
 if (!args.quick)
   for (const sc of screens.filter(
     s => s.name === 'card-live' || s.name === 'card-played',

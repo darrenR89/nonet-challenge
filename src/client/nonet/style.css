@@ -678,3 +678,12 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .dn-panel .duels h3{display:none}
 .dn-panel .duelList{margin:0}
 .dn-panel .event{max-width:none;background:none;border:0;padding:0}
+/* the end of a counted run: the cube drops back in over the whole screen, above the finished cover */
+.stage.dropping{position:fixed;inset:0;z-index:45;height:auto;min-height:0;pointer-events:none;transform-origin:50% 45%}
+.stage.dropping .space{opacity:0}
+/* the run's own panel on the finished cover: the result to share, the ping, then the points */
+.dn-panel .sharetxt{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.5 var(--code);color:var(--washi);background:var(--tile);border:1px solid var(--edge);border-radius:var(--r);padding:10px 12px}
+.dn-panel .acts{display:flex;flex-wrap:wrap;gap:8px}
+.dn-panel .toggle{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer}
+.dn-panel .toggle input{width:20px;height:20px;accent-color:var(--gold);margin:0}
+.dn-panel .dn-points{padding:8px 12px}
