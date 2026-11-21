@@ -565,7 +565,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .xcell .st{left:5px;top:5px}
 /* the chosen square's face: one thick rounded ring */
 .xface{outline:4px solid var(--washi);outline-offset:3px;z-index:0}
-@media (prefers-color-scheme:light){.xface{outline-color:#000;outline-offset:0;box-shadow:0 0 0 5.5px #fff}}
+/* on paper: a thin white line hugging the face, then a thicker black ring outside it */
+@media (prefers-color-scheme:light){.xface{outline:4px solid #000;outline-offset:2px;box-shadow:0 0 0 2px #fff}}
 /* what the far side of the cube allows in the chosen square */
 .ncands{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:min(460px,96%);flex-wrap:wrap}
 .ncands p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);text-align:center}
