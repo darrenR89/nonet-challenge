@@ -410,15 +410,15 @@ async function claimPending(r){const p=readPending();if(!p)return;
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
-  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} of ${num(s.boards.day.players)} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let crewOpen=false;
 // the top of the end card, set like the cover: the issue row between double rules, then the
 // numbers in columns, label over value
-function resHead(total,time,rank,name,pen){
+function resHead(total,time,rank,name,pen,players){
   const pips=[0,1,2].map(k=>`<i${k<=level?' class="on"':''}></i>`).join('');
   const col=(l,v)=>`<div><dt>${l}</dt><dd>${v}</dd></div>`;
   return `<h2 class="cv-sr">Solved</h2><div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
-  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}`):''}</dl>
+  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}${players>1?`<small> of ${num(players)}</small>`:''}`):''}</dl>
   <p class="res-sub">${esc(name)}${pen<1?` · retry ×${pen}`:''}</p>`}
 function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
@@ -439,7 +439,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
-  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
+  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen,r?r.boards.day.players:0)}
   ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
@@ -471,7 +471,7 @@ async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=tru
   const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
   const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
   const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
-    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||'',crew:daily?crewCard(D&&D.crew):undefined}).catch(()=>undefined);
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,journey:journeyNow(),subreddit:D&&D.subreddit||'',crew:daily?crewCard(D&&D.crew):undefined}).catch(()=>undefined);
   if(b)b.disabled=false;
   if(!card){copyResult(txt);return}
   journey.interaction('share','open');

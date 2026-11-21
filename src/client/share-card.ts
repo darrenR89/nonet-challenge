@@ -1,6 +1,8 @@
 // The share card: the player's result, drawn on a canvas in the Nonet look (graphite, washi, the
 // yellow of a solved cube), with the points as the hero. Spoiler free, like the text line.
 
+import {isJourney} from '../shared/result.ts'
+
 export type ShareCard = {
   cubeNo: number | undefined
   /** Long date of the cube, e.g. "Friday 20 November 2026". Empty to leave out. */
@@ -20,6 +22,8 @@ export type ShareCard = {
   rank: number
   /** Subreddit without the r/, or empty. */
   subreddit: string
+  /** The journey line, a square per face in the order finished; drawn under the points. */
+  journey?: string
   /** The player's crew today, for the crew version of the card. */
   crew?: CrewCard
 }
@@ -178,6 +182,27 @@ function hero(c: Ctx, d: ShareCard, bottom: number): void {
     c.font = `400 ${size}px ${DISPLAY}`
   }
   c.fillText(pts, cx, 700)
+}
+
+// the journey under the points: a square per face, in the order finished, coloured by how
+// many wrong locks it took (the same marks as the text line)
+const JOURNEY_COLOURS: Record<string, string> = {
+  '🟨': '#f5c12e',
+  '🟧': '#e8892b',
+  '🟥': '#d9534f',
+}
+function journeyRow(c: Ctx, journey: string | undefined, y: number): void {
+  if (!isJourney(journey)) return
+  const marks = [...journey]
+  const size = 36
+  const gap = 12
+  let x = (CARD_W - (marks.length * size + (marks.length - 1) * gap)) / 2
+  for (const m of marks) {
+    roundRect(c, x, y, size, size, 6)
+    c.fillStyle = JOURNEY_COLOURS[m] ?? C.lead
+    c.fill()
+    x += size + gap
+  }
 }
 
 // the numbers under the hero: time, the ★ openers, and today's rank, label over value
@@ -351,6 +376,7 @@ export function drawShareCard(canvas: HTMLCanvasElement, d: ShareCard): void {
   // with a crew the numbers sit higher, to give the crew band room above and below
   const statsY = d.crew ? 834 : 870
   hero(c, d, statsY - 30)
+  journeyRow(c, d.journey, d.crew ? 750 : 764)
 
   stats(c, d, statsY)
   c.fillStyle = C.lead
