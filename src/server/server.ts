@@ -128,7 +128,7 @@ import {
   saveEvent,
 } from './events.ts'
 import {cubeList} from './export.ts'
-import {flairAfterSolve, lapseFlair} from './flair.ts'
+import {claimFounder, flairAfterSolve, lapseFlair} from './flair.ts'
 import {
   getSpot,
   noteBestStreak,
@@ -949,22 +949,26 @@ async function routeBoard(req: BoardReq): Promise<BoardRsp> {
 }
 
 /**
- * Updates the player's flair after a counted run: their streak, and their crew's name when the
- * subreddit turned crew flair on. A failure never stops the score.
+ * Updates the player's flair after a counted run: their streak, their founder number if they were
+ * among the first to play here, and their crew's name when the subreddit turned crew flair on. A
+ * failure never stops the score.
  */
 async function flairSolve(day: string, uid: string, st: Streak): Promise<void> {
   const sub = context.subredditName
   const name = context.username
   if (!sub || !name) return
   const streaks = await setting('streakFlair')
+  const founder = (await setting('founderFlair'))
+    ? await claimFounder(uid)
+    : undefined
   const crewId = (await setting('crewFlair')) ? await crewOf(uid) : undefined
   const crew = crewId ? (await crewInfo(day, uid)).crew?.name : undefined
-  if (!streaks && !crew) return
+  if (!streaks && !crew && !founder) return
   const shown: Streak = streaks ? st : {...st, current: 0, best: 0}
   const wrap = crew
     ? (text: string | undefined): string => crewFlair(crew, text)
     : undefined
-  await flairAfterSolve(day, uid, name, sub, shown, wrap).catch(err =>
+  await flairAfterSolve(day, uid, name, sub, shown, wrap, founder).catch(err =>
     console.warn(`flair failed: ${err}`),
   )
 }
@@ -973,11 +977,71 @@ async function flairSolve(day: string, uid: string, st: Streak): Promise<void> {
 
 /** A yes/no subreddit setting; on unless a moderator turned it off. */
 async function setting(
-  name: 'autoPost' | 'pinPosts' | 'streakFlair' | 'crewFlair',
+  name:
+    | 'autoPost'
+    | 'pinPosts'
+    | 'streakFlair'
+    | 'crewFlair'
+    | 'founderFlair'
+    | 'postFlair',
 ): Promise<boolean> {
   const v = await settings.get<boolean>(name).catch(() => undefined)
   // crew flair is opt-in; the rest are on unless a moderator turned them off
   return name === 'crewFlair' ? v === true : v !== false
+}
+
+/** The app's post flairs, so players can filter the subreddit by kind of post. */
+export const POST_FLAIRS = {
+  daily: {text: 'Daily cube', backgroundColor: '#f5c12e', textColor: 'dark'},
+  week: {
+    text: 'Weekly top nine',
+    backgroundColor: '#121316',
+    textColor: 'light',
+  },
+  event: {
+    text: 'Event results',
+    backgroundColor: '#121316',
+    textColor: 'light',
+  },
+} as const
+const postFlairKey = 'postFlair'
+
+/**
+ * Tags one of the app's posts with its post flair, if the subreddit wants that. The flair is a
+ * mod-only template the app makes the first time, so it shows in the subreddit's flair filter.
+ */
+async function flairPost(
+  postId: string,
+  kind: keyof typeof POST_FLAIRS,
+): Promise<void> {
+  const sub = context.subredditName
+  if (!sub || !(await setting('postFlair'))) return
+  const f = POST_FLAIRS[kind]
+  try {
+    let id = await redis.hGet(postFlairKey, kind)
+    if (!id) {
+      const all = await reddit.getPostFlairTemplates(sub)
+      id =
+        all.find(t => t.text === f.text)?.id ??
+        (
+          await reddit.createPostFlairTemplate({
+            subredditName: sub,
+            ...f,
+            modOnly: true,
+          })
+        ).id
+      await redis.hSet(postFlairKey, {[kind]: id})
+    }
+    await reddit.setPostFlair({
+      subredditName: sub,
+      postId: postId as `t3_${string}`,
+      flairTemplateId: id,
+    })
+  } catch (err) {
+    // a template a mod deleted: forget it, so the next post makes it again
+    await redis.hDel(postFlairKey, [kind])
+    console.warn(`post flair failed: ${err}`)
+  }
 }
 
 /** Pins a post as a community highlight, if the subreddit wants that. */
@@ -1003,6 +1067,7 @@ async function postDaily(day: string): Promise<{url: string; id: string}> {
     postData: {day},
   })
   await redis.hSet(DAILY_POSTS, {[day]: post.id})
+  await flairPost(post.id, 'daily')
   await pin(post, 1)
   return {url: post.url, id: post.id}
 }
@@ -1059,7 +1124,12 @@ async function routeAppInstall(): Promise<TriggerResponse> {
 async function writeWiki(day: string): Promise<string | undefined> {
   const sub = context.subredditName
   if (!sub) return
-  await publishWiki(day, sub, await setting('streakFlair'))
+  await publishWiki(
+    day,
+    sub,
+    await setting('streakFlair'),
+    await setting('founderFlair'),
+  )
   return `https://www.reddit.com${wikiPath(sub)}`
 }
 
@@ -1109,6 +1179,7 @@ async function postWeekResults(
     title: `Nonet · weekly top nine${final ? '' : ' so far'} · week of ${shortDate(from)}`,
     text: text.filter(Boolean).join('\n\n'),
   })
+  await flairPost(post.id, 'week')
   await pin(post, 2)
   return post.url
 }
@@ -1124,10 +1195,11 @@ async function postEventResults(e: GameEvent): Promise<void> {
         )
         .join('\n\n')}\n\n`
     : ''
-  await reddit.submitPost({
+  const post = await reddit.submitPost({
     title: `Nonet · ${e.title}: results`,
     text: `${e.tagline ? `${e.tagline}\n\n` : ''}${teams}Top players:\n\n${boardText(st.board)}`,
   })
+  await flairPost(post.id, 'event')
 }
 
 async function routeMenuWeekPost(): Promise<UiResponse> {
@@ -1191,7 +1263,7 @@ export async function runDaily(): Promise<void> {
   await ensureDay(addDays(day, 1))
   const sub = context.subredditName
   if (sub && (await setting('streakFlair')))
-    await lapseFlair(day, sub).catch(err =>
+    await lapseFlair(day, sub, await setting('founderFlair')).catch(err =>
       console.warn(`flair failed: ${err}`),
     )
   const auto = await setting('autoPost')

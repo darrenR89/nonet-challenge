@@ -41,6 +41,8 @@ Your first finished run each day is the one that counts.
 
 - **Daily posts.** The app posts each day's cube and pins it. Every Monday it also posts the week's top nine and the solve of the week. The card in the feed shows today's cube number, how many people have played, the fastest time, and your streak and rank.
 - **Streaks and flair.** From 3 days in a row, a player's user flair shows their streak, such as "Nonet · 7-day streak". Once a streak lapses, the flair shows their best instead.
+- **Founder flair.** The first 100 players to finish a cube in the subreddit get numbered flair, "Nonet founder #1" to "#100", in front of their streak. It's a reason to start playing on day one.
+- **Post flair.** The app tags its own posts as "Daily cube", "Weekly top nine" or "Event results", so players can filter the subreddit by them.
 - **Boards.** There are boards for today, the week and all time, each showing where you stand.
 - **Challenges.** Once you've finished, dare another player by username to beat your score on today's cube. They accept before they play.
 - **Nonet Crews (連).** Team up with up to two other players. You play the same cube on your own time, and your scores add up.
@@ -51,7 +53,7 @@ Your first finished run each day is the one that counts.
   - If a member misses three days in a row, the others can open their seat.
   - Crew names are checked for offensive words.
 - **Wiki.** The app writes a wiki page at `/wiki/nonet` with the rules, the scoring table and records, and rewrites it every Monday.
-- **Subreddit settings.** Mods can turn off auto-posting, pinning, streak flair and crew flair (crew flair is off by default). The mod menu can also make a post by hand, post the week's board, update the wiki, or send the mod the list of recent cubes and their answers.
+- **Subreddit settings.** Mods can turn off auto-posting, pinning, streak flair, founder flair and post flair, and turn on crew flair, which is off by default. The mod menu can also make a post by hand, post the week's board, update the wiki, or send the mod the list of recent cubes and their answers.
 
 The game works in light and dark mode, on phones and desktops, and inside the Reddit app.
 

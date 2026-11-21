@@ -11,7 +11,7 @@ import {
   WEEK_LEVELS,
 } from '../shared/scoring.ts'
 import {boardKey, readBoard} from './board.ts'
-import {FLAIR_FROM} from './flair.ts'
+import {FLAIR_FROM, FOUNDERS} from './flair.ts'
 import {longestStreaks, pastWeeks, type WeekRecord} from './records.ts'
 
 export const WIKI_PAGE = 'nonet'
@@ -53,6 +53,8 @@ function weekRow(w: WeekRecord): string {
 export type WikiData = {
   day: string
   flair: boolean
+  /** Founder flair is on. */
+  founders?: boolean
   streaks: Board
   all: Board
   weeks: WeekRecord[]
@@ -74,6 +76,9 @@ export function wikiText(d: WikiData): string {
     .join('\n')
   const flair = d.flair
     ? ` From ${FLAIR_FROM} days in a row your user flair here shows it, like "Nonet · ${FLAIR_FROM}-day streak". Miss a day and it shows your best instead. Flair you or the mods set yourselves is left alone.`
+    : ''
+  const founders = d.founders
+    ? ` The first ${FOUNDERS} players to finish a cube here are its founders: their flair says so, "Nonet founder #1" onwards, for good.`
     : ''
   const weeks = d.weeks.slice(0, WIKI_WEEKS)
   const past = weeks.length
@@ -107,7 +112,7 @@ ${mult}
 
 ## Streaks
 
-Finish a cube on days in a row to build a streak.${flair} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
+Finish a cube on days in a row to build a streak.${flair}${founders} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
 
 ## The week
 
@@ -142,10 +147,12 @@ export async function publishWiki(
   day: string,
   sub: string,
   flair: boolean,
+  founders = false,
 ): Promise<void> {
   const content = wikiText({
     day,
     flair,
+    founders,
     streaks: await longestStreaks(),
     all: await readBoard(boardKey.all, 'All time', undefined),
     weeks: await pastWeeks(),

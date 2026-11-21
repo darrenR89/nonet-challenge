@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import type {Board} from '../shared/api.ts'
+import {crewFlair} from '../shared/crew.ts'
 import {streakFlair} from './flair.ts'
 import {clockTime, spotText} from './records.ts'
 import {wikiText} from './wiki.ts'
@@ -57,10 +58,26 @@ test('the solve of the week reads as one sentence', () => {
   )
 })
 
+test('founder flair goes in front of the streak', () => {
+  assert.equal(
+    streakFlair({current: 0, best: 0, played: 1}, 7),
+    'Nonet founder #7',
+  )
+  assert.equal(
+    streakFlair({current: 4, best: 4, played: 4}, 7),
+    'Nonet founder #7 · 4-day streak',
+  )
+  assert.equal(
+    crewFlair('Owls', streakFlair({current: 4, best: 4, played: 4}, 7)),
+    '連 Owls · founder #7 · 4-day streak',
+  )
+})
+
 test('the wiki has the week, the multipliers and the records', () => {
   const md = wikiText({
     day: '2026-11-23',
     flair: true,
+    founders: true,
     streaks: board([['ann', 12]]),
     all: board([]),
     weeks: [
@@ -85,6 +102,7 @@ test('the wiki has the week, the multipliers and the records', () => {
   assert.match(md, /\| Friday \| Hard \| 0 to 2 \|/)
   assert.match(md, /\| 3 \| ×2 \| ×3 \| not offered \|/)
   assert.match(md, /Nonet · 3-day streak/)
+  assert.match(md, /first 100 players .* "Nonet founder #1"/)
   assert.match(md, /1\. u\/ann · 12 days/)
   assert.match(md, /### All-time points\n\nNobody yet\./)
   assert.match(

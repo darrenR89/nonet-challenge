@@ -7,6 +7,7 @@ import {
   type Context,
   notifications,
   reddit,
+  redis,
   runWithContext,
   settings,
 } from '@devvit/web/server'
@@ -49,6 +50,10 @@ const wiki = {content: '', created: 0}
 let autoPost: boolean | undefined = true
 let pinPosts: boolean | undefined = true
 let crewFlair = false
+let founderFlair = false
+/** Post flair the app set, as [post id, template id]; and templates it made. */
+const postFlairs: [string, string][] = []
+const templates: {id: string; text: string}[] = []
 const SUB = 'nonetdaily'
 /** Journey events the server sent to Devvit, in order. */
 const journeys: {kind: string; body: unknown}[] = []
@@ -69,6 +74,9 @@ const was = {
   sendPrivateMessage: r.sendPrivateMessage,
   getUserById: r.getUserById,
   setUserFlair: r.setUserFlair,
+  getPostFlairTemplates: r.getPostFlairTemplates,
+  createPostFlairTemplate: r.createPostFlairTemplate,
+  setPostFlair: r.setPostFlair,
   getWikiPage: r.getWikiPage,
   createWikiPage: r.createWikiPage,
   updateWikiPage: r.updateWikiPage,
@@ -111,12 +119,23 @@ before(async () => {
         ? autoPost
         : name === 'crewFlair'
           ? crewFlair
-          : true
+          : name === 'founderFlair'
+            ? founderFlair
+            : true
   r.getUserById = async (id: string) => ({
     getUserFlairBySubreddit: async () => ({flairText: flairs.get(id)}),
   })
   r.setUserFlair = async (o: {username: string; text: string}) => {
     flairs.set(`t2_${o.username}`, o.text)
+  }
+  r.getPostFlairTemplates = async () => templates
+  r.createPostFlairTemplate = async (o: {text: string}) => {
+    const t = {id: `tpl${templates.length + 1}`, text: o.text}
+    templates.push(t)
+    return t
+  }
+  r.setPostFlair = async (o: {postId: string; flairTemplateId: string}) => {
+    postFlairs.push([o.postId, o.flairTemplateId])
   }
   r.getWikiPage = async () => {
     if (!wiki.created) throw new Error('PAGE_NOT_FOUND')
@@ -199,6 +218,9 @@ after(async () => {
     sendPrivateMessage: was.sendPrivateMessage,
     getUserById: was.getUserById,
     setUserFlair: was.setUserFlair,
+    getPostFlairTemplates: was.getPostFlairTemplates,
+    createPostFlairTemplate: was.createPostFlairTemplate,
+    setPostFlair: was.setPostFlair,
     getWikiPage: was.getWikiPage,
     createWikiPage: was.createWikiPage,
     updateWikiPage: was.updateWikiPage,
@@ -221,6 +243,9 @@ beforeEach(() => {
   wiki.created = 0
   pinPosts = true
   crewFlair = false
+  founderFlair = false
+  postFlairs.length = 0
+  templates.length = 0
   journeys.length = 0
   pushed.length = 0
   comments.length = 0
@@ -1227,6 +1252,56 @@ test('streak flair from three days in a row, then the best once it lapses', asyn
     await playDay(1, run())
   }
   assert.equal(flairs.get('t2_ann'), 'sudoku fan')
+})
+
+test('the first players to finish are numbered founders, in front of their streak', async () => {
+  founderFlair = true
+  // cat has flair from the mods, which stays, but cat still takes a founder place
+  flairs.set('t2_cat', 'Puzzle mod')
+  for (const day of ['14', '15', '16']) {
+    now = new Date(`2026-11-${day}T12:00:00Z`)
+    as('t2_ann', 'ann')
+    await playDay(1, run())
+    if (day === '14') assert.equal(flairs.get('t2_ann'), 'Nonet founder #1')
+    as('t2_cat', 'cat')
+    await playDay(1, run())
+  }
+  assert.equal(flairs.get('t2_ann'), 'Nonet founder #1 · 3-day streak')
+  assert.equal(flairs.get('t2_cat'), 'Puzzle mod')
+  // the lapse keeps the founder number
+  now = new Date('2026-11-18T08:01:00Z')
+  await daily()
+  assert.equal(flairs.get('t2_ann'), 'Nonet founder #1 · best streak 3')
+  // a third player is #3: places are handed out in finishing order
+  as('t2_bob', 'bob')
+  now = new Date('2026-11-18T12:00:00Z')
+  await playDay(1, run())
+  assert.equal(flairs.get('t2_bob'), 'Nonet founder #3')
+})
+
+test('founder places run out at 100', async () => {
+  founderFlair = true
+  await redis.hSet('founderSeq', {n: '100'})
+  now = new Date('2026-11-14T12:00:00Z')
+  await playDay(1, run())
+  assert.equal(flairs.get('t2_ann'), undefined)
+})
+
+test("the app's posts get mod-only post flair, made once and then reused", async () => {
+  now = new Date('2026-11-16T08:01:00Z') // Monday: the daily cube and the week's post
+  await daily()
+  assert.deepEqual(
+    templates.map(t => t.text),
+    ['Daily cube', 'Weekly top nine'],
+  )
+  assert.deepEqual(postFlairs, [
+    ['t3_post', 'tpl1'],
+    ['t3_text', 'tpl2'],
+  ])
+  now = new Date('2026-11-17T08:01:00Z')
+  await daily()
+  assert.equal(templates.length, 2, 'no new template the second day')
+  assert.deepEqual(postFlairs.at(-1), ['t3_post', 'tpl1'])
 })
 
 test("Monday's post has the weekly top nine and the solve of the week, is pinned, and the wiki is written", async () => {
