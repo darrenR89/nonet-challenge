@@ -429,17 +429,25 @@ async function toCover(){
   sp.style.opacity='';landCube();$('showRes').textContent='Back to today';$('showRes').hidden=true;
   if(!reduce){setTimeout(()=>sp.classList.remove('fd-print-off'),PARTY.pixelFrom+PARTY.pixelFor*.6);void celebrate(document.body)}
   return true}
+// the cube drops back in, grows until it fills the screen, and the cover is put up behind it while
+// it's hidden; then it carries on down and out of the bottom, uncovering the cover top first
 function dropIn(sp){return new Promise(done=>{
   stageEl.classList.remove('flown','leaving');stageEl.classList.add('dropping');apply();
-  const DUR=1000,t0=performance.now(),base=cubeEl.style.transform;let a=0,last=t0;
-  const step=now=>{const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;a+=(900-700*e)*dt;
-    const y=-(1-e)*(1-e)*innerHeight,sc=.55+3.6*e*e*e;
+  const r0=cubeEl.getBoundingClientRect(),size=Math.max(40,Math.min(r0.width,r0.height));
+  const cover=1.7*Math.hypot(innerWidth,innerHeight)/size;
+  const DUR=1900,t0=performance.now(),base=cubeEl.style.transform;let a=0,last=t0,shown=false;
+  const ease=x=>x*x*(3-2*x);
+  const step=now=>{const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;
+    // in from the top, spinning down to a stop as it lands
+    const d=Math.min(1,e/.4),g=Math.min(1,Math.max(0,(e-.4)/.28)),p=Math.max(0,(e-.72)/.28);
+    a+=720*(1-d)*dt;
+    const y=-(1-ease(d))*innerHeight+p*p*(innerHeight+.9*Math.hypot(innerWidth,innerHeight)),sc=(.5+.5*ease(d))*(1+(cover-1)*g*g);
     stageEl.style.transform=`translateY(${y}px) scale(${sc})`;
-    stageEl.style.opacity=String(e<.55?1:Math.max(0,1-(e-.55)/.45));
-    sp.style.opacity=String(Math.min(1,Math.max(0,(e-.3)/.6)));
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
+    // the screen is all cube: the cover goes up behind it
+    if(!shown&&g>=1){shown=true;sp.style.opacity='1'}
     if(e<1){requestAnimationFrame(step);return}
-    stageEl.classList.remove('dropping');stageEl.style.transform='';stageEl.style.opacity='';cubeEl.style.transform=base;done()};
+    stageEl.classList.remove('dropping');stageEl.style.transform='';cubeEl.style.transform=base;done()};
   requestAnimationFrame(step)})}
 // the run's own details on the finished cover: the points, the result to share or post, and the
 // ping for tomorrow, in one panel

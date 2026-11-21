@@ -444,9 +444,12 @@ for (const engine of engines) {
     const errors = [],
       warns = []
     const local = u => u.startsWith('file:') || u.startsWith('data:')
+    // axe-core's own canvas checks log errors in WebKit, so the page's console counts until axe runs
+    let auditing = false
     page.on(
       'console',
       m =>
+        !auditing &&
         m.type() === 'error' &&
         !/fonts\.g/.test(m.text()) &&
         errors.push(`console: ${m.text().slice(0, 200)}`),
@@ -502,6 +505,7 @@ for (const engine of engines) {
         const r = await target.evaluate(inspect)
         errors.push(...r.errors)
         warns.push(...r.warns)
+        auditing = true
         await target.evaluate(axeSrc)
         const axe = await target.evaluate(async () => {
           const res = await window.axe.run(document, {
