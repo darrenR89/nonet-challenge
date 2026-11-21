@@ -195,6 +195,11 @@ export async function answerInvite(
     return 'ok'
   }
   if (await crewOf(uid)) return 'in-crew'
+  // a crew whose members all left is closed, and its invitations with it
+  if (await redis.hGet(crewKey(id), 'closed')) {
+    await redis.hDel(invitesKey(uid), [id])
+    return 'no-invite'
+  }
   if ((await memberIds(id)).length >= CREW_SIZE) {
     await redis.hDel(invitesKey(uid), [id])
     return 'full'
