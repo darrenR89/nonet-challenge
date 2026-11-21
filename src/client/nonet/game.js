@@ -870,7 +870,7 @@ tk.addEventListener('toggle',()=>{try{localStorage.setItem('nonet-tk',tk.open?'1
 const answer=()=>{const r=solveCount(vals.map((v,i)=>v),1,200000);return r[0]>0?r[1]:null};
 function lockFill(list){if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}
   const sol=answer();if(!sol){tkMsg('The cube has a wrong digit in it, so there is no answer to fill from.');return}
-  let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++}
+  let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++;const f=faceOfCell(c);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i]))faceOrder.push(f)}
   tkMsg(n?`Filled ${n} square${n===1?'':'s'}.`:'Nothing left to fill there.');render()}
 const needSel=()=>{if(sel<0){tkMsg('Tap a square first.');return false}return true};
 const shownLine=()=>{const by={};for(const k of lineIdxOf[sel])(by[Math.floor(k/6)]??=[]).push(k);const ax=Object.keys(by).sort()[0];const arr=by[ax];return lines[arr[lc%arr.length]]};
