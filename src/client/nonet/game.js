@@ -33,12 +33,16 @@ F.forEach((f,fi)=>{
   }
   cubeEl.appendChild(el);faceEls.push(el);
 });
+// a solid core just inside the faces, with square corners, so the rounded faces leave no gap where three meet.
+// It comes after the faces, so .face:nth-child still counts faces only.
+F.forEach(f=>{const c=document.createElement('div');c.className='core';c.style.transform=f.t.replace('translateZ(var(--h))','translateZ(calc(var(--h) - 4px))');cubeEl.appendChild(c)});
 let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.7,Math.min(st.clientWidth,st.clientHeight)/290));apply()};
 const $=id=>document.getElementById(id);
 
 // ---------- state ----------
 let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
+let flatOn=false; // the flattened net is showing
 let hold=false; // the clock is held during the intro animation and countdown
 let t0=0,t1=0,t2=0,wrong=0,blanks=0,penMode=false,gaveUp=false,aligned=false;
 const alignMemo=new Map();
@@ -374,7 +378,7 @@ async function finale(){
 function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits, no squares, just how it went
-const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} suggestion${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
 // where you stand among the people you've challenged today, once any of them has played
 function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
   const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
@@ -477,7 +481,7 @@ function pointsTable(s,pen){return `<table>
    <tr><td>Fill in speed</td><td>${s.sp2} / 300</td></tr><tr class="sub"><td>${fmt(t2)} vs ${fmt(s.T2)} target (${blanks} squares)</td><td></td></tr>
    <tr><td>Fill in accuracy</td><td>${s.acc} / 200</td></tr><tr class="sub"><td>${wrong} wrong lock${wrong===1?'':'s'} × −25</td><td></td></tr>
    <tr><td>Lock-first squares</td><td>${s.starPts} / 150</td></tr><tr class="sub"><td>${starWon.size} of 3 locked before any other square</td><td></td></tr>
-   ${s.tut?'':`<tr><td>No-hint bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} suggestion${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
+   ${s.tut?'':`<tr><td>No-helper bonus</td><td>${s.bonus} / 100</td></tr><tr class="sub"><td>${hintsUsed} helper${hintsUsed===1?'':'s'} used</td><td></td></tr>`}
    <tr><td>Subtotal × ${s.mult}</td><td>${s.raw} × ${s.mult}</td></tr>
    ${pen<1?`<tr><td>Retry</td><td>× ${pen}</td></tr>`:''}
   </table>`}
@@ -517,11 +521,12 @@ function render(){
   const settled=stage===1&&!gaveUp?settledCells():new Set();
   if(sel>=0)Object.keys(by).sort().forEach((ax,n)=>{const arr=by[ax],l=lines[arr[lc%arr.length]];
     const tgt=stage>=2&&complete(l)?done:(n===0?la:lb);l.forEach(i=>tgt.add(i));
-    // a ring's two lines share the six squares on two opposite faces (blue). So each line's other three
-    // squares hold the same three digits as the three across the cube that the shown line leaves out (dashed).
-    const q=ringOf(arr[0]),other=new Set(lines[2*q+1]);
-    if(tgt!==done)for(const i of lines[2*q])if(other.has(i))ov.add(i);
-    if(stage===2){const L=new Set(l);for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
+    // the whole line of nine is blue. A ring's two lines share six squares, so the three squares only this
+    // line has hold the same three digits as the three across the cube that it leaves out. When the tapped
+    // square is one of those three, both sets of three are dashed.
+    const k=arr[lc%arr.length],q=ringOf(k),oth=new Set(lines[k^1]),own=l.filter(i=>!oth.has(i));
+    if(tgt!==done)l.forEach(i=>ov.add(i));
+    if(stage===2&&own.includes(sel)){const L=new Set(l);own.forEach(i=>twin.add(i));for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
   const showHome=stage>1||!T.hideHome||aligned;
   cells.forEach((_,i)=>stickers[i].forEach(s=>{
     if(vals[i]){if(s.dataset.v!=String(vals[i])){s.innerHTML=digitSVG(vals[i]);s.dataset.v=vals[i]}}
@@ -543,7 +548,10 @@ function render(){
   music.update({stage,progress:stage===1?home/nClues:tot?1-left/tot:1,lines:stage===2?lines.reduce((n,l)=>n+(complete(l)?1:0),0):0,gaveUp});
   showTip();
   $('padbox').hidden=stage!==2;
-  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;$('suggest').textContent=`Suggest ${hintsLeft}/3`;
+  $('suggest').disabled=hintsLeft<=0;$('suggest').hidden=isPrac()||stage===3||!P;
+  $('flatBtn').disabled=hintsLeft<=0||flatOn;$('flatBtn').hidden=$('hCount').hidden=$('suggest').hidden;
+  $('hN').textContent=`${hintsLeft}/3`;
+  if(flatOn)flatBuild(); // a new number or selection shows on the flattened cross too
   $('suggest').setAttribute('aria-label',`Suggest a ${stage===2?'square':'turn'}, ${hintsLeft} left`);
   $('mPencil').setAttribute('aria-pressed',!penMode);$('mPen').setAttribute('aria-pressed',penMode);
   // the walkthrough's next thing to tap
@@ -601,7 +609,7 @@ function updateStatus(){
 // from the square, and a beat later the padlock shudders and the count goes up.
 // tips: no helper text in a scored run (it's all under ?). Practice shows one tip at a time, rotating.
 const TIPS={1:['Tap a square, then use the arrows on its edges to rotate it horizontally or vertically.','Spot the same number twice on a face or a line? That\'s a conflict to correct.','Lines glow once nothing in it conflicts.','Fewest turns scores best, so look before you turn.'],
-  2:['Pencil digits in as notes, or switch to Lock in when you\'re sure.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines. Tap again where two lines overlap to switch.','Blue squares sit in both lines of a ring, so each line\'s other three squares hold the same digits as the dashed three across the cube.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
+  2:['Pencil digits in as notes, or switch to Lock in when you\'re sure.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines in blue. Tap again where two lines overlap to switch.','A line\'s middle face holds the same three digits as three squares across the cube. Tap one of those middle squares and both sets are dashed.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
 let tipN=0,tipStage=0;
 function showTip(){const h=$('hint'),list=isPrac()&&stage<3?TIPS[stage]:null;h.hidden=!list;if(!list)return;
   if(tipStage!==stage){tipStage=stage;tipN=0}h.textContent=`Tip · ${list[tipN%list.length]}`}
@@ -678,6 +686,84 @@ function showHint(free){
       if(mm[0]===m[0]&&mm[1]===m[1]&&mm[2]===m[2]){if(!free){hintsLeft--;hintsUsed++;journey.interaction('hint')}sel=c;selFace=fi;hintArrow=[fi,ai];render();return}}}
 }
 $('suggest').onclick=()=>showHint(false);
+// flatten, one of the three helpers. First the main clock stops for up to 5 seconds while the player turns
+// the cube and taps a square. Then, for 20 seconds on a clock of its own, the square's two lines of nine
+// are laid flat as a cross, every face they pass through shown whole and the picked face ringed. Under it,
+// the numbers on the matching dashed squares across the cube are offered as what the square could be.
+const PICK_MS=5000,FLAT_MS=20000;
+let flatEnd=0,flatTick=0,flatFace=-1,flatAnchor=-1,pickEnd=0;
+const v3=(a,b,k=1)=>a.map((x,i)=>x+k*b[i]);
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+// one line of nine through the selected square, laid out in order along `along` as seen from its face.
+// A ring of twelve holds two lines; the shown one skips three squares on one end face (the far squares).
+function crossStrip(along,across,n0,at=sel){const lv=dot(cells[at].c,across);
+  const ring=[...Array(N).keys()].filter(i=>dot(cells[i].n,across)===0&&dot(cells[i].c,across)===lv);
+  const ks=lineIdxOf[at].filter(k=>lines[k].every(i=>ring.includes(i)));const k=ks[lc%ks.length];const L=new Set(lines[k]);
+  const ang=i=>{const q=v3(cells[i].c,cells[i].n,.5);return Math.atan2(dot(q,along),dot(q,n0))};
+  const ord=ring.slice().sort((x,y)=>ang(x)-ang(y));const st=ord.findIndex((i,x)=>!L.has(i)&&L.has(ord[(x+1)%12]));
+  const other=new Set(lines[k^1]);
+  return {strip:[...Array(9)].map((_,x)=>ord[(st+1+x)%12]),far:ring.filter(i=>!L.has(i)),own:lines[k].filter(i=>!other.has(i))}}
+// what the far squares say about the selected square: if it is one of the three squares only its line has,
+// it must hold one of the numbers on the three far squares, less those already used beside it
+function farDigits(S){if(!S.own.includes(sel))return null;const far=S.far.map(i=>vals[i]).filter(Boolean);
+  const used=new Set(S.own.filter(i=>i!==sel).map(i=>vals[i]).filter(Boolean));const ds=far.filter(d=>!used.has(d)).sort((x,y)=>x-y);
+  // with all three far squares filled the list is complete; with fewer it is only some of the options
+  ds.full=far.length===3;return ds}
+// the cross is rebuilt only when something on it changes (a tap, a number, a resize); the clock ticks on its own
+function flatBuild(){const net=$('net'),g=net.querySelector('.ngrid');if(!flatOn||net.hidden||sel<0)return;g.textContent='';
+  const f=F[flatFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
+  const H=crossStrip(R,D,n,flatAnchor),V=crossStrip(D,R,n,flatAnchor),hx=H.strip.indexOf(flatAnchor),vy=V.strip.indexOf(flatAnchor);
+  // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
+  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(3,Math.round(room/100)),
+    u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
+  const pos=c=>Math.floor(c/3)*F3+p+(c%3)*u,size=3*F3;g.style.width=g.style.height=`${size}px`;
+  const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
+    b.style.width=`${w/3*F3}px`;b.style.height=`${h/3*F3}px`;g.appendChild(b)};
+  const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
+    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow');st.style.animation='none';st.style.left=st.style.top='5px';
+    st.style.setProperty('--shade',faceShade[+src.dataset.f]);w.appendChild(st);g.appendChild(w)};
+  const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
+  // every face the two lines cross is shown whole: the rest of a face sits beside its line's squares,
+  // a step across the line (down for the line across, right for the line down)
+  const at=(ci,step,d)=>idx.get(key(cells[ci].n,v3(cells[ci].c,step,d)));
+  for(let t=0;t<9;t+=3){if(t!==fc){block(t,fr,3,3,'xband');H.strip.slice(t,t+3).forEach((ci,x)=>{for(let r=0;r<3;r++)cell(at(ci,D,fr+r-vy),t+x,fr+r)})}
+    if(t!==fr){block(fc,t,3,3,'xband');V.strip.slice(t,t+3).forEach((ci,y)=>{for(let c=0;c<3;c++)cell(at(ci,R,fc+c-hx),fc+c,t+y)})}}
+  block(fc,fr,3,3,'xband xface');
+  for(let j=0;j<3;j++)for(let i=0;i<3;i++)cell(idx.get(key(n,v3(v3(n,R,i-1),D,j-1))),fc+i,fr+j);
+  // the numbers the far squares allow here, from either line through the square
+  const sf=F[selFace],sn=sf.map(1,1),sR=v3(sf.map(2,1),sn,-1),sD=v3(sf.map(1,2),sn,-1);
+  const all=[farDigits(crossStrip(sR,sD,sn)),farDigits(crossStrip(sD,sR,sn))].filter(Boolean),full=all.filter(x=>x.full);
+  // a complete list wins (two complete lists narrow each other); otherwise show every far number seen
+  const ds=full.length?full.reduce((a,b2)=>a.filter(d=>b2.includes(d))):all.length?[...new Set(all.flat())].sort((x,y)=>x-y):null;
+  const applies=all.length>0,sure=full.length>0;
+  $('nDigits').innerHTML=ds&&!vals[sel]?ds.map(d=>`<i>${digitSVG(d)}</i>`).join(''):'';
+  $('nCandTxt').textContent=vals[sel]?'This square already has a number. Tap another square on the board.':ds&&ds.length?(sure?'Must be one of':'Could be'):
+    applies?'The matching dashed squares across the cube are still empty.':'Matching numbers only apply to the three squares on a line\'s middle face. Tap one of those.'}
+function flatClock(){const left=$('nWhy').hidden?Math.max(0,flatEnd-Date.now()):whyLeft;clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
+// one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
+function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
+function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0){const fi=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0],n=F[fi].map(1,1);pickFace(fi,idx.get(key(n,n)))}}
+function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
+  flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
+function pickFace(fi,c){if(!flatOn||!$('net').hidden)return;sel=c;selFace=fi;lc=0;hintArrow=null;render();clearInterval(flatTick);releaseClock();$('pick').hidden=true;
+  flatFace=fi;flatAnchor=c;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatBuild();flatClock();flatTick=setInterval(flatClock,200)}
+function flatStop(){if(!flatOn)return;if(!$('nWhy').hidden)why(false);flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
+$('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
+// reading the explanation stops both clocks; closing it starts them again where they were
+let whyLeft=0;
+function why(open){if(open===!$('nWhy').hidden)return;
+  if(open){whyLeft=Math.max(0,flatEnd-Date.now());clearInterval(flatTick);holdClock()}
+  else{flatEnd=Date.now()+whyLeft;releaseClock();if(flatOn){clearInterval(flatTick);flatTick=setInterval(flatClock,200)}}
+  $('nWhy').hidden=!open;$('nInfo').setAttribute('aria-expanded',String(open))}
+$('nInfo').onclick=e=>{e.stopPropagation();why($('nWhy').hidden)};$('nWhyOk').onclick=e=>{e.stopPropagation();why(false)};
+// while picking, a tap on the cube chooses that face instead of a square
+cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;
+  e.stopPropagation();pickFace(+s.dataset.f,+s.dataset.c)},true);
+// the picked face stays put for the whole flatten. Any square can be tapped to fill it in, but only a tap on
+// the picked face moves the cross's lines
+$('net').addEventListener('click',e=>{e.stopPropagation();const s=e.target.closest('.st');if(!s)return;if(+s.dataset.f===flatFace)flatAnchor=+s.dataset.c;
+  const real=faceEls[+s.dataset.f].querySelector(`.st[data-i="${s.dataset.i}"][data-j="${s.dataset.j}"]`);moved=false;real?.click()});
+window.addEventListener('resize',()=>flatBuild());
 
 $('restart').onclick=askRetry;$('spRetry').onclick=askRetry;
 // giving up asks first, and offers today's retry instead when there is one
@@ -713,7 +799,11 @@ document.querySelectorAll('#tierSeg button').forEach(b=>b.onclick=()=>{const t=+
 // ---------- view rotation ----------
 let rx=-28,ry=-38,moved=false;
 // light, not colour, separates faces: the face pointing most up is sheet, then right and left shades
-function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi);el.style.setProperty('--shade',y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)')})}
+// a face's shade only changes when it crosses into another lighting band, so it is written only then:
+// writing it on every frame of a drag would restyle all 54 squares each time
+const faceShade=[];
+function shadeFaces(){faceEls.forEach((el,fi)=>{const [x,y]=viewNormal(fi),v=y<-.5?'var(--cell-top)':x>=0?'var(--cell-right)':'var(--cell-left)';
+  if(faceShade[fi]!==v){faceShade[fi]=v;el.style.setProperty('--shade',v)}})}
 // the room behind the cube turns with the view but doesn't lean in when a face is focused
 const room=makeRoom(document.getElementById('room'));
 const apply=()=>{cubeEl.style.transform=`scale(${scaleK*zoom}) rotateX(${rx}deg) rotateY(${ry}deg)`;
@@ -728,10 +818,12 @@ function focusFace(fi){zoom=1.08;
       // stay on the side of the face we were already looking from, and take the short way round
       const side=(((ry-base)%360)+540)%360-180>=0?1:-1;let t=base+22*side;t+=Math.round((ry-t)/360)*360;ry=t;rx=-22}}
   apply()}
-const stageEl=$('stage');let drag=null;
+const stageEl=$('stage');let drag=null,dragFrame=0;
 stageEl.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx,ry};moved=false;cubeEl.classList.add('dragging')});
 window.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
-  if(Math.abs(dx)+Math.abs(dy)>6)moved=true;ry=drag.ry+dx*.5;rx=Math.max(-89,Math.min(89,drag.rx-dy*.5));apply()});
+  if(Math.abs(dx)+Math.abs(dy)>6)moved=true;ry=drag.ry+dx*.5;rx=Math.max(-89,Math.min(89,drag.rx-dy*.5));
+  // several moves can arrive in one frame; turn the cube once per frame, to the latest position
+  if(!dragFrame)dragFrame=requestAnimationFrame(()=>{dragFrame=0;apply()})});
 window.addEventListener('pointerup',()=>{drag=null;cubeEl.classList.remove('dragging');setTimeout(()=>moved=false,0)});
 const tx=makeTransitions({cubeEl,faceEls,stageEl,view:()=>({rx,ry,scaleK}),apply});
 

@@ -30,7 +30,7 @@ test('the share text carries the result, the dare and the link', () => {
 
 test('the detail line reads cleanly', () => {
   const d = {levelName: 'Medium', mode: '1 turn', wrong: 0, hints: 1}
-  assert.equal(detailLine(d), 'Medium · 1 turn · no wrong locks · 1 suggestion')
+  assert.equal(detailLine(d), 'Medium · 1 turn · no wrong locks · 1 helper')
 })
 
 test('the crew band lists each member and the crew points', () => {
