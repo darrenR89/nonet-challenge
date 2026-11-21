@@ -1434,13 +1434,56 @@ test('pinning can be turned off', async () => {
   assert.deepEqual(pins, [])
 })
 
-test('a mod can try the game as a new player; everyone else sees it as usual', async () => {
-  const before = await get<DailyRsp>(Endpoint.Daily)
-  assert.equal(before.body.asNew, undefined)
-  const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuTryNew)
-  assert.match(menu.body.showToast?.text ?? '', /new player sees/)
-  const after = await get<DailyRsp>(Endpoint.Daily)
-  assert.equal(after.body.asNew, true)
+test('demo mode fills the boards and walks a mod through a crew invite and challenges, for them alone', async () => {
+  const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuDemo)
+  assert.match(menu.body.showToast?.text ?? '', /Demo mode is on/)
+  const d = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(d.asNew, true, 'they start as a new player')
+  const card = (await get<CardRsp>(Endpoint.Card)).body
+  assert.equal(card.streak, 0)
+  assert.equal(card.solves, 1031)
+  assert.equal(d.boards.day.players, 1284)
+  assert.equal(d.boards.day.top.length, 9)
+  assert.equal(d.crew.invites[0]?.crew, 'Night Owls')
+  assert.ok(d.duels.some(x => !x.sent && x.status === 'offered'))
+
+  // accepting the invite puts them in the sample crew, with a crewmate to nudge
+  const joined = await post<CrewRsp>(Endpoint.CrewAnswer, {
+    crewId: 'demo-crew',
+    accept: true,
+  })
+  assert.equal(joined.body.crew?.members.length, 3)
+  const away = joined.body.crew?.members.find(m => m.missed >= 3)
+  assert.ok(away)
+  const nudged = await post<CrewRsp>(Endpoint.CrewNudge, {to: away?.id})
+  assert.equal(
+    nudged.body.crew?.members.find(m => m.id === away?.id)?.nudged,
+    true,
+  )
+  const opened = await post<CrewRsp>(Endpoint.CrewSeat, {to: away?.id})
+  assert.equal(opened.body.crew?.members.length, 2)
+
+  // a challenge they received can be accepted
+  const offer = d.duels.find(x => !x.sent)
+  const answered = await post<ChallengeRsp>(Endpoint.Answer, {
+    from: offer?.themId,
+    accept: true,
+  })
+  assert.equal(
+    answered.body.duels.find(x => x.themId === offer?.themId)?.status,
+    'accepted',
+  )
+
+  // none of it touched the real crews or anyone else's view
+  assert.equal(
+    (await get<DailyRsp>(Endpoint.Daily)).body.crew.crew?.members.length,
+    2,
+    'the demo copy remembers',
+  )
   as('t2_bob', 'bob')
-  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.asNew, undefined)
+  const bob = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(bob.asNew, undefined)
+  assert.equal(bob.crew.crew, undefined)
+  assert.equal(bob.crew.invites.length, 0)
+  assert.notEqual(bob.boards.day.players, 1284)
 })

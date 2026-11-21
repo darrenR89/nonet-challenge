@@ -48,7 +48,7 @@ Your first finished run each day is the one that counts.
   - If a member misses three days in a row, the others can open their seat.
   - Crew names are checked for offensive words.
 - **Wiki.** The app writes a small wiki under `/wiki/nonet`: a home page, then How to play, Scoring (with a worked example), Streaks and flair, Challenges and crews, Records and Questions. It rewrites every page each Monday.
-- **Subreddit settings.** Mods can turn off auto-posting, pinning, streak flair, founder flair and post flair, and turn on crew flair, which is off by default. The mod menu can also make a post by hand, post the week's board, update the wiki, send the mod the list of recent cubes and their answers, or let the mod try the game as a new player for an hour (the guided practice start screen, with their own scores and streak untouched).
+- **Subreddit settings.** Mods can turn off auto-posting, pinning, streak flair, founder flair and post flair, and turn on crew flair, which is off by default. The mod menu can also make a post by hand, post the week's board, update the wiki, send the mod the list of recent cubes and their answers, or turn on demo mode for an hour: the mod sees today's post as a new player on a busy day, with the guided practice first, then full sample boards, a crew invite and challenges. Only that mod sees it; it's kept apart from real crews and challenges, and their own scores and streak are untouched.
 
 The game works in light and dark mode, on phones and desktops, and inside the Reddit app.
 
