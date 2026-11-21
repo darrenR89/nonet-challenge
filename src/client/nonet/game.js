@@ -41,7 +41,7 @@ let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Ma
 const $=id=>document.getElementById(id);
 
 // ---------- state ----------
-let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
+let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,hintCell=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
 // each face's squares, to buzz when a face is finished
 const faceOfCell=i=>faceOfNormal.get(k3(cells[i].n));
@@ -306,7 +306,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
-  hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
+  hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
 const WALK=[
@@ -544,7 +544,10 @@ function render(){
     if(tgt!==done)l.forEach(i=>ov.add(i));
     if(stage===2&&own.includes(sel)){const L=new Set(l);own.forEach(i=>twin.add(i));for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
   const showHome=stage>1||!T.hideHome||aligned;
+  // a suggested square stays marked until it is locked in, or Fill in is over
+  if(hintCell>=0&&(stage!==2||vals[hintCell]))hintCell=-1;
   cells.forEach((_,i)=>stickers[i].forEach(s=>{
+    s.classList.toggle('hinted',i===hintCell);if(i!==hintCell)s.classList.remove('hintme');
     if(vals[i]){if(s.dataset.v!=String(vals[i])){s.innerHTML=digitSVG(vals[i]);s.dataset.v=vals[i]}}
     else if(pm[i]){const d=Math.log2(pm[i]&-pm[i]);if(s.dataset.v!=='p'+d){s.innerHTML=digitSVG(d).replace('class="dg"','class="dg pen"');s.dataset.v='p'+d}}
     else{s.textContent='';s.dataset.v=''}
@@ -693,7 +696,7 @@ function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
   if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
-  stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
+  hintCell=c;render();stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
   $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to Lock in to place it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
@@ -738,7 +741,7 @@ function flatBuild(){const net=$('net'),g=net.querySelector('.ngrid');if(!flatOn
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
     b.style.width=`${w/3*F3}px`;b.style.height=`${h/3*F3}px`;g.appendChild(b)};
   const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
-    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow');st.style.animation='none';st.style.left=st.style.top='5px';
+    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow');if(!st.classList.contains('hinted'))st.style.animation='none';st.style.left=st.style.top='5px';
     st.style.setProperty('--shade',faceShade[+src.dataset.f]);w.appendChild(st);g.appendChild(w)};
   const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
   // every face the two lines cross is shown whole: the rest of a face sits beside its line's squares,
