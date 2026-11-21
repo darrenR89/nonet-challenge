@@ -547,7 +547,7 @@ function render(){
   // a suggested square stays marked until it is locked in, or Fill in is over
   if(hintCell>=0&&(stage!==2||vals[hintCell]))hintCell=-1;
   cells.forEach((_,i)=>stickers[i].forEach(s=>{
-    s.classList.toggle('hinted',i===hintCell);if(i!==hintCell)s.classList.remove('hintme');
+    s.classList.toggle('hinted',i===hintCell);if(i!==hintCell)s.classList.remove('hintme','hintquiet');
     if(vals[i]){if(s.dataset.v!=String(vals[i])){s.innerHTML=digitSVG(vals[i]);s.dataset.v=vals[i]}}
     else if(pm[i]){const d=Math.log2(pm[i]&-pm[i]);if(s.dataset.v!=='p'+d){s.innerHTML=digitSVG(d).replace('class="dg"','class="dg pen"');s.dataset.v='p'+d}}
     else{s.textContent='';s.dataset.v=''}
@@ -653,8 +653,9 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
-    setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
+  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);// the square goes red and pulses twice, on the cube and in the flattened cross
+    const red=[...el,...document.querySelectorAll(`#net .st[data-c="${sel}"]`)];red.forEach(x=>{x.classList.remove('shake','wrong');x.style.animation='';void x.offsetWidth;x.classList.add('wrong')});
+    setTimeout(()=>red.forEach(x=>x.classList.remove('wrong')),1400);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
   vals[sel]=d;pm[sel]=0;music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
@@ -696,7 +697,8 @@ function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
   if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
-  hintCell=c;render();stickers[c].forEach(el=>{el.classList.remove('hintme');void el.offsetWidth;el.classList.add('hintme')});
+  hintCell=c;render();stickers[c].forEach(el=>{el.classList.remove('hintme','hintquiet');void el.offsetWidth;el.classList.add('hintme')});
+  setTimeout(()=>{if(hintCell===c)stickers[c].forEach(el=>el.classList.add('hintquiet'))},4000);
   $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to Lock in to place it.':'Only one digit fits in this square.'}
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
@@ -741,7 +743,7 @@ function flatBuild(){const net=$('net'),g=net.querySelector('.ngrid');if(!flatOn
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
     b.style.width=`${w/3*F3}px`;b.style.height=`${h/3*F3}px`;g.appendChild(b)};
   const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
-    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow');if(!st.classList.contains('hinted'))st.style.animation='none';st.style.left=st.style.top='5px';
+    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow','wrong');if(!st.classList.contains('hinted'))st.style.animation='none';st.style.left=st.style.top='5px';
     st.style.setProperty('--shade',faceShade[+src.dataset.f]);w.appendChild(st);g.appendChild(w)};
   const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
   // every face the two lines cross is shown whole: the rest of a face sits beside its line's squares,
