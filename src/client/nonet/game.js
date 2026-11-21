@@ -429,25 +429,26 @@ async function toCover(){
   sp.style.opacity='';landCube();$('showRes').textContent='Back to today';$('showRes').hidden=true;
   if(!reduce){setTimeout(()=>sp.classList.remove('fd-print-off'),PARTY.pixelFrom+PARTY.pixelFor*.6);void celebrate(document.body)}
   return true}
-// the cube drops back in, grows until it fills the screen, and the cover is put up behind it while
-// it's hidden; then it carries on down and out of the bottom, uncovering the cover top first
+// off the top, the cube grows to about the size of the screen, then sweeps down it: the finished
+// cover is uncovered behind it as it goes, its edge always hidden under the cube
 function dropIn(sp){return new Promise(done=>{
   stageEl.classList.remove('flown','leaving');stageEl.classList.add('dropping');apply();
-  const r0=cubeEl.getBoundingClientRect(),size=Math.max(40,Math.min(r0.width,r0.height));
-  const cover=1.7*Math.hypot(innerWidth,innerHeight)/size;
-  const DUR=1900,t0=performance.now(),base=cubeEl.style.transform;let a=0,last=t0,shown=false;
-  const ease=x=>x*x*(3-2*x);
-  const step=now=>{const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;
-    // in from the top, spinning down to a stop as it lands
-    const d=Math.min(1,e/.4),g=Math.min(1,Math.max(0,(e-.4)/.28)),p=Math.max(0,(e-.72)/.28);
-    a+=720*(1-d)*dt;
-    const y=-(1-ease(d))*innerHeight+p*p*(innerHeight+.9*Math.hypot(innerWidth,innerHeight)),sc=(.5+.5*ease(d))*(1+(cover-1)*g*g);
-    stageEl.style.transform=`translateY(${y}px) scale(${sc})`;
+  const W=innerWidth,H=innerHeight,big=Math.max(Math.min(W,H),360)*1.05;
+  const DUR=1300,base=cubeEl.style.transform;let a=0,t0=0,last=0,sc=1;
+  const ease=x=>x<.5?2*x*x:1-2*(1-x)*(1-x);
+  sp.style.opacity='1';sp.style.clipPath='inset(0 0 100% 0)';stageEl.style.transform=`translateY(${-H}px)`;
+  const step=now=>{
+    // measured once the stage has its full-screen layout: the cube is drawn bigger there
+    if(!t0){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const f of cubeEl.querySelectorAll('*')){const r=f.getBoundingClientRect();if(!r.width)continue;x0=Math.min(x0,r.left);y0=Math.min(y0,r.top);x1=Math.max(x1,r.right);y1=Math.max(y1,r.bottom)}
+      sc=x1>x0?big/Math.max(40,Math.min(x1-x0,y1-y0)):1;t0=last=now}
+    const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;a+=240*dt;
+    // the cube's centre, from just above the top to just below the bottom
+    const cy=-big/2+ease(e)*(H+big);
+    stageEl.style.transform=`translateY(${cy-H/2}px) scale(${sc})`;
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
-    // the screen is all cube: the cover goes up behind it
-    if(!shown&&g>=1){shown=true;sp.style.opacity='1'}
+    sp.style.clipPath=`inset(0 0 ${Math.max(0,H-cy)}px 0)`;
     if(e<1){requestAnimationFrame(step);return}
-    stageEl.classList.remove('dropping');stageEl.style.transform='';cubeEl.style.transform=base;done()};
+    stageEl.classList.remove('dropping');stageEl.style.transform='';cubeEl.style.transform=base;sp.style.clipPath='';done()};
   requestAnimationFrame(step)})}
 // the run's own details on the finished cover: the points, the result to share or post, and the
 // ping for tomorrow, in one panel
