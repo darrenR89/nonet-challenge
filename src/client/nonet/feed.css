@@ -179,3 +179,29 @@ body.cv {
     display: none;
   }
 }
+
+/* played today: the cover is there at once (nothing fades or slides in), and the glitter
+   plays over it on two canvases, one crisp and one that pixelates and blurs away */
+.fd-now *,
+.fd-now *::before {
+  transition: none !important;
+}
+.fd-party {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* the print behind the cover stays out of the way of the glitter, then fades up as it clears */
+.fd-print.cv::before,
+.fd-print .cv-mid::before,
+.fd-print .cv-body::before {
+  transition: opacity 1.6s ease;
+}
+.fd-print-off.cv::before,
+.fd-print-off .cv-mid::before,
+.fd-print-off .cv-body::before {
+  opacity: 0;
+}
