@@ -144,7 +144,7 @@ function splashTwist(){
   const first=firstTimer();$('spSkip').hidden=!first;$('spPractice').parentElement.hidden=first; // Learn to play stands in for Practice
   $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':first?'Learn to play · 1 min':'Play today\'s cube';
   let sub='';
-  if(first)sub='New to Nonet? A guided practice cube shows you how, one step at a time. No clock and no score.';
+  if(first)sub='New to Nonet? A guided practice cube shows you how to play, one step at a time. No clock and no score.';
   else if(guest)sub='Play free, no account needed. Sign up at the end to save your score, join a crew, and start a streak.';
   else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
