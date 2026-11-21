@@ -304,7 +304,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         week: weekKey(day),
         level: levelOf(day),
         puzzle: rec.tier !== undefined ? cube(day).tiers[rec.tier] : undefined,
-        my: {tier: rec.tier, score: rec.score, starsWon: rec.stars, retries: rec.retries ?? 0},
+        my: {tier: rec.tier, score: rec.score, starsWon: rec.stars, retries: rec.retries ?? 0, commented: !!(rec as {commented?: boolean}).commented},
         streak: streakNow(day, s),
         preview: preview(day, s),
         boards: boards(day, s),
@@ -430,6 +430,12 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       s.nudgesOff = body.on !== true
       save(s)
       return json(crewSample(day, s))
+    case 'api/daily/comment':
+      if (rec.score === undefined) return err(409, "Finish today's cube first.")
+      if ((rec as {commented?: boolean}).commented) return err(409, "You've already posted today's result.")
+      ;(rec as {commented?: boolean}).commented = true
+      save(s)
+      return json({commented: true})
     case 'api/crew/post':
       ;(s.crewPosted ??= {})[day] = true
       save(s)

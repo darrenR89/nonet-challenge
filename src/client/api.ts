@@ -20,6 +20,7 @@ import {
   type JoinTeamReq,
   type JoinTeamRsp,
   type NotifyRsp,
+  type ResultCommentRsp,
   type RetryRsp,
   type ScoreReq,
   type ScoreRsp,
@@ -122,5 +123,8 @@ export const setCrewNudges = (
   req: CrewNudgesReq,
 ): Promise<CrewRsp | undefined> => call<CrewRsp>(Endpoint.CrewNudges, req)
 /** Posts the crew's result for today as a comment on the daily post. */
+/** Posts the player's finished result as their own comment on this post. */
+export const postResult = (): Promise<ResultCommentRsp | undefined> =>
+  call<ResultCommentRsp>(Endpoint.ResultComment, {})
 export const postCrewResult = (): Promise<CrewRsp | undefined> =>
   call<CrewRsp>(Endpoint.CrewPost, {})

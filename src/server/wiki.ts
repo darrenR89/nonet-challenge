@@ -75,7 +75,7 @@ export function wikiText(d: WikiData): string {
     })
     .join('\n')
   const flair = d.flair
-    ? ` From ${FLAIR_FROM} days in a row your user flair here shows it, like "Nonet · ${FLAIR_FROM}-day streak". Miss a day and it shows your best instead. Flair you or the mods set yourselves is left alone.`
+    ? ` From ${FLAIR_FROM} days in a row your user flair here shows it, like "Nonet · ${FLAIR_FROM}-day streak". Once the streak ends it shows your best instead. Flair you or the mods set yourselves is left alone.`
     : ''
   const founders = d.founders
     ? ` The first ${FOUNDERS} players to finish a cube here are its founders: their flair says so, "Nonet founder #1" onwards, for good.`
@@ -112,7 +112,7 @@ ${mult}
 
 ## Streaks
 
-Finish a cube on days in a row to build a streak.${flair}${founders} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
+Finish a cube on days in a row to build a streak. You can take one day off a week, Monday to Sunday, without losing it.${flair}${founders} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
 
 ## The week
 

@@ -3,7 +3,8 @@ import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ri
 import './style.css';
 import {makeTransitions} from './transitions.js';
 import {makeRoom} from './room.js';
-import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
+import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,postResult,lastError} from '../api.ts';
+import {resultCommentText} from '../../shared/result.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
@@ -42,6 +43,9 @@ const $=id=>document.getElementById(id);
 // ---------- state ----------
 let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
+// each face's squares, to buzz when a face is finished
+const faceOfCell=i=>faceOfNormal.get(k3(cells[i].n));
+const faceCells=F.map((_,fi)=>cells.map((_,i)=>i).filter(i=>faceOfCell(i)===fi));
 let flatOn=false; // the flattened net is showing
 let hold=false; // the clock is held during the intro animation and countdown
 let t0=0,t1=0,t2=0,wrong=0,blanks=0,penMode=false,gaveUp=false,aligned=false;
@@ -88,6 +92,8 @@ async function loadDaily(){
   else{online=false;level=levelOf(today);twistDay=offlineTwist()}
   if(online)void claimPending(r);
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
+  // a first visit starts on 0 turns, just the fill-in, so the first scored cube teaches one thing at a time
+  if(twistDay===null&&!(D&&D.streak&&D.streak.played))tier=0;
   if(twistDay!==null)tier=twistDay;
   applyTwistLock();
   // locked in earlier today: today's cube waits behind the start screen, paused,
@@ -377,7 +383,7 @@ async function finale(){
 // the cube comes back when the result card is closed, or a new cube starts
 function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
-// a spoiler-free line for the daily thread: no digits, no squares, just how it went
+// a spoiler-free line for the daily thread: no digits from the cube, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
 // where you stand among the people you've challenged today, once any of them has played
 function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
@@ -403,15 +409,15 @@ async function claimPending(r){const p=readPending();if(!p)return;
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
-  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} of ${num(s.boards.day.players)} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:s.streak.best>1?`Day 1 of a new streak. Your best is ${s.streak.best}`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let crewOpen=false;
 // the top of the end card, set like the cover: the issue row between double rules, then the
 // numbers in columns, label over value
-function resHead(total,time,rank,name,pen){
+function resHead(total,time,rank,name,pen,players){
   const pips=[0,1,2].map(k=>`<i${k<=level?' class="on"':''}></i>`).join('');
   const col=(l,v)=>`<div><dt>${l}</dt><dd>${v}</dd></div>`;
   return `<h2 class="cv-sr">Solved</h2><div class="res-issue"><span class="res-no">日刊 No.<b>${D?D.cubeNo:'–'}</b></span><span class="res-level"><span class="res-pips">${pips}</span><span class="res-tag">${esc(LEVEL_NAMES[level])}</span></span></div>
-  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}`):''}</dl>
+  <dl class="res-stats">${col('Points',num(total))}${col('Time',time)}${rank?col('Today',`#${rank}${players>1?`<small> of ${num(players)}</small>`:''}`):''}</dl>
   <p class="res-sub">${esc(name)}${pen<1?` · retry ×${pen}`:''}</p>`}
 function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore,el=$('results');el.hidden=false;$('showRes').hidden=true;
   const pen=daily&&retries?RETRY_MULT:1,total=r?r.total:Math.round(s.total*pen),scored=online&&daily&&!tkUsed;
@@ -423,16 +429,16 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
   else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
-  const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
+  const streak=scored&&st&&st.current&&(st.current>1||st.best<=1)?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:scored&&st&&st.best>1?`<p class="streakline"><i></i><b>New streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ lock-first squares to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
-    <div class="acts"><button id="eComment" class="primary">Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+    <div class="acts">${canComment(r,scored)?'<button id="ePost" class="primary">Post in the comments</button>':''}<button id="eComment"${canComment(r,scored)?'':' class="primary"'}>Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
-  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen)}
+  el.innerHTML=`${resHead(total,fmt(t1+t2),scored&&me?me.rank:0,s.name,pen,r?r.boards.day.players:0)}
   ${rank}${streak}${scored?duelsHTML(D&&D.duels||[],!!r):''}${guest&&daily&&!tkUsed?'':more}${pv}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${endTab===k}">${l}</button>`).join('')}</div>
   <div class="tabpanel" id="eTab"${endTab?'':' hidden'}>${endTab?panel(endTab):''}</div>`;
@@ -441,6 +447,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
   if($('eComment'))$('eComment').onclick=()=>void openShare(s,total,scored&&me?me.rank:0);
+  if($('ePost'))$('ePost').onclick=()=>askPost(total,me,r.boards.day.players);
   // the crew box opens under What next: start one, or see who has played
   if($('eCrew'))$('eCrew').onclick=()=>{crewOpen=!crewOpen;if(crewOpen)journey.interaction('end_crew');renderEndCard()};
   if($('eCrewBox'))wireCrew($('eCrewBox'),crewChanged);
@@ -448,6 +455,15 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
+// the result as the player's own comment on the daily post: only for today's counted run, once
+function canComment(r,scored){let pid;try{pid=context.postId}catch(e){}return !!(scored&&r&&r.counted&&pid&&D&&!D.my.commented&&!D.pastBoards)}
+function askPost(total,me,players){
+  const text=resultCommentText({cubeNo:D.cubeNo,tier:P.tier,time:t1+t2,points:total,stars:starWon.size,rank:me&&me.rank,players});
+  ask('Post your result?',`<pre class="sharetxt">${esc(text)}</pre><p class="meta">It goes in this post's comments under your username. No numbers from the cube, so no spoilers.</p>`,[
+    ['Cancel'],['Post',async()=>{const b=$('ePost');if(b){b.disabled=true;b.textContent='Posting…'}journey.interaction('share','comment');
+      const ok=await postResult();
+      if(ok&&D){D.my.commented=true;if(b)b.textContent='Posted';return}
+      if(b){b.disabled=false;b.textContent=lastError||'Try again'}},'primary']])}
 // sharing: a picture of the result, points first (no digits, so no spoilers), and the
 // post's link so whoever sees it can tap through and play
 async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=true;
@@ -626,16 +642,18 @@ setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
   const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render();
   if(walk===1&&c===walkCell)walkTo(2)});
+// a short buzz on phones that support it (Android; iOS webviews ignore it), off with reduced motion
+const buzz=p=>{try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)navigator.vibrate?.(p)}catch(e){}};
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');

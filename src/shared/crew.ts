@@ -50,7 +50,7 @@ export type Crew = {
   rank: number | undefined
   /** Crews with points this week. */
   crews: number
-  /** Days in a row every member played. 0 once a day is missed. */
+  /** Days in a row every member played, with one rest day a week. 0 once it lapses. */
   streak: number
   best: number
   /** True once someone in the crew posted today's crew result comment. */
@@ -129,7 +129,7 @@ export function nudgeText(
 ): {subject: string; text: string} {
   return {
     subject: `${CREW_MARK} ${crew} is waiting on you`,
-    text: `u/${from} nudged you: ${played} of ${of} in ${crew} have played today's Nonet cube. Play it before midnight Pacific to keep the crew streak going.`,
+    text: `u/${from} nudged you: ${played} of ${of} in ${crew} have played today's Nonet cube. Today's cube is open until midnight Pacific. You can turn nudges off in the crew panel.`,
   }
 }
 

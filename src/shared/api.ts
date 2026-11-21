@@ -60,7 +60,13 @@ export type EventState = {
   myTeam: string | undefined
 }
 
-export type Streak = {current: number; best: number; played: number}
+export type Streak = {
+  current: number
+  best: number
+  played: number
+  /** True once this week's rest day has covered a missed day. */
+  restUsed?: boolean
+}
 
 /** What the asker has done today. */
 export type MyDay = {
@@ -71,6 +77,8 @@ export type MyDay = {
   starsWon: number | undefined
   /** Retries used today: 0 or 1. A retry scales today's total by RETRY_MULT. */
   retries: number
+  /** True once they've posted today's result as a comment. */
+  commented?: boolean
 }
 
 /** A retry restarts today's cube once; the finished total is multiplied by this. */
@@ -227,6 +235,8 @@ export type CrewNudgeReq = {to: string}
 export type CrewSeatReq = {to: string}
 /** Turns crew nudges to the asker on or off. */
 export type CrewNudgesReq = {on: boolean}
+/** Posts the asker's finished result as their own comment on this post. */
+export type ResultCommentRsp = {commented: boolean}
 /** The asker's crew afterwards. note says what didn't work, such as an invite that failed. */
 export type CrewRsp = CrewInfo & {note?: string}
 
@@ -257,6 +267,7 @@ export const Endpoint = {
   CrewSeat: 'api/crew/seat',
   CrewNudges: 'api/crew/nudges',
   CrewPost: 'api/crew/post',
+  ResultComment: 'api/daily/comment',
   TelemetryStart: 'api/telemetry/journey/start',
   TelemetryProgress: 'api/telemetry/journey/progress',
   TelemetryInteraction: 'api/telemetry/journey/interaction',
@@ -294,6 +305,7 @@ export const EndpointMethod = {
   [Endpoint.CrewSeat]: 'POST',
   [Endpoint.CrewNudges]: 'POST',
   [Endpoint.CrewPost]: 'POST',
+  [Endpoint.ResultComment]: 'POST',
   [Endpoint.TelemetryStart]: 'POST',
   [Endpoint.TelemetryProgress]: 'POST',
   [Endpoint.TelemetryInteraction]: 'POST',

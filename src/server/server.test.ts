@@ -19,6 +19,7 @@ import {
   Endpoint,
   type ErrorRsp,
   type JoinTeamRsp,
+  type ResultCommentRsp,
   type ScoreReq,
   type ScoreRsp,
   type StartRsp,
@@ -61,6 +62,9 @@ let optedIn = false
 const pushed: string[] = []
 /** Comments the app made, as [post id, text]. */
 const comments: [string, string][] = []
+/** Who each comment was posted as, in order. */
+const commentAs: (string | undefined)[] = []
+let commentFails = false
 /** Private messages the app sent, as [to, subject]. */
 const messages: [string, string][] = []
 
@@ -154,8 +158,10 @@ before(async () => {
     name.toLowerCase() === 'ghost'
       ? undefined
       : {id: `t2_${name.toLowerCase()}`, username: name.toLowerCase()}
-  r.submitComment = async (o: {id: string; text: string}) => {
+  r.submitComment = async (o: {id: string; text: string; runAs?: string}) => {
+    if (commentFails) throw new Error('not allowed')
     comments.push([o.id, o.text])
+    commentAs.push(o.runAs)
     return {id: 't1_c'}
   }
   r.sendPrivateMessage = async (o: {to: string; subject: string}) => {
@@ -249,6 +255,8 @@ beforeEach(() => {
   journeys.length = 0
   pushed.length = 0
   comments.length = 0
+  commentAs.length = 0
+  commentFails = false
   messages.length = 0
   optedIn = false
   autoPost = true
@@ -423,15 +431,24 @@ test('giving up uses up the day', async () => {
   assert.equal(after.body.boards.day.players, 0)
 })
 
-test('streaks grow on days in a row and lapse after a gap', async () => {
+test('streaks grow on days in a row, ride out one miss a week, and lapse after another', async () => {
   await playDay(0, run())
   now = new Date('2026-11-15T12:00:00Z')
   const two = await playDay(0, run())
   assert.equal(two.body.streak.current, 2)
+  assert.equal(two.body.streak.restUsed, false)
+  // missed Monday 16 Nov: the week's rest day covers it
   now = new Date('2026-11-17T12:00:00Z')
+  const rested = await get<DailyRsp>(Endpoint.Daily)
+  assert.equal(rested.body.streak.current, 2)
+  const three = await playDay(0, run())
+  assert.equal(three.body.streak.current, 3)
+  assert.equal(three.body.streak.restUsed, true)
+  // missed Wednesday 18 Nov, same week: no rest day left
+  now = new Date('2026-11-19T12:00:00Z')
   const daily = await get<DailyRsp>(Endpoint.Daily)
   assert.equal(daily.body.streak.current, 0)
-  assert.equal(daily.body.streak.best, 2)
+  assert.equal(daily.body.streak.best, 3)
   const back = await playDay(0, run())
   assert.equal(back.body.streak.current, 1)
 })
@@ -767,7 +784,11 @@ test('the feed card: puzzle number, solves today, and your streak and result', a
 
   later(2 * 86400)
   const lapsed = await get<CardRsp>(Endpoint.Card)
-  assert.equal(lapsed.body.streak, 0, 'a missed day ends the streak')
+  assert.equal(
+    lapsed.body.streak,
+    1,
+    "the week's rest day covers one missed day",
+  )
   assert.equal(lapsed.body.no, 320)
   assert.equal(lapsed.body.solves, 0, 'a new day starts at zero')
 })
@@ -800,6 +821,38 @@ test("an older day's post keeps its date, and links to today's post", async () =
   assert.equal(missed.past, true)
   assert.equal(missed.score, undefined, 'never played that day')
   postData = undefined
+})
+
+test('a finished player posts their result as their own comment, once a day', async () => {
+  const early = await post<ErrorRsp>(Endpoint.ResultComment, {})
+  assert.equal(early.status, 409, 'not before finishing')
+  as('t2_bob', 'bob')
+  await playDay(0, run({t1: 10, t2: 50}))
+  as('t2_ann', 'ann')
+  const ann = await playDay(1, run({t1: 60, t2: 187, starsWon: 2}))
+
+  commentFails = true
+  const failed = await post<ErrorRsp>(Endpoint.ResultComment, {})
+  assert.equal(failed.status, 502)
+  commentFails = false
+
+  const posted = await post<ResultCommentRsp>(Endpoint.ResultComment, {})
+  assert.equal(posted.status, 200, 'the failed try gave the claim back')
+  assert.equal(comments.length, 1)
+  assert.equal(comments[0]?.[0], 't3_123')
+  assert.equal(commentAs[0], 'USER', 'posted as the player, not the app')
+  const text = comments[0]?.[1] ?? ''
+  assert.match(
+    text,
+    /^Nonet No\.318 · 1 turn · 4:07 · ([\d,]+) pts · #\d of 2\n\n★★☆$/,
+  )
+  assert.equal(
+    text.match(/([\d,]+) pts/)?.[1],
+    ann.body.total.toLocaleString('en-GB'),
+  )
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.my.commented, true)
+  const again = await post<ErrorRsp>(Endpoint.ResultComment, {})
+  assert.equal(again.status, 409, 'once a day')
 })
 
 test('a challenge is offered, accepted before playing, then settles', async () => {
@@ -1147,7 +1200,7 @@ test('crew flair, when the subreddit turns it on, shows the crew with the streak
     await playDay(1, run())
   }
   assert.equal(flairs.get('t2_ann'), '連 Owls · 3-day streak')
-  now = new Date('2026-11-18T08:01:00Z')
+  now = new Date('2026-11-19T08:01:00Z')
   await daily()
   assert.equal(flairs.get('t2_ann'), '連 Owls · best streak 3')
 })
@@ -1236,11 +1289,19 @@ test('streak flair from three days in a row, then the best once it lapses', asyn
   assert.equal(flairs.get('t2_ann'), 'Nonet · 3-day streak')
   assert.equal(flairs.get('t2_cat'), 'Puzzle mod')
 
-  // ann misses the 17th; the job on the 18th moves her flair to her best
+  // ann misses the 17th, which the week's rest day covers, then the 18th; the job on the 19th
+  // moves her flair to her best
   now = new Date('2026-11-17T08:01:00Z')
   await daily()
   assert.equal(flairs.get('t2_ann'), 'Nonet · 3-day streak')
   now = new Date('2026-11-18T08:01:00Z')
+  await daily()
+  assert.equal(
+    flairs.get('t2_ann'),
+    'Nonet · 3-day streak',
+    'the rest day covers the 17th',
+  )
+  now = new Date('2026-11-19T08:01:00Z')
   await daily()
   assert.equal(flairs.get('t2_ann'), 'Nonet · best streak 3')
 
@@ -1269,12 +1330,12 @@ test('the first players to finish are numbered founders, in front of their strea
   assert.equal(flairs.get('t2_ann'), 'Nonet founder #1 · 3-day streak')
   assert.equal(flairs.get('t2_cat'), 'Puzzle mod')
   // the lapse keeps the founder number
-  now = new Date('2026-11-18T08:01:00Z')
+  now = new Date('2026-11-19T08:01:00Z')
   await daily()
   assert.equal(flairs.get('t2_ann'), 'Nonet founder #1 · best streak 3')
   // a third player is #3: places are handed out in finishing order
   as('t2_bob', 'bob')
-  now = new Date('2026-11-18T12:00:00Z')
+  now = new Date('2026-11-19T12:00:00Z')
   await playDay(1, run())
   assert.equal(flairs.get('t2_bob'), 'Nonet founder #3')
 })
@@ -1341,7 +1402,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.match(
     wiki.content,
-    /### Longest streaks\n\n1\. u\/(ann|bob) · 1 day\n2\. u\/(ann|bob) · 1 day\n/,
+    /### Longest streaks\n\n1\. u\/ann · 2 days\n2\. u\/bob · 1 day\n/,
   )
 
   // the moderator menu rewrites the same page

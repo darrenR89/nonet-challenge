@@ -395,6 +395,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 @media (prefers-reduced-motion:reduce){.st.pop,.st.sweep,.st.facedone{animation:none}.moment.go{animation:momentfade 1.5s both}@keyframes momentfade{0%,100%{opacity:0}15%,75%{opacity:1}}}
 /* the completed page's share line and next steps */
 .results .more .sharetxt{margin:0;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap}
+#modalBody .sharetxt{margin:0 0 10px;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap;overflow-wrap:anywhere}
 .results .more button small{font-size:11px;opacity:.7;margin-left:4px}
 /* the guest's end card: what signing up saves */
 .results .signup{background:var(--yellow);color:var(--sumi);border-radius:var(--r);padding:14px;display:grid;gap:10px;margin-top:4px}
@@ -428,6 +429,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .res-stats div:first-child{border-left:0;padding-left:0}
 .res-stats div:last-child{padding-right:0}
 .res-stats dt{font:400 11px/1.3 var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--lead)}
+.res-stats dd small{display:block;font:400 11px/1.3 var(--code);letter-spacing:.04em;color:var(--lead)}
 .res-stats dd{margin:2px 0 0;font:500 30px/1.1 var(--code);font-variant-numeric:tabular-nums}
 .results .res-sub{margin:-6px 0 0;font:400 12px var(--code);color:var(--lead);text-align:right}
 

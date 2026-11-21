@@ -40,13 +40,14 @@ Your first finished run each day is the one that counts.
 ## On Reddit
 
 - **Daily posts.** The app posts each day's cube and pins it. Every Monday it also posts the week's top nine and the solve of the week. The card in the feed shows today's cube number, how many people have played, the fastest time, and your streak and rank.
-- **Streaks and flair.** From 3 days in a row, a player's user flair shows their streak, such as "Nonet · 7-day streak". Once a streak lapses, the flair shows their best instead.
+- **Streaks and flair.** A streak counts days in a row with a finished cube. Each week (Monday to Sunday), one missed day is covered by a rest day, so a single bad day doesn't end it. From 3 days in a row, a player's user flair shows their streak, such as "Nonet · 7-day streak". Once a streak lapses, the flair shows their best instead.
+- **Results in the comments.** Once you've finished, "Post in the comments" posts your result on the day's post under your username: the cube number, turns, time, points, rank and ★. Nothing from the cube itself, so no spoilers.
 - **Founder flair.** The first 100 players to finish a cube in the subreddit get numbered flair, "Nonet founder #1" to "#100", in front of their streak. It's a reason to start playing on day one.
 - **Post flair.** The app tags its own posts as "Daily cube", "Weekly top nine" or "Event results", so players can filter the subreddit by them.
 - **Boards.** There are boards for today, the week and all time, each showing where you stand.
 - **Challenges.** Once you've finished, dare another player by username to beat your score on today's cube. They accept before they play.
 - **Nonet Crews (連).** Team up with up to two other players. You play the same cube on your own time, and your scores add up.
-  - Your crew streak grows on every day that all of you play.
+  - Your crew streak grows on every day that all of you play, with the same one rest day a week.
   - You can nudge a crewmate who hasn't played yet.
   - Once everyone has played, you can post the crew's result as a comment.
   - A crew's line-up is locked for the week.
