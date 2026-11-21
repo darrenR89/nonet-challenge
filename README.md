@@ -19,13 +19,7 @@ Some extra rules and tools:
 - **Flatten cube.** Unfolds the cube into a flat net if you'd rather fill it in flat. On a phone the number pad sits at the bottom of the screen. On a wide screen it sits on the right.
 - **How to play.** The ? button in the game has the full rules with pictures. "Practice cube" lets you play without scoring.
 
-The difficulty follows the week:
-
-| Days                        | Difficulty |
-| :-------------------------- | :--------- |
-| Monday, Tuesday             | Easy       |
-| Wednesday, Thursday, Sunday | Medium     |
-| Friday, Saturday            | Hard       |
+Each week has two Easy days, three Medium and two Hard. The order is shuffled at random every week, the same for everyone, so a Hard day can come on a Monday. Hard days have fewer clues.
 
 ### Scoring
 

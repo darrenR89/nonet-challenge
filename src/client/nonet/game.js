@@ -71,7 +71,7 @@ const clearPending=()=>{try{localStorage.removeItem(PENDING)}catch(e){}};
 let paused=false,pausedAt=0,retries=0,lastScore=null;
 let today=dayKey();
 let twistDay=null;
-// today's fill difficulty: 0 Easy, 1 Medium, 2 Hard. The server sends it; offline it comes from the weekday
+// today's fill difficulty: 0 Easy, 1 Medium, 2 Hard. The server sends it; offline it comes from the week's shuffle
 let level=levelOf(today);
 const offlineTwist=()=>{try{const v=JSON.parse(localStorage.getItem('nonet-twist')||'null');if(v&&v.d===today&&tierAllowed(level,v.t))return v.t}catch(e){}return null};
 function lockTwist(t){twistDay=t;if(!online){try{localStorage.setItem('nonet-twist',JSON.stringify({d:today,t}))}catch(e){}}applyTwistLock()}

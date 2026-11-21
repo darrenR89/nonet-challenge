@@ -27,13 +27,44 @@ export const tierAllowed = (level: number, tier: number): boolean =>
 export const multOf = (level: number, tier: number): number =>
   TURN_MULT[level]?.[tier] ?? 1
 
-/** Each day's fill difficulty by weekday, Monday first: easy early in the week, hard at the end. */
-export const WEEK_LEVELS = [0, 0, 1, 1, 2, 2, 1] as const
+/** Each week's mix of fill difficulties: two Easy days, three Medium and two Hard. */
+export const WEEK_MIX = [0, 0, 1, 1, 1, 2, 2] as const
+
+/** The old fixed order, Monday first, kept for days before the shuffle started so past cubes keep their level. */
+const OLD_WEEK = [0, 0, 1, 1, 2, 2, 1] as const
+
+/** The first Monday whose week is shuffled. */
+export const SHUFFLE_FROM = '2026-11-23'
+
+/** A small seeded random number generator (mulberry32), so a week shuffles the same everywhere. */
+function rng(seed: string): () => number {
+  let h = 2166136261
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+  return () => {
+    h = (h + 0x6d2b79f5) | 0
+    let t = Math.imul(h ^ (h >>> 15), 1 | h)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** A day's week of fill difficulties, Monday first: the week's mix in an order picked at random for that week. */
+export function weekLevels(day: string): number[] {
+  const dow = (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7
+  if (addDays(day, -dow) < SHUFFLE_FROM) return [...OLD_WEEK]
+  const next = rng(`nonet:${weekKey(day)}`)
+  const week: number[] = [...WEEK_MIX]
+  for (let i = week.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1))
+    ;[week[i], week[j]] = [week[j] ?? 0, week[i] ?? 0]
+  }
+  return week
+}
 
 /** The fill difficulty for a YYYY-MM-DD day. */
 export function levelOf(day: string): number {
   const dow = (new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7
-  return WEEK_LEVELS[dow] ?? 0
+  return weekLevels(day)[dow] ?? 0
 }
 
 /** What a finished run reports. Times are in seconds. */

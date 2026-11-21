@@ -11,11 +11,13 @@ import {
   msUntilNextDay,
   multOf,
   padNo,
+  SHUFFLE_FROM,
   scoreRun,
   shortDate,
   tierAllowed,
   weekday,
   weekKey,
+  weekLevels,
 } from './scoring.ts'
 
 const perfect = (turns: number) => ({
@@ -69,11 +71,29 @@ test('turn multipliers grow faster on harder cubes, and Hard stops at 2 turns', 
   assert.ok(!tierAllowed(0, -1))
 })
 
-test('the week runs Easy, Easy, Medium, Medium, Hard, Hard, Medium', () => {
-  const week = ['2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19']
-    .concat(['2026-11-20', '2026-11-21', '2026-11-22'])
-    .map(levelOf)
-  assert.deepEqual(week, [0, 0, 1, 1, 2, 2, 1])
+const weekOf = (monday: string): number[] =>
+  [0, 1, 2, 3, 4, 5, 6].map(i => levelOf(addDays(monday, i)))
+
+test('weeks before the shuffle keep their old order, so past cubes keep their level', () => {
+  assert.deepEqual(weekOf('2026-11-16'), [0, 0, 1, 1, 2, 2, 1])
+})
+
+test('every week has two Easy, three Medium and two Hard days, in a random order', () => {
+  const orders = new Set<string>()
+  for (let w = 0; w < 52; w++) {
+    const week = weekOf(addDays(SHUFFLE_FROM, w * 7))
+    assert.deepEqual([...week].sort(), [0, 0, 1, 1, 1, 2, 2])
+    orders.add(week.join(''))
+  }
+  assert.ok(orders.size > 20, `only ${orders.size} different orders in a year`)
+  // the week doesn't simply get harder: some week has a Hard day before an Easy one
+  assert.ok([...orders].some(o => o.indexOf('2') < o.lastIndexOf('0')))
+})
+
+test('a week shuffles the same every time it is asked', () => {
+  const day = addDays(SHUFFLE_FROM, 21)
+  assert.deepEqual(weekLevels(day), weekLevels(addDays(day, 3)))
+  assert.deepEqual(weekLevels(day), weekLevels(day))
 })
 
 test('weeks start on Monday, ISO numbered', () => {

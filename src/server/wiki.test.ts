@@ -98,8 +98,9 @@ test('the wiki has the week, the multipliers and the records', () => {
       },
     ],
   })
-  assert.match(md, /\| Monday \| Easy \| 0 to 3 \|/)
-  assert.match(md, /\| Friday \| Hard \| 0 to 2 \|/)
+  assert.match(md, /\| Easy \| 2 \| 0 to 3 \|/)
+  assert.match(md, /\| Medium \| 3 \| 0 to 3 \|/)
+  assert.match(md, /\| Hard \| 2 \| 0 to 2 \|/)
   assert.match(md, /\| 3 \| ×2 \| ×3 \| not offered \|/)
   assert.match(md, /Nonet · 3-day streak/)
   assert.match(md, /first 100 players .* "Nonet founder #1"/)
