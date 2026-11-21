@@ -544,8 +544,8 @@ function render(){
     if(tgt!==done)l.forEach(i=>ov.add(i));
     if(stage===2&&own.includes(sel)){const L=new Set(l);own.forEach(i=>twin.add(i));for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
   const showHome=stage>1||!T.hideHome||aligned;
-  // a suggested square stays marked until it is locked in, or Fill in is over
-  if(hintCell>=0&&(stage!==2||vals[hintCell]))hintCell=-1;
+  // a suggested square stays marked through its pulse and hold, or until Fill in is over
+  if(hintCell>=0&&stage!==2)hintCell=-1;
   cells.forEach((_,i)=>stickers[i].forEach(s=>{
     s.classList.toggle('hinted',i===hintCell);if(i!==hintCell)s.classList.remove('hintme','hintquiet');
     if(vals[i]){if(s.dataset.v!=String(vals[i])){s.innerHTML=digitSVG(vals[i]);s.dataset.v=vals[i]}}
@@ -637,9 +637,11 @@ setInterval(()=>{if(!isPrac()||stage===3||$('hint').hidden)return;tipN++;const h
 function showMisses(){}
 function penaltyAt(el){if(!el)return;const r=el.getBoundingClientRect(),f=document.createElement('div');
   f.className='penalty';f.setAttribute('aria-hidden','true');f.innerHTML='−25<sub>pts</sub>';
-  // beside the square's top corner, not over it: to its right, or to its left near the screen's right edge
-  const flip=r.right+96>innerWidth;f.classList.toggle('flip',flip);
-  f.style.left=`${flip?r.left-2:r.right+2}px`;f.style.top=`${r.top+4}px`;document.body.appendChild(f);setTimeout(()=>f.remove(),1300)}
+  // just above the wrong square, centred on it, kept on screen
+  f.style.left=`${Math.min(innerWidth-48,Math.max(48,r.left+r.width/2))}px`;f.style.top=`${Math.max(36,r.top-2)}px`;document.body.appendChild(f);setTimeout(()=>f.remove(),1300)}
+// where a square is on screen: its tile in the flattened cross when that's showing, otherwise its sticker on the face nearest you
+function shownSticker(c){const flat=[...document.querySelectorAll(`#net .st[data-c="${c}"]`)].find(x=>x.offsetParent&&x.getBoundingClientRect().width);
+  return flat||stickers[c].slice().sort((a,b)=>facing(+b.dataset.f)-facing(+a.dataset.f))[0]}
 setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
@@ -653,7 +655,7 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);// the square goes red and pulses twice, on the cube and in the flattened cross
+  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(shownSticker(sel));// the square goes red and pulses twice, on the cube and in the flattened cross
     const red=[...el,...document.querySelectorAll(`#net .st[data-c="${sel}"]`)];red.forEach(x=>{x.classList.remove('shake','wrong');x.style.animation='';void x.offsetWidth;x.classList.add('wrong')});
     setTimeout(()=>red.forEach(x=>x.classList.remove('wrong')),1400);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
@@ -688,18 +690,24 @@ function viewNormal(fi){const n=F[fi].map(1,1);const r=x=>x*Math.PI/180;
   const cx=Math.cos(r(rx)),sx=Math.sin(r(rx));[y,z]=[y*cx-z*sx,y*sx+z*cx];return[x,y,z]}
 const facing=fi=>viewNormal(fi)[2];
 // shows the next turn home as a pulsing arrow; free in Practice, otherwise it uses one of the three
-// a Fill in suggestion finds a square where only one digit fits and pencils that digit in for you;
-// it skips squares already pencilled with the right digit, and you still lock it in yourself
-function hintSquare(){const sol=answer();const done=i=>sol&&pm[i]===1<<sol[i];
-  const order=singlesOrder(vals).filter(i=>!done(i));let c=order[0];
-  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]&&!done(i)){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
+// a Fill in suggestion finds a square where only one digit fits and locks that digit in for you.
+// The square pulses three times, holds its gold mark a moment, then goes back to a normal square.
+// A suggested lock-first square doesn't win its bonus; any other suggested square ends the lock-first run.
+function hintSquare(){const sol=answer();
+  const order=singlesOrder(vals);let c=order[0];
+  if(c===undefined){let best=10;for(let i=0;i<N;i++)if(!vals[i]){const n=peers[i].reduce((m,p)=>vals[p]?m&~(1<<vals[p]):m,0x3FE).toString(2).split('1').length-1;if(n<best){best=n;c=i}}}
   if(c===undefined)return;hintsLeft--;hintsUsed++;journey.interaction('hint');
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
-  if(sol){pm[c]=1<<sol[c];music.sfx('pencil');render()}
-  hintCell=c;render();stickers[c].forEach(el=>{el.classList.remove('hintme','hintquiet');void el.offsetWidth;el.classList.add('hintme')});
-  setTimeout(()=>{if(hintCell===c)stickers[c].forEach(el=>el.classList.add('hintquiet'))},4000);
-  $('status').textContent=sol?'Only one digit fits here, so it\'s pencilled in. Switch to Lock in to place it.':'Only one digit fits in this square.'}
+  hintCell=c;
+  if(sol){if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;music.sfx('lock');buzz(10)}
+  render();if(stage!==2)return;const marks=()=>[...stickers[c],...document.querySelectorAll(`#net .st[data-c="${c}"]`)];
+  marks().forEach(el=>{el.classList.remove('hintme','hintquiet');el.style.animation='';void el.offsetWidth;el.classList.add('hintme')});
+  setTimeout(()=>{if(hintCell===c)marks().forEach(el=>el.classList.add('hintquiet'))},HINT_PULSE);
+  setTimeout(()=>{if(hintCell===c){hintCell=-1;render()}},HINT_HOLD);
+  $('status').textContent=sol?'Only one digit fits here, so it\'s locked in for you.':'Only one digit fits in this square.'}
+// the suggested square pulses three times (1.2s each), then holds its gold mark until HINT_HOLD
+const HINT_PULSE=3600,HINT_HOLD=6000;
 function showHint(free){
   if(stage===2&&!free&&hintsLeft>0){hintSquare();return}
   if(stage!==1||(!free&&hintsLeft<=0))return;const m=nextHomeMove();if(!m)return;
