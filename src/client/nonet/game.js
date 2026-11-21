@@ -33,6 +33,9 @@ F.forEach((f,fi)=>{
   }
   cubeEl.appendChild(el);faceEls.push(el);
 });
+// a solid core just inside the faces, with square corners, so the rounded faces leave no gap where three meet.
+// It comes after the faces, so .face:nth-child still counts faces only.
+F.forEach(f=>{const c=document.createElement('div');c.className='core';c.style.transform=f.t.replace('translateZ(var(--h))','translateZ(calc(var(--h) - 4px))');cubeEl.appendChild(c)});
 let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Math.max(.6,Math.min(1.7,Math.min(st.clientWidth,st.clientHeight)/290));apply()};
 const $=id=>document.getElementById(id);
 
