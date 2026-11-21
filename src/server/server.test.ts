@@ -912,6 +912,9 @@ test('challenges explain what is wrong', async () => {
 })
 
 test('a crew: start one, invite by name, join, and scores add up', async () => {
+  const rude = await post<ErrorRsp>(Endpoint.CrewCreate, {name: 'Sh1t Kickers'})
+  assert.equal(rude.status, 400)
+  assert.match(rude.body.error, /can't be posted/)
   const made = await post<CrewRsp>(Endpoint.CrewCreate, {
     name: ' Night  Owls ',
     invite: ['u/Bob', 'cat'],

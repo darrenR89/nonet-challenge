@@ -2,6 +2,8 @@
 // own time, and the crew's score for a day is the sum of its members' scores.
 // Shared by the server (rules) and the game (wording).
 
+import {isOffensive} from './names.ts'
+
 /** Members in a full crew. */
 export const CREW_SIZE = 3
 
@@ -63,12 +65,13 @@ export type CrewInfo = {crew: Crew | undefined; invites: CrewInvite[]}
 
 export const NO_CREW: CrewInfo = {crew: undefined, invites: []}
 
-/** A crew name, tidied: 2 to 24 letters, digits, spaces and a little punctuation. */
+/** A crew name, tidied: 2 to 24 letters, digits, spaces and a little punctuation, and nothing offensive. */
 export function cleanCrewName(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return
   const name = raw.trim().replace(/\s+/g, ' ')
   if (name.length < 2 || name.length > 24) return
-  return /^[\p{L}\p{N}][\p{L}\p{N} '.&!-]*$/u.test(name) ? name : undefined
+  if (!/^[\p{L}\p{N}][\p{L}\p{N} '.&!-]*$/u.test(name)) return
+  return isOffensive(name) ? undefined : name
 }
 
 /** Members whose runs count for the crew today (not those waiting for Monday). */
