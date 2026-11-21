@@ -457,6 +457,18 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .padbox{position:fixed;z-index:20;left:0;right:0;bottom:0;margin:0 auto;width:min(560px,calc(100% - 24px));box-sizing:border-box;
   border-bottom:0;border-radius:0 var(--r) 0 0;padding-bottom:max(8px,env(safe-area-inset-bottom));box-shadow:0 -12px 24px rgb(0 0 0 / .35)}
 .wrap:has(.padbox:not([hidden])){padding-bottom:calc(var(--padH,180px) + 44px)}
+/* wide screens: the pad stands in a column to the right of the board instead of along the bottom,
+   as a 3 by 3 keypad with clear underneath. The board keeps its width and the pair is centred together. */
+@media (min-width:880px) and (min-aspect-ratio:5/4){
+  .wrap:has(.padbox:not([hidden])){max-width:884px;padding-right:324px;padding-bottom:48px}
+  /* the header, progress bar and helpers run the full width, over the pad's column too */
+  .wrap:has(.padbox:not([hidden]))>:is(header,.modes){margin-right:-324px}
+  .padbox{left:calc(50% + 142px);right:auto;top:var(--padMid,50%);bottom:auto;translate:0 -50%;width:300px;margin:0;
+    border-bottom:1px solid var(--edge);border-radius:0 var(--r) var(--r) var(--r);padding-bottom:8px;box-shadow:0 12px 30px rgb(0 0 0 / .3)}
+  .pad{grid-template-columns:repeat(3,1fr)}
+  .pad button,body:has(.net:not([hidden])) .pad button{min-height:min(72px,13vh)}
+  .pad button:last-child{grid-column:span 3}
+}
 /* the cube's area takes all the height left between the top bar and the pad, and the cube sits in
    its middle, so it stays centred whatever the screen height */
 .wrap{min-height:100svh;box-sizing:border-box}
@@ -526,10 +538,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* ---------- flatten helper ----------
    Step one: the main clock stops for 5 seconds while the player turns the cube and taps a square.
    Step two: a cross of that square's two lines of nine, with every face they cross shown whole,
-   on a 20-second clock of its own. The cube, its room and the number pad step away meanwhile. */
+   on a 20-second clock of its own. The cube and its room step away; the number pad stays to fill squares in. */
 .stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
-body:has(.net:not([hidden])) .padbox{display:none}
-.wrap:has(.net:not([hidden])){padding-bottom:16px}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
 
 /* one clock for both steps: an ink pill with a yellow ring, pinned to the top middle, with fold back inside */
@@ -580,3 +590,10 @@ body:has(.net:not([hidden])) .padbox{display:none}
 .nwhy b{display:block;font:600 14px var(--code);color:var(--washi)}
 .nwhy p{margin:8px 0 0;font:400 13px/1.45 var(--code);color:var(--washi)}
 .nwhy button{margin-top:12px;width:100%}
+/* short windows (a desktop post): the helpers row steps away, the pad gets shorter keys and the numbers sit beside the cross */
+@media (max-height:600px){
+  body:has(.net:not([hidden])) .helpers{display:none}
+  body:has(.net:not([hidden])) .pad button{min-height:42px}
+  .net{flex-direction:row;padding-top:52px}
+  .ncands{flex-direction:column;max-width:120px}
+}

@@ -714,7 +714,7 @@ function flatBuild(){const net=$('net'),g=net.querySelector('.ngrid');if(!flatOn
   const f=F[flatFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
   const H=crossStrip(R,D,n,flatAnchor),V=crossStrip(D,R,n,flatAnchor),hx=H.strip.indexOf(flatAnchor),vy=V.strip.indexOf(flatAnchor);
   // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
-  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(3,Math.round(room/100)),
+  const nc=$('nCands'),row=getComputedStyle(net).flexDirection==='row',room=row?Math.min(net.clientWidth-nc.offsetWidth-24,net.clientHeight-56):Math.min(net.clientWidth,net.clientHeight-60-nc.offsetHeight-12),p=Math.max(3,Math.round(room/100)),
     u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
   const pos=c=>Math.floor(c/3)*F3+p+(c%3)*u,size=3*F3;g.style.width=g.style.height=`${size}px`;
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
@@ -829,7 +829,9 @@ const tx=makeTransitions({cubeEl,faceEls,stageEl,view:()=>({rx,ry,scaleK}),apply
 
 // a cube to show behind the splash while today's loads; Play swaps in today's
 window.addEventListener('resize',setH);// the page leaves exactly the pad's height free at the bottom, so the cube centres in what is left
-const padRoom=()=>{const b=$('padbox');document.documentElement.style.setProperty('--padH',`${b.hidden?0:b.offsetHeight}px`)};
+const padRoom=()=>{const b=$('padbox'),r=$('stage').getBoundingClientRect(),h=b.hidden?0:b.offsetHeight,css=document.documentElement.style;css.setProperty('--padH',`${h}px`);
+  // on wide screens the pad stands beside the board: centred on the board's area, never above its top
+  css.setProperty('--padMid',`${Math.round(Math.max(r.top+r.height/2,r.top+h/2+28))}px`)};
 if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
