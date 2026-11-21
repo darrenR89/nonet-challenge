@@ -688,35 +688,61 @@ $('suggest').onclick=()=>showHint(false);
 const PICK_MS=5000,FLAT_MS=20000;
 let flatEnd=0,flatTick=0,flatFace=-1,pickEnd=0;
 const v3=(a,b,k=1)=>a.map((x,i)=>x+k*b[i]),neg=a=>a.map(x=>-x);
-function netLayout(fi){const f=F[fi],n=f.map(1,1),r=v3(f.map(2,1),n,-1),d=v3(f.map(1,2),n,-1);
-  // [normal, right, down, column, row]: each neighbour unfolds away from the middle face
-  return [[n,r,d,1,1,true],[neg(d),r,n,1,0],[d,r,neg(n),1,2],[neg(r),n,d,0,1],[r,neg(n),d,2,1],[neg(n),neg(r),d,3,1]]}
-function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';
-  const u=Math.floor(Math.min(net.clientWidth/4,(net.clientHeight-130)/3,200)),k=u/180;g.style.setProperty('--u',`${u}px`);
-  // the squares are copied flat and unturned, so every number reads upright on the net
-  for(const [nm,R,D,c,r,cur] of netLayout(flatFace)){const fe=document.createElement('div');fe.className=cur?'nface cur':'nface';
-    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);fe.style.setProperty('--k',String(k));
-    for(let j=0;j<3;j++)for(let i=0;i<3;i++){const ci=idx.get(key(nm,v3(v3(nm,R,i-1),D,j-1)));const src=stickers[ci]?.[0];if(!src)continue;
-      const st=src.cloneNode(true);st.style.left=`${i*58+8}px`;st.style.top=`${j*58+8}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
-    g.appendChild(fe)}
-  // the dashed squares are the key: they hold the same three numbers as the three squares only the
-  // shown line has, so they say what can go on the outlined face. The note changes once they show.
-  const tw=g.querySelector('.st.twin');$('netCap').textContent=tw?'The dashed squares hold the same three numbers as the three squares only this line has. Use them to work out what goes on the outlined face.':'Tap a square on the outlined face to see its lines. Dashed squares will show the numbers its line still needs.';
-  net.classList.toggle('has-twin',!!tw);
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+// one line of nine through the selected square, laid out in order along `along` as seen from its face.
+// A ring of twelve holds two lines; the shown one skips three squares on one end face (the far squares).
+function crossStrip(along,across,n0){const lv=dot(cells[sel].c,across);
+  const ring=[...Array(N).keys()].filter(i=>dot(cells[i].n,across)===0&&dot(cells[i].c,across)===lv);
+  const ks=lineIdxOf[sel].filter(k=>lines[k].every(i=>ring.includes(i)));const k=ks[lc%ks.length];const L=new Set(lines[k]);
+  const ang=i=>{const q=v3(cells[i].c,cells[i].n,.5);return Math.atan2(dot(q,along),dot(q,n0))};
+  const ord=ring.slice().sort((x,y)=>ang(x)-ang(y));const st=ord.findIndex((i,x)=>!L.has(i)&&L.has(ord[(x+1)%12]));
+  const other=new Set(lines[k^1]);
+  return {strip:[...Array(9)].map((_,x)=>ord[(st+1+x)%12]),far:ring.filter(i=>!L.has(i)),own:lines[k].filter(i=>!other.has(i))}}
+// what the far squares say about the selected square: if it is one of the three squares only its line has,
+// it must hold one of the numbers on the three far squares, less those already used beside it
+function farDigits(S){if(!S.own.includes(sel))return null;const far=S.far.map(i=>vals[i]).filter(Boolean);
+  const used=new Set(S.own.filter(i=>i!==sel).map(i=>vals[i]).filter(Boolean));const ds=far.filter(d=>!used.has(d)).sort((x,y)=>x-y);
+  // with all three far squares filled the list is complete; with fewer it is only some of the options
+  ds.full=far.length===3;return ds}
+function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';if(sel<0)return;
+  const f=F[selFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
+  const H=crossStrip(R,D,n),V=crossStrip(D,R,n),hx=H.strip.indexOf(sel),vy=V.strip.indexOf(sel);
+  const gap=8,u=Math.floor(Math.min((net.clientWidth-2*gap)/9,(net.clientHeight-170-2*gap)/9,64)),k=u/60;
+  const pos=c=>c*u+Math.floor(c/3)*gap,size=9*u+2*gap;g.style.width=g.style.height=`${size}px`;
+  const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${pos(c)}px`;b.style.top=`${pos(r)}px`;
+    b.style.width=`${w*u}px`;b.style.height=`${h*u}px`;g.appendChild(b)};
+  const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
+    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.style.left=st.style.top='5px';
+    st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));w.appendChild(st);g.appendChild(w)};
+  const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
+  for(let t=0;t<9;t+=3){if(t!==fc)block(t,vy,3,1,'xband');if(t!==fr)block(hx,t,1,3,'xband')}
+  block(fc,fr,3,3,'xband xface');
+  H.strip.forEach((ci,c)=>{if(Math.floor(c/3)*3!==fc)cell(ci,c,vy)});V.strip.forEach((ci,r)=>{if(Math.floor(r/3)*3!==fr)cell(ci,hx,r)});
+  for(let j=0;j<3;j++)for(let i=0;i<3;i++)cell(idx.get(key(n,v3(v3(n,R,i-1),D,j-1))),fc+i,fr+j);
+  // the numbers the far squares allow here, from either line through the square
+  const all=[farDigits(H),farDigits(V)].filter(Boolean),full=all.filter(x=>x.full);
+  // a complete list wins (two complete lists narrow each other); otherwise show every far number seen
+  const ds=full.length?full.reduce((a,b2)=>a.filter(d=>b2.includes(d))):all.length?[...new Set(all.flat())].sort((x,y)=>x-y):null;
+  const applies=all.length>0,sure=full.length>0;
+  $('nDigits').innerHTML=ds&&!vals[sel]?ds.map(d=>`<i>${digitSVG(d)}</i>`).join(''):'';
+  $('nCandTxt').textContent=vals[sel]?'This square already has a number. Tap another square on the board.':ds&&ds.length?(sure?'Must be one of':'Could be'):
+    applies?'The far squares that match this one are still empty.':'This square sits in both lines of its ring, so the far side can\'t narrow it down.';
   const left=Math.max(0,flatEnd-Date.now());clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
 // one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
 function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
-function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0)pickFace([0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0])}
+function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0){const fi=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0],n=F[fi].map(1,1);pickFace(fi,idx.get(key(n,n)))}}
 function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
   flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
-function pickFace(fi){if(!flatOn||!$('net').hidden)return;clearInterval(flatTick);releaseClock();$('pick').hidden=true;
+function pickFace(fi,c){if(!flatOn||!$('net').hidden)return;sel=c;selFace=fi;lc=0;hintArrow=null;render();clearInterval(flatTick);releaseClock();$('pick').hidden=true;
   flatFace=fi;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
-function flatStop(){if(!flatOn)return;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
+function flatStop(){if(!flatOn)return;$('nWhy').hidden=true;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
 $('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
+const why=open=>{$('nWhy').hidden=!open;$('nInfo').setAttribute('aria-expanded',String(open))};
+$('nInfo').onclick=e=>{e.stopPropagation();why($('nWhy').hidden)};$('nWhyOk').onclick=e=>{e.stopPropagation();why(false)};
 // while picking, a tap on the cube chooses that face instead of a square
 cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;
-  e.stopPropagation();pickFace(+s.dataset.f)},true);
-$('net').addEventListener('click',e=>{const s=e.target.closest('.st');if(!s)return;e.stopPropagation();
+  e.stopPropagation();pickFace(+s.dataset.f,+s.dataset.c)},true);
+$('net').addEventListener('click',e=>{e.stopPropagation();const s=e.target.closest('.st');if(!s)return;
   const real=faceEls[+s.dataset.f].querySelector(`.st[data-i="${s.dataset.i}"][data-j="${s.dataset.j}"]`);moved=false;real?.click();flatDraw()});
 
 $('restart').onclick=askRetry;$('spRetry').onclick=askRetry;

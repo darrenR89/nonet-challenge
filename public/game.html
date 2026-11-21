@@ -109,11 +109,17 @@
     <div class="cube" id="cube"></div>
     <div class="nclock" id="fclock" hidden><i></i><b id="fTime">0:05</b><button class="fback" id="netDone" type="button" aria-label="Fold back to the cube" title="Fold back to the cube"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 14 4 9l5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     <div class="pick" id="pick" hidden>
-      <p>Clock stopped. Turn the cube and tap the face to flatten from.</p>
+      <p>Clock stopped. Turn the cube and tap the square you want help with.</p>
     </div>
     <div class="net" id="net" hidden>
       <div class="ngrid"></div>
-      <p class="ncap" id="netCap"></p>
+      <div class="ncands" id="nCands"><p id="nCandTxt"></p><span class="ndigits" id="nDigits"></span><button class="ninfo" id="nInfo" type="button" aria-label="Where these numbers come from" aria-expanded="false">i</button></div>
+      <div class="nwhy" id="nWhy" hidden>
+        <b>Where these numbers come from</b>
+        <p>Every ring of twelve squares round the cube holds two lines of nine. The two lines share six squares, so the three squares only one line has must hold the same three numbers as the three only the other line has, on the far side of the cube.</p>
+        <p>So any number already on those far squares belongs in one of the matching three here. When all three far squares are filled, the list is complete and says Must be one of.</p>
+        <button class="primary" id="nWhyOk" type="button">Got it</button>
+      </div>
     </div>
     <details class="testkit" id="testkit" hidden>
       <summary>Test</summary>

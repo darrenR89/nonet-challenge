@@ -525,12 +525,10 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .net{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;cursor:default;
   background:color-mix(in srgb,var(--sumi) 96%,transparent);border-radius:12px;animation:netin .3s ease}
 @keyframes netin{from{opacity:0;transform:scale(.96)}}
-.nface .arw,.nface .hintarw{display:none}
+.xcell .arw,.xcell .hintarw{display:none}
 .nclock{display:flex;align-items:center;gap:8px;font:500 15px var(--code);font-variant-numeric:tabular-nums}
 .nclock i{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),var(--edge) 0)}
-.ngrid{display:grid;grid-template-columns:repeat(4,var(--u));grid-template-rows:repeat(3,var(--u));gap:0}
-.nface{position:relative;width:180px;height:180px;background:var(--body-ink);border-radius:0;transform-origin:0 0}
-.nface .st{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible;cursor:pointer}
+.xcell .st{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible;cursor:pointer}
 /* while flat: the cube and its room step out of sight, so only the net shows */
 .stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
 .net{background:none}
@@ -552,30 +550,46 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .pick .nclock{pointer-events:none}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
 /* step two: the net, the chosen face outlined, dotted lines through it */
-.ngrid{position:relative}
 /* the faces touch, so the net reads as one unfolded cube; the chosen face is ringed in the seams round it */
-.nface.cur{outline:4px solid var(--washi);outline-offset:3px;z-index:1}
 /* on the net the dashed squares are the point: a thick yellow dashed outline that pulses */
-.nface .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
+.xcell .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
 @keyframes twinpulse{50%{outline-color:transparent}}
-@media (prefers-reduced-motion:reduce){.nface .st.twin{animation:none}}
+@media (prefers-reduced-motion:reduce){.xcell .st.twin{animation:none}}
 /* on paper yellow is too faint: the dashes are ink over a gold wash */
 @media (prefers-color-scheme:light){
-  .nface .st.twin{outline-color:#23252b;background:color-mix(in srgb,var(--shade) 55%,#f5c12e)!important;animation-name:twinpulse-ink}
+  .xcell .st.twin{outline-color:#23252b;background:color-mix(in srgb,var(--shade) 55%,#f5c12e)!important;animation-name:twinpulse-ink}
   @keyframes twinpulse-ink{50%{outline-color:#9a6f00}}
-  .ncap::before{border-color:#23252b;background:#f6e7b8}
 }
-.net.has-twin .ncap{color:var(--washi);font-weight:500}
-.ncap::before{content:"";display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:2px dashed var(--yellow);border-radius:3px}
-.ncap{margin:0;max-width:min(460px,92%);font:400 12px/1.45 var(--code);color:var(--lead);text-align:center}
 /* the square you tapped on the net: lifted, ringed in ink and washed yellow so it is the first thing you see */
-.nface .st.sel{z-index:2;scale:1.14;outline:7px solid var(--washi);outline-offset:3px;
+.xcell .st.sel{z-index:2;scale:1.14;outline:7px solid var(--washi);outline-offset:3px;
   background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
 /* on paper the cube body is black, so the ring is yellow there and the wash is stronger */
-@media (prefers-color-scheme:light){.nface .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}}
+@media (prefers-color-scheme:light){.xcell .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}}
 /* one thick rounded ring round the chosen face; on paper it is cream, to show against the black body */
 /* on the net the squares sit a little further in from each face's edge, so the seams are wide enough
    for the chosen face's ring to run along them without covering any square */
-.nface .st{width:48px;height:48px}
-.nface.cur{outline:10px solid #eceae3;outline-offset:-5px;border-radius:14px}
-@media (prefers-color-scheme:light){.nface.cur{outline-color:#000}}
+/* flatten, step two: a cross of the two lines through the chosen square, with its whole face in the middle */
+.ngrid{position:relative;flex:none}
+.xband{position:absolute;background:var(--body-ink);border-radius:8px}
+.xcell{position:absolute;width:60px;height:60px;transform-origin:0 0}
+.xcell .st{left:5px;top:5px}
+/* the chosen square's face: one thick rounded ring */
+.xface{outline:4px solid var(--washi);outline-offset:3px;z-index:0}
+@media (prefers-color-scheme:light){.xface{outline-color:#000;outline-offset:0;box-shadow:0 0 0 5.5px #fff}}
+/* what the far side of the cube allows in the chosen square */
+.ncands{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:min(460px,96%);flex-wrap:wrap}
+.ncands p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);text-align:center}
+.ndigits{display:flex;gap:6px}
+.ndigits:empty{display:none}
+.ndigits i{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:var(--yellow);color:#121316}
+.ndigits .dg{height:20px;width:auto;fill:currentColor}
+.ninfo{flex:none;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;font:600 14px/1 var(--code);font-style:italic}
+.nwhy{position:absolute;z-index:8;left:50%;bottom:8px;translate:-50% 0;width:min(360px,92%);box-sizing:border-box;padding:14px 16px;
+  border-radius:12px;background:var(--slate);border:1px solid var(--edge);box-shadow:0 12px 30px rgb(0 0 0 / .35);text-align:left}
+.nwhy[hidden]{display:none}
+.nwhy b{display:block;font:600 14px var(--code);color:var(--washi)}
+.nwhy p{margin:8px 0 0;font:400 13px/1.45 var(--code);color:var(--washi)}
+.nwhy button{margin-top:12px;width:100%}
+/* the far squares are off the cross; their numbers show in the list below instead */
+.xcell .st.twin{outline:none;animation:none}
+@media (prefers-color-scheme:light){.xcell .st.twin{background:var(--shade)!important}}
