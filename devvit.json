@@ -104,7 +104,10 @@
   },
   "permissions": {
     "journeys": true,
-    "reddit": true,
+    "reddit": {
+      "enable": true,
+      "asUser": ["SUBMIT_COMMENT"]
+    },
     "redis": true
   }
 }

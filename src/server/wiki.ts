@@ -8,7 +8,7 @@ import {
   maxTurns,
   shortDate,
   TURN_MULT,
-  WEEK_LEVELS,
+  WEEK_MIX,
 } from '../shared/scoring.ts'
 import {boardKey, readBoard} from './board.ts'
 import {FLAIR_FROM, FOUNDERS} from './flair.ts'
@@ -20,15 +20,6 @@ export const WIKI_WEEKS = 12
 
 export const wikiPath = (sub: string): string => `/r/${sub}/wiki/${WIKI_PAGE}`
 
-const DAYS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-]
 const pts = (n: number): string => n.toLocaleString('en-GB')
 
 function rows(b: Board, unit?: string): string {
@@ -62,9 +53,9 @@ export type WikiData = {
 
 /** The page's markdown. Pure, for tests. */
 export function wikiText(d: WikiData): string {
-  const levels = DAYS.map((name, i) => {
-    const lv = WEEK_LEVELS[i] ?? 0
-    return `| ${name} | ${LEVEL_NAMES[lv]} | 0 to ${maxTurns(lv)} |`
+  const levels = LEVEL_NAMES.map((name, lv) => {
+    const days = WEEK_MIX.filter(l => l === lv).length
+    return `| ${name} | ${days} | 0 to ${maxTurns(lv)} |`
   }).join('\n')
   const mult = [0, 1, 2, 3]
     .map(t => {
@@ -96,8 +87,10 @@ Nonet is a daily sudoku challenge with a twist: it's a 3D cube. Nonet is the sud
 
 Your first finished run each day counts. You get one retry a day, and it multiplies the day's total by ${RETRY_MULT}.
 
-| Day | Fill | Turns on offer |
-|:--|:--|:--|
+Each week has two Easy days, three Medium and two Hard, in a different random order every week. The post says which today is.
+
+| Fill | Days a week | Turns on offer |
+|:--|--:|:--|
 ${levels}
 
 ## Scoring

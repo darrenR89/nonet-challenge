@@ -20,6 +20,7 @@
     <div class="cv-body">
       <div class="cv-title">
         <p class="cv-streak" id="spStreak" hidden></p>
+        <div class="cv-mark"><img src="/brand/nonet-wordmark-ink.svg" alt="Nonet" width="1000" height="184"></div>
         <div class="cv-issue" id="spIssue">
           <div class="cv-row"><span class="cv-no" aria-hidden="true"><span class="cv-daily" lang="ja">日刊</span><span>No.<b id="spNo">–</b></span></span><span class="cv-level"><span class="cv-pips" id="cvPips" aria-hidden="true"><i></i><i></i><i></i></span><span class="cv-tag" id="cvLevel"></span></span></div>
         </div>
@@ -33,12 +34,13 @@
         <div class="cv-go">
           <p class="cv-sub" id="spSub" aria-live="polite"></p>
           <button class="cv-play" id="spPlay" type="button" disabled>Play today's cube</button>
+          <button class="cv-skip" id="spSkip" type="button" hidden>Skip to today's cube</button>
           <ul class="cv-links cv-pause">
             <li><button type="button" id="spRetry">Retry</button></li>
             <li><button type="button" id="spGiveUp">Give up</button></li>
           </ul>
           <ul class="cv-links cv-home">
-            <li><button type="button" id="spHelp">How to play</button></li>
+            <li><button type="button" id="spHelp">Instructions</button></li>
             <li><button type="button" id="spPractice">Practice cube</button></li>
           </ul>
         </div>
@@ -197,10 +199,20 @@
       <tr><td>2</td><td>×1.5</td><td>×2</td><td>×3</td></tr>
       <tr><td>3</td><td>×2</td><td>×3</td><td>–</td></tr>
     </table></div>
-    <p>Your total is multiplied by the turns you pick, once a day, before you play. Easy is Monday and Tuesday, Medium Wednesday, Thursday and Sunday, and Hard Friday and Saturday, with fewer clues.</p>
+    <p>Your total is multiplied by the turns you pick, once a day, before you play. Each week has two Easy days, three Medium and two Hard, in a random order, so check today's before you pick. Hard days have fewer clues.</p>
     </div>
   </section>
 </div>
+
+<section class="bv" id="lbView" hidden aria-labelledby="lbTitle">
+  <div class="bv-in">
+    <header class="bv-head"><button type="button" class="bv-back" id="lbBack"><span aria-hidden="true">←</span> Back</button></header>
+    <p class="bv-kicker" id="lbKicker"></p>
+    <h2 class="bv-title" id="lbTitle" tabindex="-1">Leaderboard</h2>
+    <div class="bv-tabs" role="tablist" aria-label="Leaderboard"></div>
+    <div class="bv-body" id="lbBody" role="tabpanel"></div>
+  </div>
+</section>
 
 <div class="modal" id="modal" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

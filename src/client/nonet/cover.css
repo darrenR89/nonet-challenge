@@ -73,7 +73,7 @@
     background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.16;
     -webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent);mask-image:radial-gradient(closest-side,#000 55%,transparent)}
 }
-.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%}
+.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%;text-align:center}
 .cv-first[hidden],.cv-stats[hidden]{display:none}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
@@ -123,7 +123,11 @@
   font:500 15px var(--c-code);letter-spacing:.04em;background:var(--c-yellow);color:var(--c-ink)}
 .cv-play:disabled{opacity:.6;cursor:default}
 .cv-play:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
-.cv-sub{font:500 13px/1.4 var(--c-code);color:var(--c-ink);text-wrap:balance}
+.cv-skip{all:unset;box-sizing:border-box;cursor:pointer;width:100%;min-height:44px;display:grid;place-items:center;border-radius:7px;
+  font:500 14px var(--c-code);letter-spacing:.04em;color:var(--c-ink);box-shadow:inset 0 0 0 1px var(--c-ink)}
+.cv-skip[hidden]{display:none}
+.cv-skip:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
+.cv-sub{font:500 13px/1.4 var(--c-code);color:var(--c-ink);text-wrap:balance;text-align:center;justify-self:stretch}
 .cv-sub:empty{display:none}
 
 /* two quiet links under the Play block */
@@ -213,6 +217,7 @@
 .dn-chip span{grid-column:1;font:400 12px var(--c-code);color:var(--c-lead)}
 .dn-chip::after{content:"▾";grid-column:2;grid-row:1/span 2;color:var(--c-ink)}
 .dn-chip[aria-expanded="true"]::after{content:"▴"}
+.dn-go::after{content:"→"}
 .dn-chip:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px;border-radius:8px}
 .dn-row>.more{padding:0 12px 12px;display:grid;gap:8px;font-size:14px}
 .dn-row>.more[hidden]{display:none}
@@ -418,3 +423,7 @@
   .setup .cv-twists b{font-size:18px}
   .su-go{margin-top:2px}
 }
+.cv-links li[hidden]{display:none}
+.cv-go .cv-links:has(li[hidden]) li{grid-column:1/-1}
+/* the game cover: the wordmark sits within the issue box width */
+#splash .cv-mark{margin:0;width:100%;align-self:stretch}
