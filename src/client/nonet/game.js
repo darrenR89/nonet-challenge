@@ -687,14 +687,14 @@ $('suggest').onclick=()=>showHint(false);
 // its own clock: the face outlined in the middle, its four neighbours folded out beside it and the
 // far face on the end, so every row and column through the face runs straight across the net.
 const PICK_MS=5000,FLAT_MS=20000;
-let flatEnd=0,flatTick=0,flatFace=-1,pickEnd=0;
+let flatEnd=0,flatTick=0,flatFace=-1,flatAnchor=-1,pickEnd=0;
 const v3=(a,b,k=1)=>a.map((x,i)=>x+k*b[i]),neg=a=>a.map(x=>-x);
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 // one line of nine through the selected square, laid out in order along `along` as seen from its face.
 // A ring of twelve holds two lines; the shown one skips three squares on one end face (the far squares).
-function crossStrip(along,across,n0){const lv=dot(cells[sel].c,across);
+function crossStrip(along,across,n0,at=sel){const lv=dot(cells[at].c,across);
   const ring=[...Array(N).keys()].filter(i=>dot(cells[i].n,across)===0&&dot(cells[i].c,across)===lv);
-  const ks=lineIdxOf[sel].filter(k=>lines[k].every(i=>ring.includes(i)));const k=ks[lc%ks.length];const L=new Set(lines[k]);
+  const ks=lineIdxOf[at].filter(k=>lines[k].every(i=>ring.includes(i)));const k=ks[lc%ks.length];const L=new Set(lines[k]);
   const ang=i=>{const q=v3(cells[i].c,cells[i].n,.5);return Math.atan2(dot(q,along),dot(q,n0))};
   const ord=ring.slice().sort((x,y)=>ang(x)-ang(y));const st=ord.findIndex((i,x)=>!L.has(i)&&L.has(ord[(x+1)%12]));
   const other=new Set(lines[k^1]);
@@ -706,8 +706,8 @@ function farDigits(S){if(!S.own.includes(sel))return null;const far=S.far.map(i=
   // with all three far squares filled the list is complete; with fewer it is only some of the options
   ds.full=far.length===3;return ds}
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';if(sel<0)return;
-  const f=F[selFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
-  const H=crossStrip(R,D,n),V=crossStrip(D,R,n),hx=H.strip.indexOf(sel),vy=V.strip.indexOf(sel);
+  const f=F[flatFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
+  const H=crossStrip(R,D,n,flatAnchor),V=crossStrip(D,R,n,flatAnchor),hx=H.strip.indexOf(flatAnchor),vy=V.strip.indexOf(flatAnchor);
   // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
   const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(3,Math.round(room/100)),
     u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
@@ -726,7 +726,8 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   block(fc,fr,3,3,'xband xface');
   for(let j=0;j<3;j++)for(let i=0;i<3;i++)cell(idx.get(key(n,v3(v3(n,R,i-1),D,j-1))),fc+i,fr+j);
   // the numbers the far squares allow here, from either line through the square
-  const all=[farDigits(H),farDigits(V)].filter(Boolean),full=all.filter(x=>x.full);
+  const sf=F[selFace],sn=sf.map(1,1),sR=v3(sf.map(2,1),sn,-1),sD=v3(sf.map(1,2),sn,-1);
+  const all=[farDigits(crossStrip(sR,sD,sn)),farDigits(crossStrip(sD,sR,sn))].filter(Boolean),full=all.filter(x=>x.full);
   // a complete list wins (two complete lists narrow each other); otherwise show every far number seen
   const ds=full.length?full.reduce((a,b2)=>a.filter(d=>b2.includes(d))):all.length?[...new Set(all.flat())].sort((x,y)=>x-y):null;
   const applies=all.length>0,sure=full.length>0;
@@ -740,7 +741,7 @@ function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PIC
 function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
   flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
 function pickFace(fi,c){if(!flatOn||!$('net').hidden)return;sel=c;selFace=fi;lc=0;hintArrow=null;render();clearInterval(flatTick);releaseClock();$('pick').hidden=true;
-  flatFace=fi;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
+  flatFace=fi;flatAnchor=c;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
 function flatStop(){if(!flatOn)return;if(!$('nWhy').hidden)why(false);flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
 $('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
 // reading the explanation stops both clocks; closing it starts them again where they were
@@ -753,7 +754,9 @@ $('nInfo').onclick=e=>{e.stopPropagation();why($('nWhy').hidden)};$('nWhyOk').on
 // while picking, a tap on the cube chooses that face instead of a square
 cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;
   e.stopPropagation();pickFace(+s.dataset.f,+s.dataset.c)},true);
-$('net').addEventListener('click',e=>{e.stopPropagation();const s=e.target.closest('.st');if(!s)return;
+// the picked face stays put for the whole flatten. Any square can be tapped to fill it in, but only a tap on
+// the picked face moves the cross's lines
+$('net').addEventListener('click',e=>{e.stopPropagation();const s=e.target.closest('.st');if(!s)return;if(+s.dataset.f===flatFace)flatAnchor=+s.dataset.c;
   const real=faceEls[+s.dataset.f].querySelector(`.st[data-i="${s.dataset.i}"][data-j="${s.dataset.j}"]`);moved=false;real?.click();flatDraw()});
 
 $('restart').onclick=askRetry;$('spRetry').onclick=askRetry;
