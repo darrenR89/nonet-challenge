@@ -73,6 +73,8 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
   backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:background .8s ease-out}
 /* the gaps between cells flash yellow once when the cube lines up and once when it is solved */
 .stage.gridflash .face{background:var(--yellow);transition:background .12s}
+.core{position:absolute;inset:4px;background:var(--body-ink);backface-visibility:hidden;-webkit-backface-visibility:hidden;pointer-events:none}
+.stage.gridflash .core{background:var(--yellow);transition:background .12s}
 .st{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(.5px);width:50px;height:50px;
   display:grid;place-items:center;border-radius:9px;color:var(--ai);cursor:pointer;transition:background .15s}
 .st .dg{height:26px;width:auto;display:block;pointer-events:none}
