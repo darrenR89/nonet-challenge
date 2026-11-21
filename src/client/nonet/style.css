@@ -364,9 +364,20 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the run bar: help, suggestions, retry and give up, under the cube */
 .runbar button{flex:1 1 0;min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap}
 /* a suggested square pulses yellow */
-.st.hintme{animation:hintme 1.2s ease 2}
-@keyframes hintme{0%,100%{box-shadow:0 0 0 0 transparent}40%{box-shadow:0 0 0 4px var(--yellow)}}
-@media (prefers-reduced-motion:reduce){.st.hintme{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+/* a suggested square: a thick yellow ring with an ink gap, a ring that keeps pulsing out from it,
+   and a pop when it first lands. It stays until that square is locked in. Yellow on every theme,
+   since the cube body is black in both. */
+.st.hinted{z-index:3;color:#121316;background:color-mix(in srgb,var(--shade) 40%,#f5c12e)!important;box-shadow:0 0 0 3px #121316,0 0 0 8px #f5c12e,0 0 0 9px #121316!important;
+  animation:hintpulse 1.4s ease-out infinite}
+.st.hinted .dg.pen{color:#121316}
+.st.hinted.sel{box-shadow:inset 0 0 0 3px #f5c12e,0 0 0 3px #121316,0 0 0 8px #f5c12e,0 0 0 9px #121316!important}
+.st.hinted::after{content:'';position:absolute;inset:-9px;border-radius:12px;pointer-events:none;
+  border:4px solid #f5c12e;animation:hintring 1.4s ease-out infinite}
+.st.hintme{animation:hintme .5s cubic-bezier(.3,1.6,.5,1) 1,hintpulse 1.4s ease-out .5s infinite}
+@keyframes hintme{0%{scale:1}45%{scale:1.3}100%{scale:1}}
+@keyframes hintpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@keyframes hintring{0%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.45)}}
+@media (prefers-reduced-motion:reduce){.st.hinted,.st.hintme,.st.hinted::after{animation:none}.st.hinted::after{opacity:.6}}
 
 /* number pad layouts, switched from the test panel */
 .pad.lay-B{grid-template-columns:repeat(3,68px);justify-content:end}
@@ -582,10 +593,15 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the tapped square: lifted, ringed and washed yellow so it is the first thing you see */
 .xcell .st.sel{z-index:2;scale:1.14;outline:7px solid var(--washi);outline-offset:3px;
   background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
+/* a suggested square in the flattened cross: lifted, with the yellow ring outside the tapped ring */
+.xcell .st.hinted{z-index:3;scale:1.14;outline:7px solid #f5c12e;outline-offset:3px;
+  box-shadow:0 0 0 3px #121316,0 6px 14px rgb(0 0 0 / .45)!important}
+.xcell .st.hinted::after{inset:-14px;border-radius:14px;border-width:5px}
 /* the picked face: one thick rounded ring (cream on paper too, with a drop shadow to lift it off the page) */
 .xface{outline:4px solid var(--washi);outline-offset:2px;border-radius:10px}
 @media (prefers-color-scheme:light){
   .xcell .st.sel{outline-color:#f5c12e;background:color-mix(in srgb,var(--shade) 20%,#f5c12e)!important}
+  .xcell .st.hinted{outline-color:#f5c12e}
   .xface{outline:0;box-shadow:0 0 0 2px var(--body-ink),0 0 0 6px #f6f5f0,0 0 0 7px rgb(0 0 0 / .25),0 4px 12px 7px rgb(0 0 0 / .55)}
 }
 
