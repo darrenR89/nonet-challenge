@@ -412,7 +412,7 @@ async function claimPending(r){const p=readPending();if(!p)return;
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
   renderSplashExtras();splashTwist();
   const me=s.boards.day.me;
-  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} of ${num(s.boards.day.players)} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
+  ask('Score saved',`<p><b>${num(s.total)} points</b>${me?` · #${me.rank} of ${num(s.boards.day.players)} today`:''}</p><p>${s.streak.current>1?`${s.streak.current}-day streak`:s.streak.best>1?`Day 1 of a new streak. Your best is ${s.streak.best}`:'Day 1 of your streak'}. Next cube in ${untilNext()}.</p>${s.preview?'<p>You locked all three ★ lock-first squares, so tomorrow\'s clues are on the start screen.</p>':''}`,[['Done',null,'primary']])}
 let crewOpen=false;
 // the top of the end card, set like the cover: the issue row between double rules, then the
 // numbers in columns, label over value
@@ -432,7 +432,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
   else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
-  const streak=scored&&st&&st.current?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:'';
+  const streak=scored&&st&&st.current&&(st.current>1||st.best<=1)?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span title="One missed day a week is covered by a rest day">best ${st.best} · ${st.restUsed?'rest day used':'rest day ready'}</span></p>`:scored&&st&&st.best>1?`<p class="streakline"><i></i><b>New streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ lock-first squares to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
