@@ -593,3 +593,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the far squares are off the cross; their numbers show in the list below instead */
 .xcell .st.twin{outline:none;animation:none}
 @media (prefers-color-scheme:light){.xcell .st.twin{background:var(--shade)!important}}
+/* while flat the number pad steps away, so the cross can use the full width between the page's edges */
+body:has(.net:not([hidden])) .padbox{display:none}
+.wrap:has(.net:not([hidden])){padding-bottom:16px}
