@@ -528,8 +528,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nface .arw,.nface .hintarw{display:none}
 .nclock{display:flex;align-items:center;gap:8px;font:500 15px var(--code);font-variant-numeric:tabular-nums}
 .nclock i{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--yellow) calc(var(--left,1) * 360deg),var(--edge) 0)}
-.ngrid{display:grid;grid-template-columns:repeat(4,var(--u));grid-template-rows:repeat(3,var(--u));gap:4px}
-.nface{position:relative;width:180px;height:180px;background:var(--body-ink);border-radius:8px;transform-origin:0 0}
+.ngrid{display:grid;grid-template-columns:repeat(4,var(--u));grid-template-rows:repeat(3,var(--u));gap:0}
+.nface{position:relative;width:180px;height:180px;background:var(--body-ink);border-radius:0;transform-origin:0 0}
 .nface .st{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible;cursor:pointer}
 /* while flat: the cube and its room step out of sight, so only the net shows */
 .stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
@@ -544,7 +544,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .fback{display:grid;place-items:center;width:36px;height:36px;min-height:0;padding:0;margin-left:4px;border-radius:50%;border:0;
   background:#3a3d45!important;color:#eceae3!important;cursor:pointer}
 .fback:hover{background:#4a4d55!important}
-.net{padding-top:60px;box-sizing:border-box}
+.net{padding:60px 0 0;box-sizing:border-box}
 
 /* flatten, step one: pick a face while the clock is stopped */
 .pick{position:absolute;z-index:6;top:62px;left:50%;translate:-50% 0;display:grid;justify-items:center;gap:8px;width:min(320px,92%);pointer-events:none;text-align:center}
@@ -553,7 +553,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
 /* step two: the net, the chosen face outlined, dotted lines through it */
 .ngrid{position:relative}
-.nface.cur{outline:4px solid var(--washi);outline-offset:3px;z-index:1}
+/* the faces touch, so the net reads as one unfolded cube; the chosen face is ringed in the seams round it */
+.nface.cur{outline:10px solid #eceae3;outline-offset:-5px;z-index:1}
 /* on the net the dashed squares are the point: a thick yellow dashed outline that pulses */
 .nface .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
 @keyframes twinpulse{50%{outline-color:transparent}}

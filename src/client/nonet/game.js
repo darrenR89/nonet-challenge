@@ -692,10 +692,10 @@ function netLayout(fi){const f=F[fi],n=f.map(1,1),r=v3(f.map(2,1),n,-1),d=v3(f.m
   // [normal, right, down, column, row]: each neighbour unfolds away from the middle face
   return [[n,r,d,1,1,true],[neg(d),r,n,1,0],[d,r,neg(n),1,2],[neg(r),n,d,0,1],[r,neg(n),d,2,1],[neg(n),neg(r),d,3,1]]}
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';
-  const u=Math.floor(Math.min((net.clientWidth-24)/4,(net.clientHeight-130)/3,150)),k=u/180;g.style.setProperty('--u',`${u}px`);
+  const u=Math.floor(Math.min(net.clientWidth/4,(net.clientHeight-130)/3,200)),k=u/180;g.style.setProperty('--u',`${u}px`);
   // the squares are copied flat and unturned, so every number reads upright on the net
   for(const [nm,R,D,c,r,cur] of netLayout(flatFace)){const fe=document.createElement('div');fe.className=cur?'nface cur':'nface';
-    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);if(cur){fe.style.outlineWidth=`${4/k}px`;fe.style.outlineOffset=`${3/k}px`}
+    fe.style.gridColumn=String(c+1);fe.style.gridRow=String(r+1);fe.style.scale=String(k);
     for(let j=0;j<3;j++)for(let i=0;i<3;i++){const ci=idx.get(key(nm,v3(v3(nm,R,i-1),D,j-1)));const src=stickers[ci]?.[0];if(!src)continue;
       const st=src.cloneNode(true);st.style.left=`${i*60+5}px`;st.style.top=`${j*60+5}px`;st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));fe.appendChild(st)}
     g.appendChild(fe)}
