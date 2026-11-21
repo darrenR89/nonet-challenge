@@ -550,16 +550,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .pick .nclock{pointer-events:none}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
 /* step two: the net, the chosen face outlined, dotted lines through it */
-/* the faces touch, so the net reads as one unfolded cube; the chosen face is ringed in the seams round it */
-/* on the net the dashed squares are the point: a thick yellow dashed outline that pulses */
-.xcell .st.twin{outline:5px dashed var(--yellow);outline-offset:-6px;animation:twinpulse 1.4s ease-in-out infinite}
-@keyframes twinpulse{50%{outline-color:transparent}}
-@media (prefers-reduced-motion:reduce){.xcell .st.twin{animation:none}}
-/* on paper yellow is too faint: the dashes are ink over a gold wash */
-@media (prefers-color-scheme:light){
-  .xcell .st.twin{outline-color:#23252b;background:color-mix(in srgb,var(--shade) 55%,#f5c12e)!important;animation-name:twinpulse-ink}
-  @keyframes twinpulse-ink{50%{outline-color:#9a6f00}}
-}
 /* the square you tapped on the net: lifted, ringed in ink and washed yellow so it is the first thing you see */
 .xcell .st.sel{z-index:2;scale:1.14;outline:7px solid var(--washi);outline-offset:3px;
   background:color-mix(in srgb,var(--shade) 45%,#f5c12e)!important;box-shadow:0 6px 14px rgb(0 0 0 / .45)!important}
@@ -592,7 +582,6 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nwhy button{margin-top:12px;width:100%}
 /* the far squares are off the cross; their numbers show in the list below instead */
 .xcell .st.twin{outline:none;animation:none}
-@media (prefers-color-scheme:light){.xcell .st.twin{background:var(--shade)!important}}
 /* while flat the number pad steps away, so the cross can use the full width between the page's edges */
 body:has(.net:not([hidden])) .padbox{display:none}
 .wrap:has(.net:not([hidden])){padding-bottom:16px}
