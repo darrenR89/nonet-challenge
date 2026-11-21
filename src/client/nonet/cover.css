@@ -425,3 +425,5 @@
 }
 .cv-links li[hidden]{display:none}
 .cv-go .cv-links:has(li[hidden]) li{grid-column:1/-1}
+/* the game cover: the wordmark sits within the issue box width */
+#splash .cv-mark{margin:0;width:100%;align-self:stretch}
