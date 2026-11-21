@@ -17,7 +17,7 @@ Some extra rules and tools:
 - **Lock-first squares (★).** Locking them before any other square earns +50 each. Lock all three and you get a peek at tomorrow's clues.
 - **Help.** "Suggest a move" turns the cube for you, but it costs the no-help bonus.
 - **Flatten cube.** Unfolds the cube into a flat net if you'd rather fill it in flat. On a phone the number pad sits at the bottom of the screen. On a wide screen it sits on the right.
-- **How to play.** The ? button in the game has the full rules with pictures. "Practice cube" lets you play without scoring.
+- **How to play.** The ? button in the game has the full rules with pictures. First-time players start with a guided practice cube (they can skip it), and "Practice cube" brings it back any time, with no clock or score.
 
 Each week has two Easy days, three Medium and two Hard. The order is shuffled at random every week, the same for everyone, so a Hard day can come on a Monday. Hard days have fewer clues.
 

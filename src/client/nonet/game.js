@@ -141,9 +141,11 @@ function splashTwist(){
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Turn multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
-  $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':'Play today\'s cube';
+  const first=firstTimer();$('spSkip').hidden=!first;
+  $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':first?'Learn to play · 1 min':'Play today\'s cube';
   let sub='';
-  if(guest)sub='Play free, no account needed. Sign up at the end to save your score, join a crew, and start a streak.';
+  if(first)sub='New to Nonet? A guided practice cube shows you how, one step at a time. No clock and no score.';
+  else if(guest)sub='Play free, no account needed. Sign up at the end to save your score, join a crew, and start a streak.';
   else if(!online)sub='Log in to Reddit to play for points. Until then cubes are unscored.';
   else if(isPaused)sub=`Paused at ${fmt(nowSec()+(stage===2?t1:0))}. The clock is stopped.`;
   $('spSub').textContent=sub;
@@ -227,8 +229,14 @@ function showSplash(){if(stage===3)music.leave();splashUp=true;$('splash').hidde
 // each daily post is fixed to its own day: an older post sends players on to today's
 function goToday(){let sub='';try{sub=context.subredditName??''}catch(e){}
   if(D.todayPost)navigateToPost(D.todayPost);else navigateTo(`https://www.reddit.com/r/${sub}/`)}
+// a first-time player: Play starts the guided practice, with a way to skip straight to the day
+const PRACTICED='nonet-practiced';
+function practiced(){try{return !!localStorage.getItem(PRACTICED)}catch(e){return false}}
+function notePracticed(){try{localStorage.setItem(PRACTICED,'1')}catch(e){}}
+function firstTimer(){return !practiced()&&twistDay===null&&!paused&&!(daily&&P)&&!(D&&(D.past||D.my&&D.my.score!==undefined||D.streak&&D.streak.played))}
+$('spSkip').onclick=()=>{notePracticed();journey.interaction('skip_practice');splashTwist();$('spPlay').click()};
 $('spPlay').onclick=()=>{
-  if(tx.busy)return;if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();
+  if(tx.busy)return;if(firstTimer()){journey.interaction('first_practice');$('spPractice').click();return}if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();
   if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
   journey.start();
   // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
@@ -252,7 +260,7 @@ function resume(){if(!paused)return;t0+=performance.now()-pausedAt;paused=false;
 $('pauseBtn').onclick=pause;
 music.wire($('soundBtn'));
 // Practice sits outside the day: a guided walkthrough, no score, open any time
-$('spPractice').onclick=()=>{if(tx.busy)return;music.unlock();tier=PRACTICE;journey.start();
+$('spPractice').onclick=()=>{if(tx.busy)return;music.unlock();welcome=!practiced();notePracticed();tier=PRACTICE;journey.start();
   void tx.enter({before:hideSplashNow,ready:new Promise(r=>{newGame();setTimeout(r,120)}),done:()=>{if(paused)resume()}})};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!splashUp&&stage<3&&P&&!isPrac()){pauseNow();showSplash()}});
 // leaving mid-cube: the run is saved here to resume later, and this journey ends unfinished
@@ -320,7 +328,12 @@ const WALK=[
 let walk=-1,walkCell=-1,walkDigit=0;
 function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p]=WALK[n];
   ask(t,`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
-function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;showHint(true);walkTo(0)}
+// a first practice opens with what the game is before the first step
+let welcome=false;
+function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;if(tx.busy){setTimeout(coachTurn,200);return} // after the countdown, not over it
+  showHint(true);
+  if(!welcome){walkTo(0);return}welcome=false;
+  ask('Welcome to Nonet','<p>Nonet is sudoku on a cube. Every day has two stages: <b>Dial in</b>, where you rotate the scrambled cube until no numbers clash, then <b>Fill in</b>, where you complete it. This practice cube walks you through both, one step at a time.</p>',[['Start',()=>walkTo(0),'primary']])}
 /** Step 2 on: the first square that only one number fits, and that number. */
 function walkFill(){const c=singlesOrder(vals).find(i=>!vals[i]);const sol=c>=0?answer():null;
   if(c===undefined||!sol){walkTo(WALK.length-1);return}walkCell=c;walkDigit=sol[c];focusFace(faceOfNormal.get(k3(cells[c].n)));walkTo(1)}
@@ -357,8 +370,8 @@ function finishStage1(){
 function finishStage2(){
   t2=nowSec();stage=3;sel=-1;clearRun();
   $('banner').hidden=true;updateRunButtons();
-  if(isPrac()){journey.end(true,true,0);$('results').hidden=false;$('results').innerHTML=`<h2>Practice complete</h2><p>You cleared the conflicts and filled the cube${wrong?` with ${wrong} wrong lock${wrong===1?'':'s'}`:' with no wrong locks'}. Today's cube works the same way, with fewer clues. Pick how many turns scramble it, or none and just fill it in.</p><button id="toEasy" class="primary">Try today's cube</button>`;
-    $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash()};return}
+  if(isPrac()){journey.end(true,true,0);$('results').hidden=false;$('results').innerHTML=`<h2>Practice complete</h2><p>You cleared the conflicts and filled the cube${wrong?` with ${wrong} wrong lock${wrong===1?'':'s'}`:' with no wrong locks'}. Today's cube works the same way, with fewer clues. Pick how many turns scramble it, or none and just fill it in.</p><button id="toEasy" class="primary">Play today's cube</button>`;
+    $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash();if(!(D&&(D.past||D.my&&D.my.score!==undefined)))setTimeout(()=>$('spPlay').click(),450)};return}
   runScore=score();lastScore=null;
   if(!daily||tkUsed)journey.end(true,true,daily?0:runScore.total);
   flying=true;void submitRun();
