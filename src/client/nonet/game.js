@@ -186,15 +186,24 @@ function renderSplashExtras(){
   if(ev){const m0=$('spEvent').querySelector('.more'),open=m0?!m0.hidden:false;$('spEvent').innerHTML=eventLine(ev);if(open&&$('spEvent').querySelector('.more'))$('spEvent').querySelector('.more').hidden=false;wireChip($('spEvent'));wireSides($('spEvent'));document.documentElement.style.setProperty('--event',ev.event.accent||'var(--yellow)')}
   {const h=online&&D?splashDuelsHTML(D.duels||[]):'';let el=$('spDuels');if(!el&&h){el=document.createElement('section');el.id='spDuels';el.className='duelsSplash';$('spPeek').after(el)}if(el){el.hidden=!h;el.innerHTML=h;wireAnswers(el,d=>{if(D)D.duels=d;journey.interaction('answer_challenge',String(d.length));renderSplashExtras()})}}
   $('spPeek').hidden=!(D&&D.preview);
-  renderDone();renderCrewRow();
+  for(const k in dnPanels)delete dnPanels[k];renderDone();renderCrewRow();refreshPanel();
   if(D&&D.preview){$('spPeek').innerHTML=`<button class="chip" type="button" aria-expanded="false"><b>Tomorrow's clues</b><span>unlocked with all three ★</span></button><div class="more" hidden>${cluesNet(D.preview.given)}</div>`;wireChip($('spPeek'))}
 }
 // once today is done the cover turns to how you did, and what to do next: challenge someone,
 // the team challenge, the boards. Each opens in place; the feed card can ask for one.
 function dnLink(k,label,sub){return `<div class="dn-row"><button type="button" class="dn-chip dn-go" data-dn="${k}"><b>${label}</b><span>${sub}</span></button></div>`}
-function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="button" class="dn-chip" data-dn="${k}" aria-expanded="false"><b>${label}</b><span>${sub}</span></button><div class="more" hidden>${body}</div></div>`}
+// each next step opens in a modal over the cover, so the cover keeps its size
+const dnPanels={};let dnOpen=null;
+function dnRow(k,label,sub,body,title){dnPanels[k]={title:title||label.replace(/<[^>]*>/g,'').trim(),body};
+  return `<div class="dn-row"><button type="button" class="dn-chip dn-go" data-dn="${k}" aria-haspopup="dialog"><b>${label}</b><span>${sub}</span></button></div>`}
+function openPanel(k){const p=dnPanels[k];if(!p)return;ask(p.title,`<div class="dn-panel">${p.body}</div>`,[['Done',null,'primary']]);dnOpen=k;wirePanel();journey.interaction('cover_'+k)}
+function wirePanel(){const box=$('modalBody');
+  wireDuels(box,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderSplashExtras()});wireSides(box);wireCrew(box,crewChanged)}
+// after a change, the open modal shows the new state
+function refreshPanel(){if(!dnOpen||$('modal').hidden)return;const p=dnPanels[dnOpen];if(!p){$('modal').hidden=true;return}
+  $('modalTitle').textContent=p.title;$('modalBody').innerHTML=`<div class="dn-panel">${p.body}</div>`;wirePanel()}
+function wireDnRows(el){el.querySelectorAll('.dn-go').forEach(b=>b.onclick=()=>{if(b.dataset.dn==='boards'){journey.interaction('cover_boards');showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`})}else openPanel(b.dataset.dn)})}
 function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined&&!firstTimer();el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
-  const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
   const me=D.boards.day.me,st=D.streak,ev=D.event,mine=ev&&ev.teams.find(t=>t.team.id===ev.myTeam);
   const side=(me?`<span class="dn-rank">#${me.rank} today</span>`:'')+(st&&st.current?`<span class="dn-streak">${st.current}-day streak</span>`:'')+(D.my.starsWon?`<span class="dn-streak">${'★'.repeat(D.my.starsWon)}</span>`:'');
   const sent=(D.duels||[]).filter(d=>d.sent).length;
@@ -204,24 +213,18 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
     ${D.crew?dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew)):''}
     ${dnLink('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week')}</div>
     <p class="dn-next">Next cube in <b>${untilNext()}</b></p>`;
-  el.querySelectorAll('.dn-go').forEach(b=>b.onclick=()=>{journey.interaction('cover_'+b.dataset.dn);showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`})});
-  el.querySelectorAll('.dn-chip:not(.dn-go)').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
-    b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
-  wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el);wireCrew(el,crewChanged)}
+  wireDnRows(el)}
 // your crew on the cover before today is done: one row, open to see who has played, nudge, invite or leave
 function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undefined,show=online&&D&&D.crew&&!done&&!firstTimer();el.hidden=!show;if(!show)return;
-  const open=!!el.querySelector('.dn-chip[aria-expanded="true"]');
   el.innerHTML=`<div class="dn-acts">${dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew))}</div>`;
-  const b=el.querySelector('.dn-chip'),m=b.nextElementSibling;if(open||D.crew.invites.length&&!D.crew.crew){m.hidden=false;b.setAttribute('aria-expanded','true')}
-  b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_crew')};
-  wireCrew(el,crewChanged)}
+  wireDnRows(el)}
 // any change to the crew, from the cover or the end card: keep it and redraw both
 function crewChanged(info,what){if(!D)return;D.crew=info;journey.interaction(what);renderSplashExtras();if(runScore&&!$('results').hidden)renderEndCard()}
 // the feed card's buttons ask for one of those to be open when the game comes up
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
   if(!k)return;if(k==='rules'){showRules();return}
   if(k==='pastboard'){if(D&&D.pastBoards)showBoards(D.pastBoards,{kicker:'Final standings',back:ev=>{try{exitExpandedMode(ev)}catch(e){}}});return}if(k==='practice'){$('spPractice').click();return}
-  const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
+  if(k==='boards'&&D){showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`});return}openPanel(k)}
 addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
 document.querySelectorAll('#spTwists button').forEach(b=>b.onclick=()=>{if(twistDay!==null)return;tier=+b.dataset.t;splashTwist();
@@ -291,7 +294,7 @@ let saveT=0;const saveSoon=()=>{clearTimeout(saveT);saveT=setTimeout(saveRun,400
 
 // ---------- retry and give up ----------
 // one retry a day on today's cube: it starts again from the turned cube, and the day's total is ×0.8
-function ask(title,body,buttons){const m=$('modal');$('modalTitle').textContent=title;$('modalTitle').classList.remove('vh');$('modalBody').innerHTML=body;$('modalBody').scrollTop=0;
+function ask(title,body,buttons){const m=$('modal');dnOpen=null;$('modalTitle').textContent=title;$('modalTitle').classList.remove('vh');$('modalBody').innerHTML=body;$('modalBody').scrollTop=0;
   $('modalActs').innerHTML='';buttons.forEach(([label,fn,cls])=>{const b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;
     b.onclick=e=>{m.hidden=true;if(fn)fn(e)};$('modalActs').appendChild(b)});m.hidden=false;$('modalActs').lastElementChild?.focus()}
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').hidden=true});

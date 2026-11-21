@@ -670,3 +670,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .bv-empty{margin:24px 0;color:var(--lead);font:14px var(--body);text-align:center}
 @media (min-width:720px){.bv{padding-top:40px}.bv-title{font-size:44px}}
 @media (prefers-color-scheme:light){.bv-table tr.p2 td:first-child{color:#6b6f78}.bv-table tr.p3 td:first-child{color:#9a5b26}}
+/* the cover's next steps, opened in the modal: the modal's own title stands in for the panel's */
+.dn-panel{display:grid;gap:12px;text-align:left}
+.dn-panel .duels{display:grid;gap:12px;background:none;border:0;padding:0}
+.dn-panel .duels h3{display:none}
+.dn-panel .duelList{margin:0}
+.dn-panel .event{max-width:none;background:none;border:0;padding:0}
