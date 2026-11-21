@@ -141,12 +141,11 @@ export function crewPanelHTML(info: Readonly<CrewInfo>): string {
       {length: seats},
       () => '<li class="seat"><span>Open seat</span></li>',
     ).join('')
+    // rank and streak are already on the summary line just above
     const meta = [
       `${num(c.today)} today`,
-      c.week
-        ? `${num(c.week)} this week${c.rank ? `, #${c.rank} of ${c.crews}` : ''}`
-        : '',
-      c.streak ? `${c.streak}-day crew streak` : '',
+      c.week ? `${num(c.week)} this week` : '',
+      c.rank ? `${c.crews} crews on the board` : '',
     ]
       .filter(Boolean)
       .join(' · ')
