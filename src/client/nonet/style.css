@@ -528,7 +528,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   :root{--sumi:#f3f2ec;--slate:#e6e4dc;--tile:#e9e7df;--edge:#cfccc2;--washi:#23252b;--lead:#5b5f69;
     --peer:#dde3f2;--done:#f6e7b8;--ai:#3d5fb8;--beni:#b8423f;
     --body-ink:#23252b;--cell-top:#f6f5f0;--cell-right:#e4e2da;--cell-left:#d6d3c9;color-scheme:light;
-    --gold:#866000;--tint:rgb(217 165 20 / .45);--pencil:#4b4f58}
+    --gold:#f5c12e;--gold-line:#d9a514;--gold-ink:#9a6f00;--tint:rgb(217 165 20 / .45);--pencil:#4b4f58}
   body{background:#e9ece9 url(/brand/paper.jpg) center/cover fixed;color:#23252b}
   body::after{opacity:.25;mix-blend-mode:multiply}
   body::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-30vw;bottom:-6vh;height:96vh;aspect-ratio:1000/1342;
@@ -536,8 +536,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   h1 img{content:url(/brand/nonet-wordmark-ink.svg)}
   /* lanes: opaque tints over each sticker's own shade, so the black body never shows through */
   .st.ov{background:color-mix(in srgb,var(--shade) 72%,#5b7fd6)!important}
-  .st.la,.st.lb{box-shadow:inset 0 0 0 2.5px var(--gold)}
-  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2.5px var(--gold)}
+  .st.la,.st.lb{box-shadow:inset 0 0 0 2.5px var(--gold-line)}
+  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2.5px var(--gold-line)}
   .st.wrong{color:#fff!important}
   .arw:hover{background:#fff}
   .testkit{background:rgba(243,242,236,.94)}
@@ -550,9 +550,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   /* the interface buttons are solid ink on the paper */
   header button,.modes button,.modal button:not(.primary):not([aria-selected]):not([aria-pressed]){background:#23252b;color:#eceae3;border-color:#23252b}
   header button:hover,.modes button:hover{border-color:#5b5f69}
-  /* yellow is too faint on paper as type, lines or rings: the deep gold instead (--gold, 5:1 on the paper,
-     3.8:1 on the darkest sticker). Yellow stays as a fill under ink type, and as rings on the black cube body. */
-  .tx-count b{color:var(--gold)}
+  /* on paper the accents are the bright yellow again; only small type takes a deep gold (--gold-ink) so it
+     stays readable, and the lane rings on the stickers a slightly deeper yellow (--gold-line) */
+  .tx-count b,.rules .diag figcaption,.rules .callout b,.pstage.done .plbl::before{color:var(--gold-ink)}
   .rules p.callout,.modal .body .rules p.callout{border-left-color:var(--gold)}
   .pad button,#mPen,.arw{--glow:var(--gold)}
   /* the run's progress bar gets an ink outline so it reads on paper */
