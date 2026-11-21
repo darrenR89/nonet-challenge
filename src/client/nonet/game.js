@@ -85,6 +85,9 @@ async function playDaily(t){
   document.querySelectorAll('#tierSeg button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.t===tier));
   restart();
 }
+// today's cube as you left it: every square filled and locked, the clock off. Nothing is sent.
+function showSolvedDay(){P=D.puzzle;daily=true;sent=true;tier=P.tier;restart();vals=P.sol.slice();locked=vals.map(Boolean);stage=3;sel=-1;render();updateRunButtons();
+  const b=$('showRes');b.textContent='Back to today';b.hidden=false}
 async function loadDaily(){
   const r=await getDaily();
   if(r&&r.loggedIn){D=r;online=true;today=r.day;level=r.level??levelOf(today);twistDay=r.my.tier??null;retries=r.my.retries||0}
@@ -98,7 +101,7 @@ async function loadDaily(){
   applyTwistLock();
   // locked in earlier today: today's cube waits behind the start screen, paused,
   // and picks up where you left it if this device saved a run
-  if(online&&r.puzzle){P=r.puzzle;daily=true;sent=r.my.score!==undefined;restart();if(!sent){restoreRun();pauseNow()}}
+  if(online&&r.puzzle){if(r.my.score!==undefined)showSolvedDay();else{P=r.puzzle;daily=true;sent=false;restart();restoreRun();pauseNow()}}
   renderSplashExtras();splashTwist();openFromCard();
   $('spPlay').disabled=false;
   journey.ready();
@@ -237,7 +240,9 @@ function firstTimer(){return !practiced()&&twistDay===null&&!paused&&!(daily&&P)
 $('spSkip').onclick=()=>{notePracticed();journey.interaction('skip_practice');splashTwist();$('spPlay').click()};
 $('spPlay').onclick=()=>{
   if(tx.busy)return;if(firstTimer()){journey.interaction('first_practice');$('spPractice').click();return}if(D&&D.past&&!(daily&&P)){goToday();return}music.unlock();
-  if(daily&&P&&P.tier===tier){void tx.enter({before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
+  if(daily&&P&&P.tier===tier){void tx.enter({count:stage!==3,before:()=>{hideSplashNow();holdClock()},done:()=>{releaseClock();if(paused)resume()}});return} // today's cube is already here
+  // today is done but this visit hasn't loaded the cube: show it solved, not a fresh run
+  if(online&&D&&D.my.score!==undefined&&D.puzzle){void tx.enter({count:false,before:hideSplashNow,ready:()=>{showSolvedDay();return new Promise(r=>setTimeout(r,60))}});return}
   journey.start();
   // until today's rotations are set, the yellow opens on the setup screen: pick, see the day, then Start
   const locked=twistDay!==null;
@@ -316,7 +321,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
-  hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
+  hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;$('showRes').textContent='Show result';penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
 const WALK=[
@@ -504,7 +509,7 @@ const pageUrl=()=>/^https?:$/.test(location.protocol)?location.href.split('#')[0
 function copyResult(txt,ev){journey.interaction('share','comment');
   const done=()=>{const b=$('eComment');if(b)b.textContent='Copied. Paste it in the thread';try{if(ev)exitExpandedMode(ev)}catch(e){}};
   navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})}
-$('showRes').onclick=()=>{$('results').hidden=false;$('showRes').hidden=true};
+$('showRes').onclick=()=>{if(!runScore){void tx.leave({covered:showSplash});return}$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
    ${s.tut?'':`<tr><td>Dial in turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
@@ -651,7 +656,7 @@ function updateStatus(){
   if(!P)return;const T=TIERS[P.tier];
   const nClues=P.given.filter(Boolean).length,home=locked.reduce((n,l,i)=>n+(l&&P.given[i]===vals[i]?1:0),0);
   const t=stage===3?t1+t2:nowSec();
-  $('timer').textContent=fmt(t);$('timer').hidden=isPrac();$('reveal').disabled=stage===3;
+  $('timer').textContent=fmt(t);$('timer').hidden=isPrac()||stage===3&&!t1&&!t2;$('reveal').disabled=stage===3;
   $('status').textContent=gaveUp?'Answer shown · not scored':'';
   $('status').classList.toggle('win',stage===3);
   showMisses();
