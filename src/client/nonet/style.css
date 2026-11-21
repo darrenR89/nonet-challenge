@@ -91,7 +91,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .st.starwon::before{content:"★+50";color:var(--yellow)}
 /* squares shared by both lines of a ring: soft ai blue, under the yellow line outline */
 .st.ov{background:rgb(143 176 255 / .26)!important}
-.st.twin{outline:2px dashed var(--lead);outline-offset:-5px}
+.st.twin{outline:3px dashed var(--washi);outline-offset:-5px}
 .st.flash{animation:flash .45s ease}
 @keyframes flash{from{filter:brightness(1.4)}to{filter:none}}
 .st.shake{animation:shake .4s ease}
@@ -581,7 +581,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .nwhy p{margin:8px 0 0;font:400 13px/1.45 var(--code);color:var(--washi)}
 .nwhy button{margin-top:12px;width:100%}
 /* the far squares are off the cross; their numbers show in the list below instead */
-.xcell .st.twin{outline:none;animation:none}
+.xcell .st.twin{outline:5px dashed var(--washi);outline-offset:-7px}
 /* while flat the number pad steps away, so the cross can use the full width between the page's edges */
 body:has(.net:not([hidden])) .padbox{display:none}
 .wrap:has(.net:not([hidden])){padding-bottom:16px}

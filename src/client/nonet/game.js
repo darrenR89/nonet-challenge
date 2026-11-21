@@ -518,11 +518,12 @@ function render(){
   const settled=stage===1&&!gaveUp?settledCells():new Set();
   if(sel>=0)Object.keys(by).sort().forEach((ax,n)=>{const arr=by[ax],l=lines[arr[lc%arr.length]];
     const tgt=stage>=2&&complete(l)?done:(n===0?la:lb);l.forEach(i=>tgt.add(i));
-    // a ring's two lines share the six squares on two opposite faces (blue). So each line's other three
-    // squares hold the same three digits as the three across the cube that the shown line leaves out (dashed).
-    const q=ringOf(arr[0]),other=new Set(lines[2*q+1]);
-    if(tgt!==done)for(const i of lines[2*q])if(other.has(i))ov.add(i);
-    if(stage===2){const L=new Set(l);for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
+    // the whole line of nine is blue. A ring's two lines share six squares, so the three squares only this
+    // line has hold the same three digits as the three across the cube that it leaves out. When the tapped
+    // square is one of those three, both sets of three are dashed.
+    const k=arr[lc%arr.length],q=ringOf(k),oth=new Set(lines[k^1]),own=l.filter(i=>!oth.has(i));
+    if(tgt!==done)l.forEach(i=>ov.add(i));
+    if(stage===2&&own.includes(sel)){const L=new Set(l);own.forEach(i=>twin.add(i));for(const i of ringCells(q))if(!L.has(i))twin.add(i)}});
   const showHome=stage>1||!T.hideHome||aligned;
   cells.forEach((_,i)=>stickers[i].forEach(s=>{
     if(vals[i]){if(s.dataset.v!=String(vals[i])){s.innerHTML=digitSVG(vals[i]);s.dataset.v=vals[i]}}
@@ -604,7 +605,7 @@ function updateStatus(){
 // from the square, and a beat later the padlock shudders and the count goes up.
 // tips: no helper text in a scored run (it's all under ?). Practice shows one tip at a time, rotating.
 const TIPS={1:['Tap a square, then use the arrows on its edges to rotate it horizontally or vertically.','Spot the same number twice on a face or a line? That\'s a conflict to correct.','Lines glow once nothing in it conflicts.','Fewest turns scores best, so look before you turn.'],
-  2:['Pencil digits in as notes, or switch to Lock in when you\'re sure.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines. Tap again where two lines overlap to switch.','Blue squares sit in both lines of a ring, so each line\'s other three squares hold the same digits as the dashed three across the cube.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
+  2:['Pencil digits in as notes, or switch to Lock in when you\'re sure.','A wrong lock shakes, doesn\'t stay, and costs 25 points.','Every face holds 1 to 9 once, and so does each line of nine around the cube.','Tap a square to light up its two lines. Tap again where two lines overlap to switch.','A line\'s middle face holds the same three digits as three squares across the cube. Tap one of those middle squares and both sets are dashed.','Start where only one digit fits.','6 and 9 carry a yellow bar along their foot, so you can tell which way up they are.']};
 let tipN=0,tipStage=0;
 function showTip(){const h=$('hint'),list=isPrac()&&stage<3?TIPS[stage]:null;h.hidden=!list;if(!list)return;
   if(tipStage!==stage){tipStage=stage;tipN=0}h.textContent=`Tip · ${list[tipN%list.length]}`}
@@ -729,7 +730,7 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   const applies=all.length>0,sure=full.length>0;
   $('nDigits').innerHTML=ds&&!vals[sel]?ds.map(d=>`<i>${digitSVG(d)}</i>`).join(''):'';
   $('nCandTxt').textContent=vals[sel]?'This square already has a number. Tap another square on the board.':ds&&ds.length?(sure?'Must be one of':'Could be'):
-    applies?'The far squares that match this one are still empty.':'This square sits in both lines of its ring, so the far side can\'t narrow it down.';
+    applies?'The matching dashed squares across the cube are still empty.':'Matching numbers only apply to the three squares on a line\'s middle face. Tap one of those.';
   const left=$('nWhy').hidden?Math.max(0,flatEnd-Date.now()):whyLeft;clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
 // one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
 function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
