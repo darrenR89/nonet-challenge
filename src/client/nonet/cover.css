@@ -145,6 +145,9 @@
 
 /* in the game: the cover is the start screen, and the pause screen when the clock is stopped */
 .splash.cv{position:fixed;inset:0;z-index:40;overflow-y:auto;place-items:unset;padding-left:0;padding-right:0}
+/* the cover grows with what's on it and the screen scrolls, instead of stretching to the screen and
+   cutting off the last rows (a small phone, or a phone on its side, after a run) */
+.splash.cv>.cv-cover{align-self:flex-start}
 @media (min-width:600px){.splash.cv{padding:24px 0}}
 .cv .event,.cv .peek{width:100%;max-width:none;background:rgba(255,255,255,.55);border:1px solid var(--c-ink);border-left:3px solid var(--event,var(--c-yellow));color:var(--c-ink);text-align:left}
 .cv .event p,.cv .peek p,.cv .compact>.chip span,.cv .compact>.chip::after,.cv .event .teams li span{color:var(--c-lead)}

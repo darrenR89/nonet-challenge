@@ -17,6 +17,7 @@ import {
   type CrewRsp,
   type DailyRsp,
   Endpoint,
+  EndpointMethod,
   type ErrorRsp,
   type JoinTeamRsp,
   type ResultCommentRsp,
@@ -1509,4 +1510,96 @@ test('demo mode fills the boards and walks a mod through a crew invite and chall
   assert.equal(bob.crew.crew, undefined)
   assert.equal(bob.crew.invites.length, 0)
   assert.notEqual(bob.boards.day.players, 1284)
+})
+
+test('junk from the browser gets a 4xx, never a crash, and never corrupts what players see', async () => {
+  const JUNK: unknown[] = [
+    null,
+    [],
+    'x',
+    42,
+    {},
+    {day: 7, tier: 'one', stats: 'fast', name: {}, user: [], team: null},
+    {tier: -1},
+    {tier: 1e9},
+    {tier: Number.NaN},
+    {
+      tier: 1.5,
+      stats: {
+        turns: -5,
+        t1: 'a',
+        t2: null,
+        blanks: 1e12,
+        wrong: -1,
+        starsWon: 99,
+      },
+    },
+    {name: 'x'.repeat(10_000), user: 'x'.repeat(10_000), id: '../../etc'},
+    {__proto__: {admin: true}, constructor: {prototype: {admin: true}}},
+    {
+      day: '2026-11-14',
+      tier: 0,
+      stats: {
+        turns: 0,
+        t1: 1,
+        t2: 1,
+        blanks: 0,
+        wrong: 0,
+        hintsUsed: 0,
+        starsWon: 3,
+      },
+    },
+  ]
+  const posts = Object.values(Endpoint).filter(
+    // joining the subreddit takes no body, and the test server can't reach Reddit for it
+    e =>
+      e.startsWith('api/') &&
+      e !== Endpoint.JoinSub &&
+      EndpointMethod[e] === 'POST',
+  )
+  for (const who of [undefined, 't2_ann'] as const) {
+    as(who)
+    for (const e of posts)
+      for (const body of JUNK) {
+        const rsp = await fetch(`${serverURL}/${e}`, {
+          body: JSON.stringify(body),
+          headers: {'Content-Type': 'application/json'},
+          method: 'POST',
+        })
+        const text = await rsp.text()
+        assert.ok(
+          rsp.status < 500,
+          `${who ?? 'logged out'} ${e} ${JSON.stringify(body)?.slice(0, 80)} → ${rsp.status} ${text.slice(0, 200)}`,
+        )
+        assert.doesNotMatch(
+          text,
+          /NaN|\[object Object\]|undefined/,
+          `${e} answered ${text.slice(0, 200)}`,
+        )
+      }
+    // a body that isn't JSON at all
+    const bad = await fetch(`${serverURL}/${Endpoint.Score}`, {
+      body: '{"tier":',
+      headers: {'Content-Type': 'application/json'},
+      method: 'POST',
+    })
+    assert.ok(bad.status < 500, `broken JSON → ${bad.status}`)
+  }
+  // and the day still reads cleanly afterwards
+  as('t2_ann', 'ann')
+  for (const e of [Endpoint.Daily, Endpoint.Card]) {
+    const rsp = await fetch(`${serverURL}/${e}`)
+    const text = await rsp.text()
+    assert.equal(rsp.status, 200, `${e} → ${text.slice(0, 200)}`)
+    assert.doesNotMatch(
+      text,
+      /NaN|\[object Object\]/,
+      `${e} answered ${text.slice(0, 300)}`,
+    )
+  }
+  const day = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.ok(
+    day.my.score === undefined || Number.isInteger(day.my.score),
+    `score ${day.my.score}`,
+  )
 })
