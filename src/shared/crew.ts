@@ -106,7 +106,7 @@ export function crewResultText(
 
 /** A crew's user flair: the crew's name, with the player's streak when they have one. */
 export function crewFlair(name: string, streak: string | undefined): string {
-  const tail = streak?.replace(/^Nonet · /, '')
+  const tail = streak?.replace(/^Nonet(?: · | )/, '')
   return tail ? `${CREW_MARK} ${name} · ${tail}` : `${CREW_MARK} ${name}`
 }
 

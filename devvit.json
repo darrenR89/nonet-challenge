@@ -76,6 +76,18 @@
         "helpText": "From 3 days in a row, a player's flair shows their streak, then their best once it lapses. Flair players or mods set themselves is left alone.",
         "defaultValue": true
       },
+      "founderFlair": {
+        "type": "boolean",
+        "label": "Give founder flair to the first 100 players",
+        "helpText": "The first 100 players to finish a cube here get numbered flair, \"Nonet founder #1\" to \"#100\", shown in front of their streak. Flair players or mods set themselves is left alone.",
+        "defaultValue": true
+      },
+      "postFlair": {
+        "type": "boolean",
+        "label": "Add post flair to the app's posts",
+        "helpText": "Tags the daily cube, the weekly top nine and event results with mod-only post flair, so players can filter by them. The app makes the flair the first time.",
+        "defaultValue": true
+      },
       "crewFlair": {
         "type": "boolean",
         "label": "Show crew names in user flair",

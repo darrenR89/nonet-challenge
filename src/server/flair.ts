@@ -1,5 +1,7 @@
 // Streak flair: from three days in a row, a player's user flair in the subreddit shows their streak,
-// and after a missed day it shows their best. Flair a player or a mod set some other way is left alone.
+// and after a missed day it shows their best. The first players to finish a cube in a subreddit are
+// its founders, numbered, and keep "Nonet founder #n" in front. Flair a player or a mod set some
+// other way is left alone.
 import {reddit, redis} from '@devvit/web/server'
 import type {Streak} from '../shared/api.ts'
 import {CREW_MARK, crewFlair} from '../shared/crew.ts'
@@ -11,11 +13,36 @@ export const FLAIR_FROM = 3
 /** Lapsed streaks moved to "best" each night, at most; the rest wait for the next night. */
 export const LAPSE_MAX = 100
 
-/** The flair for a streak as it stands, or undefined for none yet. */
-export function streakFlair(st: Streak): string | undefined {
-  if (st.current >= FLAIR_FROM) return `Nonet · ${st.current}-day streak`
-  if (st.best >= FLAIR_FROM) return `Nonet · best streak ${st.best}`
-  return undefined
+/** Players who finish a cube first in a subreddit get founder flair, numbered 1 to this. */
+export const FOUNDERS = 100
+
+/** The flair for a streak as it stands, or undefined for none yet. A founder always has one. */
+export function streakFlair(st: Streak, founder?: number): string | undefined {
+  const head = founder ? `Nonet founder #${founder}` : 'Nonet'
+  if (st.current >= FLAIR_FROM) return `${head} · ${st.current}-day streak`
+  if (st.best >= FLAIR_FROM) return `${head} · best streak ${st.best}`
+  return founder ? head : undefined
+}
+
+// userId → founder number; and the count handed out so far
+const foundersKey = 'founders'
+const founderSeqKey = 'founderSeq'
+
+/** A player's founder number, if they are one. */
+export async function founderOf(uid: string): Promise<number | undefined> {
+  const n = Number(await redis.hGet(foundersKey, uid))
+  return n > 0 ? n : undefined
+}
+
+/** Makes the player a founder if they aren't one and places are left. Returns their number. */
+export async function claimFounder(uid: string): Promise<number | undefined> {
+  const had = await founderOf(uid)
+  if (had) return had
+  if (Number(await redis.hGet(founderSeqKey, 'n')) >= FOUNDERS) return undefined
+  const n = await redis.hIncrBy(founderSeqKey, 'n', 1)
+  if (n > FOUNDERS) return undefined
+  await redis.hSet(foundersKey, {[uid]: String(n)})
+  return n
 }
 
 // userId → the flair text the app last set, or OFF once someone else changed it
@@ -67,8 +94,10 @@ export async function flairAfterSolve(
   sub: string,
   st: Streak,
   wrap?: (streak: string | undefined) => string,
+  founder?: number,
 ): Promise<void> {
-  const text = wrap ? wrap(streakFlair(st)) : streakFlair(st)
+  const own = streakFlair(st, founder)
+  const text = wrap ? wrap(own) : own
   if (!text) return
   const set = await setFlair(uid, name, sub, text)
   if (set && st.current >= FLAIR_FROM)
@@ -76,7 +105,11 @@ export async function flairAfterSolve(
 }
 
 /** At the start of a day: streak flair for anyone who missed yesterday moves to their best. */
-export async function lapseFlair(day: string, sub: string): Promise<void> {
+export async function lapseFlair(
+  day: string,
+  sub: string,
+  founders = false,
+): Promise<void> {
   const cutoff = dayNo(addDays(day, -1))
   const rows = await redis.zRange(liveKey, 0, LAPSE_MAX - 1, {by: 'rank'})
   const gone = rows.filter(r => r.score < cutoff).map(r => r.member)
@@ -84,7 +117,8 @@ export async function lapseFlair(day: string, sub: string): Promise<void> {
   for (const [i, uid] of gone.entries()) {
     await redis.zRem(liveKey, [uid])
     const name = names[i]
-    const streak = streakFlair(await getStreak(day, uid))
+    const founder = founders ? await founderOf(uid) : undefined
+    const streak = streakFlair(await getStreak(day, uid), founder)
     // a crew member's flair keeps the crew's name in front
     const mine = await redis.hGet(flairKey, uid)
     const crew = mine?.startsWith(`${CREW_MARK} `)
