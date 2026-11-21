@@ -12,6 +12,7 @@ import {
   scoreRun,
 } from '../shared/scoring.ts'
 import {getCard} from './api.ts'
+import {celebrate, PARTY} from './confetti.ts'
 import {foldIntro} from './nonet/splash.js'
 
 // The feed card: the cover, with today's number, difficulty, the most a run can score,
@@ -52,6 +53,16 @@ function flyToCover(svg: SVGSVGElement, target: Element): Promise<void> {
   })
 }
 
+const DONE_KEY = 'nonet-card-done'
+/** Whether this card last showed today as finished. Only a hint: the server's answer decides. */
+function seenDone(): boolean {
+  try {
+    return localStorage.getItem(DONE_KEY) === dayKey()
+  } catch {
+    return false
+  }
+}
+
 /** The intro, then the cover. Tapping the black, or reduced motion, goes straight to the cover. */
 async function intro(): Promise<void> {
   const body = document.body
@@ -71,6 +82,25 @@ async function intro(): Promise<void> {
     show()
     return
   }
+  // Once today is played, the finished cover is there at once, with no cube and nothing
+  // fading in, and glitter goes off over it. The card waits up to 1.5s for the answer, or 5s
+  // when it last showed today as finished; any slower and the cube plays as usual.
+  const card = await Promise.race([
+    cardP,
+    wait(seenDone() ? 5000 : 1500).then(() => undefined),
+  ])
+  if (card && card.score !== undefined && !card.past) {
+    // the print behind the cover waits until the glitter clears, then fades up
+    body.classList.add('fd-now', 'fd-print', 'fd-print-off')
+    show()
+    requestAnimationFrame(() => body.classList.remove('fd-now'))
+    setTimeout(
+      () => body.classList.remove('fd-print-off'),
+      PARTY.pixelFrom + PARTY.pixelFor * 0.6,
+    )
+    await celebrate(body)
+    return
+  }
   let skipped = false
   box.addEventListener('click', () => {
     skipped = true
@@ -87,6 +117,8 @@ async function intro(): Promise<void> {
   await Promise.all([formed, flyToCover(svg, mark)])
   if (!skipped) show()
 }
+// asked for straight away: the intro needs to know if today is already played
+const cardP = getCard()
 void intro()
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
 const WDAYS = 'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
@@ -232,7 +264,7 @@ function stat(label: string, value: string): HTMLElement {
 }
 
 // The live numbers: filled in when the server answers, left as they are if it can't.
-void getCard().then(card => {
+void cardP.then(card => {
   // the numbers are in (or won't come): the drawn frame gives way to the cover
   document.body.classList.remove('is-loading')
   if (!card) return
@@ -252,6 +284,10 @@ void getCard().then(card => {
     document.body.classList.add('is-past')
     return
   }
+  try {
+    if (card.score === undefined) localStorage.removeItem(DONE_KEY)
+    else localStorage.setItem(DONE_KEY, card.day)
+  } catch {}
   if (card.firstTime && !practiced(card.asNew)) showFirstTime()
   if (card.streak > 1) {
     $('streak-n')?.replaceChildren(`${card.streak}-day streak`)
