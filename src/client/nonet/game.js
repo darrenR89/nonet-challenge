@@ -709,7 +709,7 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   const f=F[selFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
   const H=crossStrip(R,D,n),V=crossStrip(D,R,n),hx=H.strip.indexOf(sel),vy=V.strip.indexOf(sel);
   // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
-  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(10,Math.round(room/40)),
+  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(3,Math.round(room/100)),
     u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
   const pos=c=>Math.floor(c/3)*F3+p+(c%3)*u,size=3*F3;g.style.width=g.style.height=`${size}px`;
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;

@@ -560,13 +560,13 @@ button.danger{border-color:var(--beni);color:var(--beni)}
    for the chosen face's ring to run along them without covering any square */
 /* flatten, step two: a cross of the two lines through the chosen square, with its whole face in the middle */
 .ngrid{position:relative;flex:none}
-.xband{position:absolute;background:var(--body-ink);border-radius:0}
+.xband{position:absolute;background:var(--body-ink);border-radius:6px}
 .xcell{position:absolute;width:60px;height:60px;transform-origin:0 0}
 .xcell .st{left:5px;top:5px}
 /* the chosen square's face: one thick rounded ring */
-.xface{outline:4px solid var(--washi);outline-offset:3px;z-index:0;border-radius:10px}
+.xface{outline:4px solid var(--washi);outline-offset:2px;z-index:0;border-radius:10px}
 /* on paper: a thin white line hugging the face, then a thicker black ring outside it */
-@media (prefers-color-scheme:light){.xface{outline:8px solid #000;outline-offset:2px;box-shadow:0 0 0 2px #fff}}
+@media (prefers-color-scheme:light){.xface{outline:5px solid #000;outline-offset:1.5px;box-shadow:0 0 0 1.5px #fff}}
 /* what the far side of the cube allows in the chosen square */
 .ncands{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:min(460px,96%);flex-wrap:wrap}
 .ncands p{margin:0;font:500 13px/1.4 var(--code);color:var(--washi);text-align:center}
