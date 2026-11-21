@@ -8,6 +8,24 @@
       },
       "game": {
         "entry": "game.html"
+      },
+      "practice": {
+        "entry": "open-practice.html"
+      },
+      "rules": {
+        "entry": "open-rules.html"
+      },
+      "challenge": {
+        "entry": "open-challenge.html"
+      },
+      "crew": {
+        "entry": "open-crew.html"
+      },
+      "boards": {
+        "entry": "open-boards.html"
+      },
+      "pastboard": {
+        "entry": "open-pastboard.html"
       }
     }
   },

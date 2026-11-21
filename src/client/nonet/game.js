@@ -104,7 +104,7 @@ async function loadDaily(){
   // and picks up where you left it if this device saved a run
   if(online&&r.puzzle){if(r.my.score!==undefined)showSolvedDay();else{P=r.puzzle;daily=true;sent=false;restart();restoreRun();pauseNow()}}
   renderSplashExtras();splashTwist();openFromCard();
-  $('spPlay').disabled=false;
+  $('spPlay').disabled=false;$('splash').classList.remove('is-loading');
   journey.ready();
 }
 function applyTwistLock(){
@@ -221,7 +221,10 @@ function renderCrewRow(){const el=$('spCrew'),done=online&&D&&D.my.score!==undef
 // any change to the crew, from the cover or the end card: keep it and redraw both
 function crewChanged(info,what){if(!D)return;D.crew=info;journey.interaction(what);renderSplashExtras();if(runScore&&!$('results').hidden)renderEndCard()}
 // the feed card's buttons ask for one of those to be open when the game comes up
+// which one comes from this page's own name (open-practice.html and so on); the prototype passes it in storage
+const openedAs=(location.pathname.match(/open-([a-z]+)\.html$/)||location.hash.match(/^#open-([a-z]+)$/)||[])[1]||null;let openedDone=false;
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
+  if(!k&&openedAs&&!openedDone){k=openedAs;openedDone=true}
   if(!k)return;if(k==='rules'){showRules();return}
   if(k==='pastboard'){if(D&&D.pastBoards)showBoards(D.pastBoards,{kicker:'Final standings',back:ev=>{try{exitExpandedMode(ev)}catch(e){}}});return}if(k==='practice'){$('spPractice').click();return}
   if(k==='boards'&&D){showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`});return}openPanel(k)}
@@ -907,6 +910,8 @@ const padRoom=()=>{const b=$('padbox'),r=$('stage').getBoundingClientRect(),h=b.
   // on wide screens the pad stands beside the board: centred on the board's area, never above its top
   css.setProperty('--padMid',`${Math.round(Math.max(r.top+r.height/2,r.top+h/2+28))}px`)};
 if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
+// "Learn to play" on the card: straight into the guided practice cube, with no start screen first
+if(openedAs==='practice'){openedDone=true;try{localStorage.removeItem(PRACTICED)}catch(e){}$('splash').classList.remove('is-loading');hideSplashNow();$('spPractice').click()}
 // ---------- test tools (prototype only) ----------
 const tkMsg=m=>{$('tkMsg').textContent=m};
 // number pad layouts to compare for speed: A a row of five under the cube, B a phone keypad in the

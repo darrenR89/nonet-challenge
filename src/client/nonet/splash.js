@@ -52,14 +52,17 @@ const tgt=tw.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
 keep.forEach((c,k)=>{c.t=tgt[k]; c.col1=tgt[k]===armT?Y:WASHI;});
 yc.t=yellowT; yc.col1=Y;
 // 4. the cell grid behind it, at the wordmark's own size: every slot is a cell that can be animated
-const gx0=((WX-4)%P)-P, gy0=((WY-4)%P)-P, GC=Math.ceil((W-gx0)/P), GR=Math.ceil((H-gy0)/P);
+//    it runs past the top and bottom of the wordmark's frame (the svg shows overflow), so the
+//    pulse is a full circle round the cube, not cut off at the frame
+const fr=svg.getBoundingClientRect(), sc=fr.width/W||1, RAD=Math.max(H/2,Math.min(W/2,(innerHeight/2-8)/sc)), gx0=((WX-4)%P)-P, gy0=((WY-4)%P)-P-Math.ceil((RAD-CY)/P)*P, GC=Math.ceil((W-gx0)/P), GR=Math.ceil((CY+RAD-gy0)/P);
 const gg=document.createElementNS(NS,'g'); gg.setAttribute('fill','none'); svg.insertBefore(gg,svg.firstChild);
 const grid=[];
 for(let j=0;j<GR;j++)for(let i=0;i<GC;i++){const el=document.createElementNS(NS,'rect');
   const x=gx0+i*P+4.5, y=gy0+j*P+4.5;
   el.setAttribute('x',x);el.setAttribute('y',y);el.setAttribute('width',S-1);el.setAttribute('height',S-1);el.setAttribute('rx',R);
-  gg.appendChild(el); grid.push({el,cx:x+19.5,cy:y+19.5});}
-const dmax=Math.max(...grid.map(g=>Math.hypot(g.cx-CX,g.cy-CY)));
+  const cx=x+19.5, cy=y+19.5;if(Math.hypot(cx-CX,cy-CY)>RAD)continue; // only the cells inside the circle
+  gg.appendChild(el); grid.push({el,cx,cy});}
+const dmax=RAD;
 // 5. timing, as fractions of the run:
 //    0 to .06 the cube draws in a breath; spares then shrink and blink out where they sit;
 //    every other cell flies straight to its letter, left to right, and lands with a small overshoot;
@@ -95,7 +98,7 @@ function draw(p){ // 0 cube, 1 wordmark
   }
   const rp=(p-.05)/.3*1.3;                                        // one pulse out from the cube as it breaks, then the grid is gone
   for(const g of grid){
-    const d=Math.hypot(g.cx-CX,g.cy-CY)/dmax, w=p>.05&&p<.35?Math.max(0,1-Math.abs(rp-d)/.16):0;
+    const d=Math.hypot(g.cx-CX,g.cy-CY)/dmax, w=p>.05&&p<.35?Math.max(0,1-Math.abs(rp-d)/.16)*(1-d*d):0; // fading out to the edge of the circle
     g.el.setAttribute('stroke','rgb('+LIT.join(',')+')'); g.el.setAttribute('stroke-opacity',(w*.9).toFixed(3));
   }
 }

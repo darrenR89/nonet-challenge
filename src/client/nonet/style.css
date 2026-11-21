@@ -250,7 +250,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .modal .card{width:min(420px,100%);max-height:calc(100% - 32px);overflow:hidden;box-sizing:border-box;background:var(--slate);border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);padding:18px 16px;display:flex;flex-direction:column;gap:12px}
 /* the title and buttons stay put; only the body scrolls */
 .modal .card>*{flex:none}
-.modal .card>.body{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.modal .card>.body{flex:0 1 auto;min-height:0;min-width:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
 .modal h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px;line-height:1.2}
 .modal .body p{margin:0;font-size:15px;line-height:1.5;color:var(--washi)}
 .modal .body .rules{margin:0;padding:0;border:0;background:none}
@@ -506,7 +506,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .modal .body .rules p:not(.lead){margin:10px 0 0;font-size:13px;color:var(--lead)}
 .rules .rtabs{display:flex;gap:4px;padding:4px;margin:0 0 12px;position:sticky;top:0;z-index:2;border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);background:var(--slate)}
 /* while the help scrolls, the tabs stay on top over a solid band */
-.rules .rtabs::before{content:"";position:absolute;inset:-12px -4px -12px;background:var(--slate);z-index:-1}
+.rules .rtabs::before{content:"";position:absolute;inset:-12px 0 -12px;background:var(--slate);z-index:-1}
 .rules .rtabs::after{content:"";position:absolute;inset:-1px;border:1px solid var(--edge);border-radius:inherit;pointer-events:none}
 .rules .rtabs button{flex:1;padding:6px 4px;font-size:12px;border:0;background:none;color:var(--lead)}
 .rules .rtabs button[aria-selected="true"]{background:var(--washi);color:var(--sumi)}
