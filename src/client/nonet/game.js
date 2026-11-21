@@ -93,6 +93,8 @@ async function loadDaily(){
   else{online=false;level=levelOf(today);twistDay=offlineTwist()}
   if(online)void claimPending(r);
   if(!tierAllowed(level,tier)&&tier!==PRACTICE)tier=Math.min(1,maxTurns(level));
+  // a first visit starts on 0 turns, just the fill-in, so the first scored cube teaches one thing at a time
+  if(twistDay===null&&!(D&&D.streak&&D.streak.played))tier=0;
   if(twistDay!==null)tier=twistDay;
   applyTwistLock();
   // locked in earlier today: today's cube waits behind the start screen, paused,
@@ -643,16 +645,18 @@ setInterval(()=>{if(stage<3&&!gaveUp)updateStatus()},500);
 cubeEl.addEventListener('click',e=>{const s=e.target.closest('.st');if(!s||moved||!P||stage===3)return;
   const c=+s.dataset.c;lc=c===sel?lc+1:0;sel=c;selFace=+s.dataset.f;hintArrow=null;focusFace(selFace);render();
   if(walk===1&&c===walkCell)walkTo(2)});
+// a short buzz on phones that support it (Android; iOS webviews ignore it), off with reduced motion
+const buzz=p=>{try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)navigator.vibrate?.(p)}catch(e){}};
 function pressDigit(d){ensureRunning();
   if(stage!==2||sel<0||locked[sel]||vals[sel])return;
   if(d===0){pm[sel]=0;render();return}
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;faceWrong[faceOfCell(sel)]++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;faceWrong[faceOfCell(sel)]++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;music.sfx('lock');{const f=faceOfCell(sel);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i]))faceOrder.push(f)}render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');{const f=faceOfCell(sel);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i])){faceOrder.push(f);buzz([12,40,24])}else buzz(10)}render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');
