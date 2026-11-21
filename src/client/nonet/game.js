@@ -715,7 +715,7 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
     b.style.width=`${w/3*F3}px`;b.style.height=`${h/3*F3}px`;g.appendChild(b)};
   const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
-    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.style.left=st.style.top='5px';
+    w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.classList.remove('flash','sweep','hintme','shake','walkglow');st.style.animation='none';st.style.left=st.style.top='5px';
     st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));w.appendChild(st);g.appendChild(w)};
   const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
   // every face the two lines cross is shown whole: the rest of a face sits beside its line's squares,
