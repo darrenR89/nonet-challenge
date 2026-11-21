@@ -708,10 +708,12 @@ function farDigits(S){if(!S.own.includes(sel))return null;const far=S.far.map(i=
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';if(sel<0)return;
   const f=F[selFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
   const H=crossStrip(R,D,n),V=crossStrip(D,R,n),hx=H.strip.indexOf(sel),vy=V.strip.indexOf(sel);
-  const gap=12,cand=$('nCands').offsetHeight+12,u=Math.floor(Math.min((net.clientWidth-2*gap)/9,(net.clientHeight-60-cand-2*gap)/9)),k=u/60;
-  const pos=c=>c*u+Math.floor(c/3)*gap,size=9*u+2*gap;g.style.width=g.style.height=`${size}px`;
-  const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${pos(c)}px`;b.style.top=`${pos(r)}px`;
-    b.style.width=`${w*u}px`;b.style.height=`${h*u}px`;g.appendChild(b)};
+  // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
+  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(10,Math.round(room/40)),
+    u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
+  const pos=c=>Math.floor(c/3)*F3+p+(c%3)*u,size=3*F3;g.style.width=g.style.height=`${size}px`;
+  const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
+    b.style.width=`${w/3*F3}px`;b.style.height=`${h/3*F3}px`;g.appendChild(b)};
   const cell=(ci,c,r)=>{const src=stickers[ci]?.[0];if(!src)return;const w=document.createElement('div');w.className='xcell';
     w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.style.left=st.style.top='5px';
     st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));w.appendChild(st);g.appendChild(w)};
