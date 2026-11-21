@@ -43,11 +43,11 @@
         "endpoint": "/internal/on/menu/cubes"
       },
       {
-        "label": "Nonet: try it as a new player",
-        "description": "For the next hour, today's post shows you the start screen and guided practice a first-time player sees. Your scores and streak are untouched.",
+        "label": "Nonet: demo mode with sample players",
+        "description": "For the next hour you see today's post as a new player on a busy day: the guided practice first, then full boards, a crew invite and challenges from sample players. Only you see it, and your real scores are untouched.",
         "location": "subreddit",
         "forUserType": "moderator",
-        "endpoint": "/internal/on/menu/try-new"
+        "endpoint": "/internal/on/menu/demo"
       }
     ]
   },

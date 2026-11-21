@@ -118,6 +118,13 @@ import {
   topCrews,
 } from './crews.ts'
 import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
+import {
+  DEMO_SECONDS,
+  type DemoMe,
+  demoDaily,
+  demoRoute,
+  startDemo,
+} from './demo.ts'
 import {addDuel, answerDuel, duelsFor, settleDuels} from './duels.ts'
 import {
   activeEvent,
@@ -229,35 +236,51 @@ async function route(
       case Endpoint.JoinSub:
         rsp = await routeJoinSub()
         break
-      case Endpoint.Challenge:
-        rsp = await routeChallenge(await readJson<ChallengeReq>(reqMsg))
+      case Endpoint.Challenge: {
+        const body = await readJson<ChallengeReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeChallenge(body))
         break
-      case Endpoint.Answer:
-        rsp = await routeAnswer(await readJson<AnswerReq>(reqMsg))
+      }
+      case Endpoint.Answer: {
+        const body = await readJson<AnswerReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeAnswer(body))
         break
-      case Endpoint.CrewCreate:
-        rsp = await routeCrewCreate(await readJson<CrewCreateReq>(reqMsg))
+      }
+      case Endpoint.CrewCreate: {
+        const body = await readJson<CrewCreateReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewCreate(body))
         break
-      case Endpoint.CrewInvite:
-        rsp = await routeCrewInvite(await readJson<CrewInviteReq>(reqMsg))
+      }
+      case Endpoint.CrewInvite: {
+        const body = await readJson<CrewInviteReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewInvite(body))
         break
-      case Endpoint.CrewAnswer:
-        rsp = await routeCrewAnswer(await readJson<CrewAnswerReq>(reqMsg))
+      }
+      case Endpoint.CrewAnswer: {
+        const body = await readJson<CrewAnswerReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewAnswer(body))
         break
+      }
       case Endpoint.CrewLeave:
-        rsp = await routeCrewLeave()
+        rsp = (await demo(endpoint, {})) ?? (await routeCrewLeave())
         break
-      case Endpoint.CrewNudge:
-        rsp = await routeCrewNudge(await readJson<CrewNudgeReq>(reqMsg))
+      case Endpoint.CrewNudge: {
+        const body = await readJson<CrewNudgeReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewNudge(body))
         break
-      case Endpoint.CrewSeat:
-        rsp = await routeCrewSeat(await readJson<CrewSeatReq>(reqMsg))
+      }
+      case Endpoint.CrewSeat: {
+        const body = await readJson<CrewSeatReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewSeat(body))
         break
-      case Endpoint.CrewNudges:
-        rsp = await routeCrewNudges(await readJson<CrewNudgesReq>(reqMsg))
+      }
+      case Endpoint.CrewNudges: {
+        const body = await readJson<CrewNudgesReq>(reqMsg)
+        rsp = (await demo(endpoint, body)) ?? (await routeCrewNudges(body))
         break
+      }
       case Endpoint.CrewPost:
-        rsp = await routeCrewPost()
+        rsp = (await demo(endpoint, {})) ?? (await routeCrewPost())
         break
       case Endpoint.ResultComment:
         rsp = await routeResultComment()
@@ -314,8 +337,8 @@ async function route(
       case Endpoint.OnMenuCubes:
         rsp = await routeMenuCubes()
         break
-      case Endpoint.OnMenuTryNew:
-        rsp = await routeMenuTryNew()
+      case Endpoint.OnMenuDemo:
+        rsp = await routeMenuDemo()
         break
       case Endpoint.OnFormNewEvent:
         rsp = await routeFormNewEvent(await readJson<unknown>(reqMsg))
@@ -438,6 +461,7 @@ async function routeDaily(): Promise<DailyRsp> {
       : false,
     duels: uid ? await duelsFor(day, uid) : [],
     crew: uid ? await crewInfo(day, uid) : NO_CREW,
+    ...(uid ? await demoView(uid, day, my.score) : undefined),
     ...(past
       ? {
           past: true,
@@ -458,8 +482,10 @@ async function routeCard(): Promise<CardRsp> {
   const day = past ?? now
   // no rememberName here: the card is read on every scroll past
   const uid = context.userId
-  const score = uid ? (await getMyDay(day, uid)).score : undefined
-  const st = await getDayStats(day)
+  // demo mode: the card looks as it would to a new player on a busy day
+  const asNew = !past && !!uid && !!(await redis.get(tryNewKey(uid)))
+  const score = uid && !asNew ? (await getMyDay(day, uid)).score : undefined
+  const st = asNew ? DEMO_STATS : await getDayStats(day)
   return {
     day,
     no: cubeNumber(day),
@@ -467,7 +493,7 @@ async function routeCard(): Promise<CardRsp> {
     solves: st.solves,
     played: (st.tiers ?? []).reduce((n, t) => n + t.picks, 0),
     fastest: st.fastest,
-    streak: uid ? (await getStreak(now, uid)).current : 0,
+    streak: uid && !asNew ? (await getStreak(now, uid)).current : 0,
     score,
     rank:
       uid && score !== undefined
@@ -477,6 +503,40 @@ async function routeCard(): Promise<CardRsp> {
       ? {past: true, todayPost: (await redis.hGet(DAILY_POSTS, now)) ?? ''}
       : {}),
   }
+}
+
+/** The card's numbers in demo mode: a busy day. */
+const DEMO_STATS: DayStats = {
+  solves: 1031,
+  avgTime: 412,
+  fastest: 92,
+  tiers: [
+    {tier: 0, picks: 180, solves: 171, avgTime: 301, avgScore: 610, best: 980},
+    {
+      tier: 1,
+      picks: 512,
+      solves: 430,
+      avgTime: 388,
+      avgScore: 1120,
+      best: 1890,
+    },
+    {
+      tier: 2,
+      picks: 431,
+      solves: 318,
+      avgTime: 455,
+      avgScore: 1640,
+      best: 2780,
+    },
+    {
+      tier: 3,
+      picks: 161,
+      solves: 112,
+      avgTime: 540,
+      avgScore: 2190,
+      best: 3920,
+    },
+  ],
 }
 
 async function routeStart(req: StartReq): Promise<StartRsp> {
@@ -610,7 +670,10 @@ async function routeScore(
     dayStats = await getDayStats(day)
     await journey.end(journeyId, true, {win: true, score: 0})
   }
-  const boards = await dayBoards(day, uid)
+  const shown = await demoDaily(
+    await demoMe(uid, day, counted ? total : Number(rec.score ?? total)),
+  )
+  const boards = shown?.boards ?? (await dayBoards(day, uid))
   const me = boards.day.me
   return {
     counted,
@@ -624,8 +687,8 @@ async function routeScore(
     boards,
     event: event ? await eventState(event, day, uid) : undefined,
     preview: await previewFor(day, uid),
-    duels: await duelsFor(day, uid),
-    crew: await crewInfo(day, uid),
+    duels: shown?.duels ?? (await duelsFor(day, uid)),
+    crew: shown?.crew ?? (await crewInfo(day, uid)),
   }
 }
 
@@ -1284,20 +1347,57 @@ async function routeMenuCubes(): Promise<UiResponse> {
   }
 }
 
-/** A moderator trying the game as a new player, for an hour. */
+/** Demo mode also shows the game as a new player would see it, for the same hour. */
 const tryNewKey = (uid: string): string => `trynew:${uid}`
-export const TRY_NEW_SECONDS = 60 * 60
 
-async function routeMenuTryNew(): Promise<UiResponse> {
+/** The asker as demo mode needs them: their name, and their real scores today and this week. */
+async function demoMe(
+  uid: string,
+  day: string,
+  score: number | undefined,
+): Promise<DemoMe> {
+  const week = await redis.zScore(boardKey.week(weekKey(day)), uid)
+  return {
+    id: uid,
+    name: context.username ?? 'you',
+    day,
+    score,
+    week: week === undefined ? undefined : Math.round(week),
+  }
+}
+
+/** What demo mode replaces in today's response: the boards, crew, challenges and the day's numbers. */
+async function demoView(uid: string, day: string, score: number | undefined) {
+  const shown = await demoDaily(await demoMe(uid, day, score))
+  return shown ? {...shown, stats: DEMO_STATS} : undefined
+}
+
+/** A crew or challenge request answered from the asker's demo copy, when demo mode is on. */
+async function demo(
+  endpoint: Endpoint,
+  body: unknown,
+): Promise<AnyRsp | undefined> {
+  const uid = context.userId
+  if (!uid) return
+  const day = today()
+  const me = await demoMe(uid, day, (await getMyDay(day, uid)).score)
+  return (await demoRoute(endpoint, body, me)) as AnyRsp | undefined
+}
+
+/** A moderator sees the post busy with sample players for an hour. */
+async function routeMenuDemo(): Promise<UiResponse> {
   const uid = await who()
-  if (!uid) return {showToast: 'Log in to try it as a new player.'}
-  await redis.set(tryNewKey(uid), '1')
-  await redis.expire(tryNewKey(uid), TRY_NEW_SECONDS)
-  const post = await redis.hGet(DAILY_POSTS, today())
+  if (!uid) return {showToast: 'Log in to turn on demo mode.'}
+  const day = today()
+  await startDemo(uid, day, (await getMyDay(day, uid)).score)
+  await redis.set(tryNewKey(uid), '1', {
+    expiration: new Date(Date.now() + DEMO_SECONDS * 1000),
+  })
+  const post = await redis.hGet(DAILY_POSTS, day)
   const sub = context.subredditName
   return {
     showToast: {
-      text: "For the next hour, today's post shows you what a new player sees.",
+      text: 'Demo mode is on for an hour: you start as a new player, with sample boards, a crew invite and challenges. Only you see it.',
       appearance: 'success',
     },
     ...(post && sub
