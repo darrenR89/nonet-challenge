@@ -73,13 +73,15 @@ export async function lockTier(
   uid: string,
   tier: number,
   nowMs: number,
+  /** False for a demo run, which is left out of the day's numbers. */
+  counts = true,
 ): Promise<number> {
   const key = userDayKey(day, uid)
   const set = await redis.hSetNX(key, 'tier', String(tier))
   if (set) {
     await redis.hSet(key, {started: String(nowMs)})
     await redis.expire(key, DAY_TTL)
-    await addPick(day, tier)
+    if (counts) await addPick(day, tier)
     return tier
   }
   return Number(await redis.hGet(key, 'tier'))
@@ -226,6 +228,11 @@ export async function rankOn(
   const asc = await redis.zRank(key, uid)
   if (asc === undefined) return
   return (await redis.zCard(key)) - asc
+}
+
+/** Forgets a player's run for the day: used to start a demo run afresh. */
+export async function clearDay(day: string, uid: string): Promise<void> {
+  await redis.del(userDayKey(day, uid))
 }
 
 /** Uses the day's one retry. Returns retries used after the call, or 0 if none left. */

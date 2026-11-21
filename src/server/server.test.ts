@@ -1435,12 +1435,20 @@ test('pinning can be turned off', async () => {
 })
 
 test('demo mode fills the boards and walks a mod through a crew invite and challenges, for them alone', async () => {
+  // the mod has already played today for real
+  const real = await playDay(1, run())
+  assert.equal(real.body.counted, true)
   const menu = await post<{showToast?: {text: string}}>(Endpoint.OnMenuDemo)
   assert.match(menu.body.showToast?.text ?? '', /Demo mode is on/)
   const d = (await get<DailyRsp>(Endpoint.Daily)).body
-  assert.equal(d.asNew, true, 'they start as a new player')
+  assert.ok(d.asNew, 'they start as a new player')
+  assert.equal(d.my.score, undefined, 'with no run today')
+  assert.equal(d.puzzle, undefined)
+  assert.equal(d.streak.played, 0)
   const card = (await get<CardRsp>(Endpoint.Card)).body
   assert.equal(card.streak, 0)
+  assert.equal(card.score, undefined)
+  assert.equal(card.firstTime, true, 'the card offers the practice')
   assert.equal(card.solves, 1031)
   assert.equal(d.boards.day.players, 1284)
   assert.equal(d.boards.day.top.length, 9)
@@ -1480,8 +1488,23 @@ test('demo mode fills the boards and walks a mod through a crew invite and chall
     2,
     'the demo copy remembers',
   )
+
+  // they play today again, as a new player: scored on the demo copy, real record untouched
+  const again = await playDay(0, run())
+  assert.equal(again.status, 200)
+  assert.equal(again.body.counted, true)
+  assert.equal(again.body.streak.current, 1)
+  assert.equal(again.body.boards.day.players, 1284)
+  const after = (await get<CardRsp>(Endpoint.Card)).body
+  assert.equal(after.score, again.body.total, 'the card shows the demo run')
+  assert.equal(after.firstTime, undefined)
+  // turning demo mode on again starts them over
+  await post(Endpoint.OnMenuDemo)
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.my.score, undefined)
+
   as('t2_bob', 'bob')
   const bob = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(bob.stats.solves, 1, 'the real day has only the real run')
   assert.equal(bob.asNew, undefined)
   assert.equal(bob.crew.crew, undefined)
   assert.equal(bob.crew.invites.length, 0)

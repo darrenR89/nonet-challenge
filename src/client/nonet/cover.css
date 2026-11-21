@@ -202,7 +202,11 @@
 .cv-title #missed{text-align:center}
 
 /* today done: how you did, then what next, each opening in place */
-.cv-done{width:100%;display:grid;gap:12px;text-align:left}
+/* one column that never grows past the page: an open challenge form or a long line wraps
+   inside it instead of pushing the panel under the spine */
+.cv-done{width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;text-align:left}
+.cv-done .dn-acts,.cv-done .dn-row>.more{grid-template-columns:minmax(0,1fr);min-width:0}
+.cv-done .duelForm button{flex:none}
 .cv-done[hidden]{display:none}
 .dn-res{display:grid;gap:2px;justify-items:end;text-align:right}
 .dn-cap{font:400 11px var(--c-code);letter-spacing:.08em;text-transform:uppercase;color:var(--c-lead)}

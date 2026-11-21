@@ -139,3 +139,43 @@ body.cv {
     transform: none;
   }
 }
+
+/* a phone's inline post is shorter than its screen (about 600px on iOS), so once today is done the
+   card tightens up to keep the score and every next step in view: a smaller name and number, the
+   stats and buttons closer together, and the next steps on one line each */
+@media (max-width: 599px) and (max-height: 760px) {
+  .is-done .cv-title {
+    --top: 34px;
+    gap: 8px;
+  }
+  .is-done .cv-mark {
+    width: min(100%, 250px);
+    margin: 0 auto;
+    align-self: center;
+  }
+  .is-done .cv-no b {
+    font-size: 44px;
+  }
+  .is-done .cv-title .cv-stats {
+    padding-block: 6px;
+  }
+  .is-done .cv-mid {
+    gap: 14px;
+    padding-top: 10px;
+  }
+  .is-done .cv-play {
+    height: 38px;
+  }
+  .is-done .dn-res {
+    padding: 6px 12px 8px;
+  }
+  .is-done .dn-score b {
+    font-size: 34px;
+  }
+  .is-done .dn-chip {
+    padding-block: 8px;
+  }
+  .is-done .dn-chip > span {
+    display: none;
+  }
+}

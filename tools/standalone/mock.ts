@@ -53,6 +53,16 @@ const save = (s: Store): void => {
   } catch {}
 }
 
+/** The mods' demo mode in the prototype: nonet-as-new in sessionStorage. */
+const asNewAt = (): number | undefined => {
+  try {
+    const v = sessionStorage.getItem('nonet-as-new')
+    return v ? Number(v) || 1 : undefined
+  } catch {
+    return undefined
+  }
+}
+
 const cache = new Map<string, ReturnType<typeof makeDay>>()
 const cube = (day: string) => {
   let d = cache.get(day)
@@ -305,7 +315,8 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         level: levelOf(day),
         puzzle: rec.tier !== undefined ? cube(day).tiers[rec.tier] : undefined,
         my: {tier: rec.tier, score: rec.score, starsWon: rec.stars, retries: rec.retries ?? 0, commented: !!(rec as {commented?: boolean}).commented},
-        streak: streakNow(day, s),
+        // demo mode plays as a new player: no streak behind them
+        streak: asNewAt() ? {current: 0, best: 0, played: 0} : streakNow(day, s),
         preview: preview(day, s),
         boards: boards(day, s),
         event: EVENTS ? eventState(day, s) : undefined,
@@ -319,7 +330,8 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         // the mods' "try it as a new player": set nonet-as-new in sessionStorage
         asNew: (() => {
           try {
-            return sessionStorage.getItem('nonet-as-new') === '1' || undefined
+            const v = sessionStorage.getItem('nonet-as-new')
+            return v ? Number(v) || 1 : undefined
           } catch {
             return undefined
           }
@@ -346,9 +358,13 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         solves: look === 'first' ? 0 : stats(day, s).solves,
         played: look === 'first' ? 0 : stats(day, s).tiers.reduce((n, t) => n + t.picks, 0),
         fastest: look === 'first' ? 0 : stats(day, s).fastest,
-        streak: look === 'first' ? 0 : streakNow(day, s).current,
+        streak: look === 'first' || asNewAt() ? 0 : streakNow(day, s).current,
         score: played ? (rec.score ?? 1840) : undefined,
         rank: played ? (b.day.me?.rank ?? 6) : undefined,
+        // a player who has never played, or a mod in demo mode, is offered the practice
+        ...(look === 'new' || (!played && (s.played === 0 || asNewAt()))
+          ? {firstTime: true, asNew: asNewAt()}
+          : {}),
       })
     }
     case 'api/daily/start': {

@@ -126,8 +126,11 @@ export type DailyRsp = {
   event: EventState | undefined
   /** False when nobody is logged in; scores are not kept. */
   loggedIn: boolean
-  /** A moderator asked to see the game as a new player: the start screen offers the guided practice. */
-  asNew?: boolean
+  /**
+   * Demo mode: when a moderator turned it on (ms). They play as a new player, so the start
+   * screen offers the guided practice again, once per time it is turned on.
+   */
+  asNew?: number
   /** Today's cube number, counting from the first cube in this subreddit. */
   cubeNo: number
   stats: DayStats
@@ -170,6 +173,10 @@ export type CardRsp = {
    */
   past?: true
   todayPost?: string
+  /** The asker has never played: Play starts the guided practice, as in the game. */
+  firstTime?: true
+  /** Demo mode, as in DailyRsp. */
+  asNew?: number
 }
 
 /** Lock today's tier (0 to 3 turns, Hard up to 2) and get its cube. Only the first call each day counts. */
