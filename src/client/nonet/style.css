@@ -526,10 +526,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* ---------- flatten helper ----------
    Step one: the main clock stops for 5 seconds while the player turns the cube and taps a square.
    Step two: a cross of that square's two lines of nine, with every face they cross shown whole,
-   on a 20-second clock of its own. The cube, its room and the number pad step away meanwhile. */
+   on a 20-second clock of its own. The cube and its room step away; the number pad stays to fill squares in. */
 .stage:has(.net:not([hidden])) .cube,.stage:has(.net:not([hidden])) .space{visibility:hidden}
-body:has(.net:not([hidden])) .padbox{display:none}
-.wrap:has(.net:not([hidden])){padding-bottom:16px}
 .stage:has(.pick:not([hidden])) .st{cursor:pointer}
 
 /* one clock for both steps: an ink pill with a yellow ring, pinned to the top middle, with fold back inside */
@@ -580,3 +578,10 @@ body:has(.net:not([hidden])) .padbox{display:none}
 .nwhy b{display:block;font:600 14px var(--code);color:var(--washi)}
 .nwhy p{margin:8px 0 0;font:400 13px/1.45 var(--code);color:var(--washi)}
 .nwhy button{margin-top:12px;width:100%}
+/* short windows (a desktop post): the helpers row steps away, the pad gets shorter keys and the numbers sit beside the cross */
+@media (max-height:600px){
+  body:has(.net:not([hidden])) .helpers{display:none}
+  body:has(.net:not([hidden])) .pad button{min-height:42px}
+  .net{flex-direction:row;padding-top:52px}
+  .ncands{flex-direction:column;max-width:120px}
+}

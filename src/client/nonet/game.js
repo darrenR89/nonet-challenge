@@ -714,7 +714,7 @@ function flatBuild(){const net=$('net'),g=net.querySelector('.ngrid');if(!flatOn
   const f=F[flatFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
   const H=crossStrip(R,D,n,flatAnchor),V=crossStrip(D,R,n,flatAnchor),hx=H.strip.indexOf(flatAnchor),vy=V.strip.indexOf(flatAnchor);
   // the faces sit edge to edge, each with a wide border round its squares, and the cross spans the page's width
-  const cand=$('nCands').offsetHeight+12,room=Math.min(net.clientWidth,net.clientHeight-60-cand),p=Math.max(3,Math.round(room/100)),
+  const nc=$('nCands'),row=getComputedStyle(net).flexDirection==='row',room=row?Math.min(net.clientWidth-nc.offsetWidth-24,net.clientHeight-56):Math.min(net.clientWidth,net.clientHeight-60-nc.offsetHeight-12),p=Math.max(3,Math.round(room/100)),
     u=Math.floor((room-6*p)/9),k=u/60,F3=3*u+2*p;
   const pos=c=>Math.floor(c/3)*F3+p+(c%3)*u,size=3*F3;g.style.width=g.style.height=`${size}px`;
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${Math.floor(c/3)*F3}px`;b.style.top=`${Math.floor(r/3)*F3}px`;
