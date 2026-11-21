@@ -578,3 +578,4 @@ button.danger{border-color:var(--beni);color:var(--beni)}
    for the chosen face's ring to run along them without covering any square */
 .nface .st{width:48px;height:48px}
 .nface.cur{outline:10px solid #eceae3;outline-offset:-5px;border-radius:14px}
+@media (prefers-color-scheme:light){.nface.cur{outline-color:#000}}
