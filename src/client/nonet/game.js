@@ -715,9 +715,12 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
     w.style.left=`${pos(c)}px`;w.style.top=`${pos(r)}px`;w.style.scale=String(k);const st=src.cloneNode(true);st.style.left=st.style.top='5px';
     st.style.setProperty('--shade',getComputedStyle(src.parentElement).getPropertyValue('--shade'));w.appendChild(st);g.appendChild(w)};
   const fc=Math.floor(hx/3)*3,fr=Math.floor(vy/3)*3;
-  for(let t=0;t<9;t+=3){if(t!==fc)block(t,vy,3,1,'xband');if(t!==fr)block(hx,t,1,3,'xband')}
+  // every face the two lines cross is shown whole: the rest of a face sits beside its line's squares,
+  // a step across the line (down for the line across, right for the line down)
+  const at=(ci,step,d)=>idx.get(key(cells[ci].n,v3(cells[ci].c,step,d)));
+  for(let t=0;t<9;t+=3){if(t!==fc){block(t,fr,3,3,'xband');H.strip.slice(t,t+3).forEach((ci,x)=>{for(let r=0;r<3;r++)cell(at(ci,D,fr+r-vy),t+x,fr+r)})}
+    if(t!==fr){block(fc,t,3,3,'xband');V.strip.slice(t,t+3).forEach((ci,y)=>{for(let c=0;c<3;c++)cell(at(ci,R,fc+c-hx),fc+c,t+y)})}}
   block(fc,fr,3,3,'xband xface');
-  H.strip.forEach((ci,c)=>{if(Math.floor(c/3)*3!==fc)cell(ci,c,vy)});V.strip.forEach((ci,r)=>{if(Math.floor(r/3)*3!==fr)cell(ci,hx,r)});
   for(let j=0;j<3;j++)for(let i=0;i<3;i++)cell(idx.get(key(n,v3(v3(n,R,i-1),D,j-1))),fc+i,fr+j);
   // the numbers the far squares allow here, from either line through the square
   const all=[farDigits(H),farDigits(V)].filter(Boolean),full=all.filter(x=>x.full);
@@ -727,7 +730,7 @@ function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textConte
   $('nDigits').innerHTML=ds&&!vals[sel]?ds.map(d=>`<i>${digitSVG(d)}</i>`).join(''):'';
   $('nCandTxt').textContent=vals[sel]?'This square already has a number. Tap another square on the board.':ds&&ds.length?(sure?'Must be one of':'Could be'):
     applies?'The far squares that match this one are still empty.':'This square sits in both lines of its ring, so the far side can\'t narrow it down.';
-  const left=Math.max(0,flatEnd-Date.now());clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
+  const left=$('nWhy').hidden?Math.max(0,flatEnd-Date.now()):whyLeft;clockDraw(left,FLAT_MS);if(left<=0)flatStop()}
 // one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
 function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
 function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0){const fi=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0],n=F[fi].map(1,1);pickFace(fi,idx.get(key(n,n)))}}
@@ -735,9 +738,14 @@ function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning
   flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
 function pickFace(fi,c){if(!flatOn||!$('net').hidden)return;sel=c;selFace=fi;lc=0;hintArrow=null;render();clearInterval(flatTick);releaseClock();$('pick').hidden=true;
   flatFace=fi;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatDraw();flatTick=setInterval(flatDraw,150)}
-function flatStop(){if(!flatOn)return;$('nWhy').hidden=true;flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
+function flatStop(){if(!flatOn)return;if(!$('nWhy').hidden)why(false);flatOn=false;clearInterval(flatTick);releaseClock();$('pick').hidden=$('net').hidden=$('fclock').hidden=true;render()}
 $('flatBtn').onclick=flatStart;$('netDone').onclick=flatStop;
-const why=open=>{$('nWhy').hidden=!open;$('nInfo').setAttribute('aria-expanded',String(open))};
+// reading the explanation stops both clocks; closing it starts them again where they were
+let whyLeft=0;
+function why(open){if(open===!$('nWhy').hidden)return;
+  if(open){whyLeft=Math.max(0,flatEnd-Date.now());clearInterval(flatTick);holdClock()}
+  else{flatEnd=Date.now()+whyLeft;releaseClock();if(flatOn){clearInterval(flatTick);flatTick=setInterval(flatDraw,150)}}
+  $('nWhy').hidden=!open;$('nInfo').setAttribute('aria-expanded',String(open))}
 $('nInfo').onclick=e=>{e.stopPropagation();why($('nWhy').hidden)};$('nWhyOk').onclick=e=>{e.stopPropagation();why(false)};
 // while picking, a tap on the cube chooses that face instead of a square
 cubeEl.addEventListener('click',e=>{if(!flatOn||$('pick').hidden)return;const s=e.target.closest('.st');if(!s||moved)return;
