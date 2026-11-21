@@ -173,6 +173,8 @@
 .setup .cv-twists .ts{grid-area:s;font:400 12px var(--c-code);color:var(--c-lead)}
 .setup .cv-twists .ts:empty{display:none}
 .setup .cv-twists>[aria-pressed="true"] small,.setup .cv-twists>[aria-pressed="true"] .ts{color:var(--c-paper)}
+/* grey type is too faint on the yellow page: ink instead */
+.setup .compact>.chip span,.setup .compact>.chip::after{color:var(--c-ink)}
 .su-extra{display:grid;gap:10px}
 .su-extra:not(:has(>:not([hidden]))){display:none}
 .setup .event,.setup .peek,.setup .duelsSplash{background:rgba(255,255,255,.6)}

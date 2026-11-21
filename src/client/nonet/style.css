@@ -5,6 +5,9 @@
   --sumi:#121316; --slate:#1c1e23; --tile:#23252b; --edge:#2c2f37; --washi:#eceae3; --lead:#8d919b;
   --yellow:#f5c12e; --ai:#8fb0ff; --beni:#f08a8a;
   --peer:#262a36; --done:#3a3219;
+  /* accents that must read as lines, marks or small type: yellow on graphite, a deep gold on paper (light).
+     --pencil is the small grey type on the cube's stickers, kept at 4.5:1 on every sticker shade. */
+  --gold:#f5c12e; --tint:rgb(245 193 46 / .35); --pencil:#a5a9b2;
   --cell-top:#3b3e47; --body-ink:#0b0c0e; --cell-right:#30333b; --cell-left:#272a31;
   --pitch:48px; --r:7px;
   --display:"DotGothic16","M PLUS 1 Code",ui-monospace,monospace;
@@ -13,6 +16,8 @@
   color-scheme:dark;
 }
 html,body{min-height:100%}
+/* pinch zoom stays on (the cube's stage handles its own touches); no double-tap zoom on quick pad taps */
+html{touch-action:manipulation}
 body{margin:0;background:var(--sumi);color:var(--washi);font-family:var(--body);font-size:15px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 /* paper grain: Heather Green's paper (Pexels 20137646), filtered to its fibre, in overlay */
@@ -42,14 +47,14 @@ h1 img{height:26px;width:auto;display:block}
 .penalty sub{font-size:.55em;font-weight:500;vertical-align:sub;margin-left:1px}
 @keyframes penalty{0%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1.7) rotate(-12deg)}22%{transform:scale(1.7) rotate(10deg)}32%{transform:scale(1.6) rotate(-8deg)}42%{transform:scale(1.5) rotate(5deg)}55%{opacity:1;transform:scale(1.3) rotate(0)}100%{opacity:0;transform:translateY(-44px) scale(1)}}
 .st .dg{overflow:visible}
-.st .dg .foot{fill:var(--yellow)}
+.st .dg .foot{fill:var(--gold)}
 
 /* buttons: the cell shape, set in the mono */
 button{font:inherit;font-family:var(--code);font-weight:500;font-size:14px;border:1px solid var(--edge);background:var(--slate);color:var(--washi);
   border-radius:var(--r);padding:0 16px;cursor:pointer;min-width:44px;min-height:var(--pitch)}
 button:hover{border-color:var(--lead)}
 button:disabled{opacity:.4;cursor:default}
-button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .modes{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .seg{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--edge);border-radius:calc(var(--r) + 4px);background:var(--slate)}
 .seg button{border:0;min-height:40px;padding:0 12px;font-size:13px;background:transparent}
@@ -78,19 +83,19 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .st{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(.5px);width:50px;height:50px;
   display:grid;place-items:center;border-radius:9px;color:var(--ai);cursor:pointer;transition:background .15s}
 .st .dg{height:26px;width:auto;display:block;pointer-events:none}
-.st .dg.pen{height:18px;color:var(--lead)}
+.st .dg.pen{height:18px;color:var(--pencil)}
 .st.given{color:var(--washi)}
 .st.ok{color:var(--washi)!important}
-.st.home::before{content:"";position:absolute;left:50%;bottom:5px;width:12px;height:3px;margin-left:-6px;border-radius:2px;background:var(--yellow)}
+.st.home::before{content:"";position:absolute;left:50%;bottom:5px;width:12px;height:3px;margin-left:-6px;border-radius:2px;background:var(--gold)}
 .st.bad{color:var(--beni)}
 .st.bad .dg{filter:drop-shadow(0 3px 0 var(--beni))}
-.st.la,.st.lb{box-shadow:inset 0 0 0 2px rgba(245,193,46,.55)}
-.st.done{background:rgba(245,193,46,.2)!important;box-shadow:inset 0 0 0 2px rgba(245,193,46,.55)}
+.st.la,.st.lb{box-shadow:inset 0 0 0 2px rgba(245,193,46,.72)}
+.st.done{background:rgba(245,193,46,.2)!important;box-shadow:inset 0 0 0 2px rgba(245,193,46,.72)}
 .st.sel{box-shadow:inset 0 0 0 2px var(--washi)!important}
-.st.star{box-shadow:inset 0 0 0 2px var(--lead)}
-.st.star::before,.st.starwon::before{position:absolute;top:4px;left:5px;font-family:var(--code);font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--lead);line-height:1}
+.st.star{box-shadow:inset 0 0 0 2px var(--pencil)}
+.st.star::before,.st.starwon::before{position:absolute;top:4px;left:5px;font-family:var(--code);font-size:9px;font-weight:500;letter-spacing:.04em;color:var(--pencil);line-height:1}
 .st.star::before{content:"★FIRST"}
-.st.starwon::before{content:"★+50";color:var(--yellow)}
+.st.starwon::before{content:"★+50";color:var(--gold)}
 /* squares shared by both lines of a ring: soft ai blue, under the yellow line outline */
 .st.ov{background:rgb(143 176 255 / .26)!important}
 .st.twin{outline:3px dashed var(--washi);outline-offset:-5px}
@@ -99,14 +104,14 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 .st.shake{animation:shake .4s ease}
 @keyframes shake{0%,100%{translate:0}25%{translate:-4px 0}75%{translate:4px 0}}
 .st.wrong{background:var(--beni)!important;color:var(--sumi)!important}
-.pm{display:grid;grid-template-columns:repeat(3,1fr);width:100%;height:100%;padding:3px;box-sizing:border-box;font-family:var(--code);font-size:10px;font-weight:500;color:var(--lead);line-height:1}
+.pm{display:grid;grid-template-columns:repeat(3,1fr);width:100%;height:100%;padding:3px;box-sizing:border-box;font-family:var(--code);font-size:10px;font-weight:500;color:var(--pencil);line-height:1}
 .pm i{font-style:normal;display:grid;place-items:center}
 /* turn arrows: small washi cells */
 .arw{position:absolute;transform:translateZ(30px);backface-visibility:hidden;-webkit-backface-visibility:hidden;width:30px;height:30px;min-width:0;min-height:0;padding:0;
   border-radius:6px;border:2px solid var(--sumi);background:var(--washi);color:var(--sumi);display:grid;place-items:center;font-size:13px;line-height:1;cursor:pointer}
 .arw:hover{background:#fff}
 .arw.pulse{animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{50%{box-shadow:0 0 0 5px var(--yellow)}}
+@keyframes pulse{50%{box-shadow:0 0 0 5px var(--glow,var(--yellow))}}
 
 .hint{margin:0;text-align:center;color:var(--lead);font-size:13px;min-height:2.7em}
 .hint[hidden]{display:none}
@@ -225,7 +230,7 @@ button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
 /* event and preview are one line on the start screen until tapped */
 .compact{padding:0;border-left-width:3px;overflow:hidden}
 .compact>.chip{all:unset;box-sizing:border-box;width:100%;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:10px 14px;cursor:pointer;font-size:14px}
-.compact>.chip:focus-visible{outline:2px solid var(--yellow);outline-offset:-2px}
+.compact>.chip:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
 .compact>.chip span{font-family:var(--code);font-size:12px;color:var(--lead)}
 .compact>.chip::after{content:"▾";margin-left:auto;color:var(--lead)}
 .compact>.chip[aria-expanded="true"]::after{content:"▴"}
@@ -328,7 +333,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 
 .plbl{white-space:nowrap}
 .pstage:not(.on){min-width:max-content}
-.pstage.done .plbl::before{content:"✓ ";color:var(--yellow)}
+.pstage.done .plbl::before{content:"✓ ";color:var(--gold)}
 .pval{display:none}
 .pinfo{white-space:nowrap;font-variant-numeric:tabular-nums}
 .pstage.on{padding:4px 10px}
@@ -370,7 +375,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* How to play: the two stages, drawn */
 .rules .diag{display:grid;gap:10px;margin:4px 0 12px}
 .rules .diag figure{margin:0;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:8px 8px 4px}
-.rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+.rules .diag figcaption{font:500 12px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
 .rules .diag svg{display:block;width:100%;height:auto;font-family:var(--code)}
 .rules .diag figure:first-child svg{max-width:240px;margin:0 auto}
 .rules .diag figure p,.modal .body .rules .diag figure p{margin:6px 0 4px;font-size:14px;line-height:1.45;color:var(--washi)}
@@ -429,7 +434,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* one thin progress bar for the whole run, with the time and pause on the same line */
 .prow{display:flex;align-items:center;gap:10px;width:100%;flex:1 1 100%;min-height:36px}
 .prow .pbar{flex:1;height:4px;border-radius:2px;background:var(--edge);box-shadow:none}
-.prow .pbar i{background:var(--yellow);border-radius:2px}
+.prow .pbar i{background:var(--gold);border-radius:2px}
 .prow .timer{font-variant-numeric:tabular-nums}
 .prow .misses{display:inline-flex;align-items:center;gap:3px}
 .prow .misses[hidden]{display:none}
@@ -492,17 +497,18 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 .modal h3.vh{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .rules .mini p,.modal .body .rules .mini p{margin:0;font-size:14px;line-height:1.45;color:var(--washi)}
 .rules p.callout,.modal .body .rules p.callout{margin:10px 0 0;padding:8px 10px;border-left:3px solid var(--yellow);border-radius:4px;background:rgb(245 193 46 / .1);font-size:14px;color:var(--washi)}
-.rules .callout b{display:block;font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+.rules .callout b{display:block;font:500 11px var(--code);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
 /* practice walkthrough: the next thing to tap pulses yellow */
 .st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:pulse 1s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:none;box-shadow:0 0 0 3px var(--yellow)}}
+@media (prefers-reduced-motion:reduce){.st.walkglow,.pad button.walkglow,#mPen.walkglow{animation:none;box-shadow:0 0 0 3px var(--glow,var(--yellow))}}
 
 /* light: the board on paper. The page takes the cover's paper and faint print, and the cube is
    black lacquer with cream stickers and ink numbers. Dark keeps the graphite board above. */
 @media (prefers-color-scheme:light){
   :root{--sumi:#f3f2ec;--slate:#e6e4dc;--tile:#e9e7df;--edge:#cfccc2;--washi:#23252b;--lead:#5b5f69;
     --peer:#dde3f2;--done:#f6e7b8;--ai:#3d5fb8;--beni:#b8423f;
-    --body-ink:#23252b;--cell-top:#f6f5f0;--cell-right:#e4e2da;--cell-left:#d6d3c9;color-scheme:light}
+    --body-ink:#23252b;--cell-top:#f6f5f0;--cell-right:#e4e2da;--cell-left:#d6d3c9;color-scheme:light;
+    --gold:#866000;--tint:rgb(217 165 20 / .45);--pencil:#4b4f58}
   body{background:#e9ece9 url(/brand/paper.jpg) center/cover fixed;color:#23252b}
   body::after{opacity:.25;mix-blend-mode:multiply}
   body::before{content:"";position:fixed;z-index:0;pointer-events:none;left:-30vw;bottom:-6vh;height:96vh;aspect-ratio:1000/1342;
@@ -510,8 +516,8 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   h1 img{content:url(/brand/nonet-wordmark-ink.svg)}
   /* lanes: opaque tints over each sticker's own shade, so the black body never shows through */
   .st.ov{background:color-mix(in srgb,var(--shade) 72%,#5b7fd6)!important}
-  .st.la,.st.lb{box-shadow:inset 0 0 0 2px #d9a514}
-  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2px #d9a514}
+  .st.la,.st.lb{box-shadow:inset 0 0 0 2.5px var(--gold)}
+  .st.done{background:color-mix(in srgb,var(--shade) 60%,#f5c12e)!important;box-shadow:inset 0 0 0 2.5px var(--gold)}
   .st.wrong{color:#fff!important}
   .arw:hover{background:#fff}
   .testkit{background:rgba(243,242,236,.94)}
@@ -524,11 +530,14 @@ button.danger{border-color:var(--beni);color:var(--beni)}
   /* the interface buttons are solid ink on the paper */
   header button,.modes button,.modal button:not(.primary):not([aria-selected]):not([aria-pressed]){background:#23252b;color:#eceae3;border-color:#23252b}
   header button:hover,.modes button:hover{border-color:#5b5f69}
+  /* yellow is too faint on paper as type, lines or rings: the deep gold instead (--gold, 5:1 on the paper,
+     3.8:1 on the darkest sticker). Yellow stays as a fill under ink type, and as rings on the black cube body. */
+  .tx-count b{color:var(--gold)}
+  .rules p.callout,.modal .body .rules p.callout{border-left-color:var(--gold)}
+  .pad button,#mPen,.arw{--glow:var(--gold)}
   /* the run's progress bar gets an ink outline so it reads on paper */
   .prow .pbar{height:8px;border-radius:3px;background:#f3f2ec;box-shadow:0 0 0 1.5px #23252b}
   .prow .pbar i{border-radius:0}
-  /* yellow type is too faint on paper: a deep gold instead */
-  .rules .diag figcaption,.rules .callout b,.tx-count b,.pstage.done .plbl::before{color:#9a6f00}
 }
 /* short windows (a desktop post): the cube's area may shrink so the page never scrolls */
 @media (max-height:600px){
