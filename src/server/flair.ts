@@ -2,6 +2,7 @@
 // and after a missed day it shows their best. Flair a player or a mod set some other way is left alone.
 import {reddit, redis} from '@devvit/web/server'
 import type {Streak} from '../shared/api.ts'
+import {CREW_MARK, crewFlair} from '../shared/crew.ts'
 import {addDays} from '../shared/scoring.ts'
 import {getStreak, namesOf} from './board.ts'
 
@@ -65,8 +66,9 @@ export async function flairAfterSolve(
   name: string,
   sub: string,
   st: Streak,
+  wrap?: (streak: string | undefined) => string,
 ): Promise<void> {
-  const text = streakFlair(st)
+  const text = wrap ? wrap(streakFlair(st)) : streakFlair(st)
   if (!text) return
   const set = await setFlair(uid, name, sub, text)
   if (set && st.current >= FLAIR_FROM)
@@ -82,7 +84,13 @@ export async function lapseFlair(day: string, sub: string): Promise<void> {
   for (const [i, uid] of gone.entries()) {
     await redis.zRem(liveKey, [uid])
     const name = names[i]
-    const text = streakFlair(await getStreak(day, uid))
+    const streak = streakFlair(await getStreak(day, uid))
+    // a crew member's flair keeps the crew's name in front
+    const mine = await redis.hGet(flairKey, uid)
+    const crew = mine?.startsWith(`${CREW_MARK} `)
+      ? mine.slice(CREW_MARK.length + 1).split(' · ')[0]
+      : undefined
+    const text = crew ? crewFlair(crew, streak) : streak
     if (name && text)
       await setFlair(uid, name, sub, text).catch(err =>
         console.warn(`flair for ${name} failed: ${err}`),

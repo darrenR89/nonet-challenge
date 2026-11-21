@@ -75,6 +75,12 @@
         "label": "Show streaks in user flair",
         "helpText": "From 3 days in a row, a player's flair shows their streak, then their best once it lapses. Flair players or mods set themselves is left alone.",
         "defaultValue": true
+      },
+      "crewFlair": {
+        "type": "boolean",
+        "label": "Show crew names in user flair",
+        "helpText": "A crew member's flair shows their crew's name, with their streak when streak flair is on. Updated each time they finish a cube. Flair players or mods set themselves is left alone.",
+        "defaultValue": false
       }
     }
   },

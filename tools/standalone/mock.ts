@@ -34,6 +34,11 @@ type Store = {
   sent?: Record<string, string[]>
   /** Your answer to the day's sample challenge. */
   answered?: Record<string, boolean>
+  /** The sample crew: days its result was posted, nudges sent, and whether mossy's seat was opened. */
+  crewPosted?: Record<string, boolean>
+  crewNudged?: Record<string, boolean>
+  seatOpened?: boolean
+  nudgesOff?: boolean
 }
 const load = (): Store => {
   try {
@@ -109,7 +114,35 @@ function boards(day: string, s: Store) {
   return {day: board('Today', today), week: board('This week', week)}
 }
 
-// a sample team event, running this week
+// a sample crew: you, a teammate who has played, and one who has been away three days
+function crewSample(day: string, s: Store) {
+  const mine = s.days[day]?.score
+  const members = [
+    {id: 't2_you', name: ME, score: mine, me: true, nudged: false, nudgesOff: !!s.nudgesOff, countsFrom: undefined, missed: 0},
+    {id: 't2_quietfox', name: 'quietfox', score: 2214, me: false, nudged: false, nudgesOff: false, countsFrom: undefined, missed: 0},
+  ]
+  if (!s.seatOpened)
+    members.push({id: 't2_mossy', name: 'mossy', score: undefined, me: false, nudged: !!s.crewNudged?.[day], nudgesOff: false, countsFrom: undefined, missed: 3})
+  const today = members.reduce((n, m) => n + (m.score ?? 0), 0)
+  return {
+    crew: {
+      id: 'c1',
+      name: 'Night Owls',
+      members,
+      today,
+      week: 18420 + today,
+      rank: 4,
+      crews: 12,
+      streak: 0,
+      best: 6,
+      posted: !!s.crewPosted?.[day],
+    },
+    invites: [],
+  }
+}
+
+// a sample team event, running this week. Events are switched off in the game, as on the server.
+const EVENTS = false
 function eventState(day: string, s: Store) {
   const start = addDays(day, -(weekday(day) - 1))
   const e = {
@@ -224,13 +257,14 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       my: {retries: 0},
       streak: {current: 0, best: 0, played: 0},
       boards: boards(day, {...s, days: {}}),
-      event: eventState(day, {...s, days: {}, team: undefined}),
+      event: EVENTS ? eventState(day, {...s, days: {}, team: undefined}) : undefined,
       loggedIn: false,
       cubeNo: cubeNo(day),
       stats: stats(day, s),
       subreddit: 'nonet_challenge_dev',
       notify: false,
       duels: [],
+      crew: {crew: undefined, invites: []},
     })
   if (guest && path === 'api/card')
     return json({
@@ -274,13 +308,14 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         streak: streakNow(day, s),
         preview: preview(day, s),
         boards: boards(day, s),
-        event: eventState(day, s),
+        event: EVENTS ? eventState(day, s) : undefined,
         loggedIn: true,
         cubeNo: cubeNo(day),
         stats: stats(day, s),
         subreddit: 'nonet_challenge_dev',
         notify: s.notify,
         duels: duels(day, s),
+        crew: crewSample(day, s),
       })
     case 'api/card': {
       // the prototype's card-state switcher can stand in for a quiet day or a finished one
@@ -355,9 +390,10 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         stats: stats(day, s),
         streak: streakNow(day, s),
         boards: b,
-        event: eventState(day, s),
+        event: EVENTS ? eventState(day, s) : undefined,
         preview: preview(day, s),
         duels: duels(day, s),
+        crew: crewSample(day, s),
       })
     }
     case 'api/challenge/answer': {
@@ -382,6 +418,27 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       save(s)
       return json({duels: duels(day, s)})
     }
+    case 'api/crew/nudge':
+      ;(s.crewNudged ??= {})[day] = true
+      save(s)
+      return json(crewSample(day, s))
+    case 'api/crew/seat':
+      s.seatOpened = true
+      save(s)
+      return json(crewSample(day, s))
+    case 'api/crew/nudges':
+      s.nudgesOff = body.on !== true
+      save(s)
+      return json(crewSample(day, s))
+    case 'api/crew/post':
+      ;(s.crewPosted ??= {})[day] = true
+      save(s)
+      return json(crewSample(day, s))
+    case 'api/crew/create':
+    case 'api/crew/invite':
+    case 'api/crew/answer':
+    case 'api/crew/leave':
+      return err(409, 'The prototype keeps one sample crew.')
     case 'api/event/join':
       s.team ??= String(body.team)
       save(s)

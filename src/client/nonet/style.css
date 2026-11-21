@@ -465,7 +465,9 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* wide screens: the pad stands in a column to the right of the board instead of along the bottom,
    as a 3 by 3 keypad with clear underneath. The board keeps its width and the pair is centred together. */
 @media (min-width:880px) and (min-aspect-ratio:5/4){
-  .wrap:has(.padbox:not([hidden])){max-width:884px;padding-right:324px;padding-bottom:48px}
+  /* the whole play screen takes the wide width from the start, so the top bar doesn't jump when the pad arrives */
+  .wrap:has(.stage:not(.flown)){max-width:884px}
+  .wrap:has(.padbox:not([hidden])){padding-right:324px;padding-bottom:48px}
   /* the header, progress bar and helpers run the full width, over the pad's column too */
   .wrap:has(.padbox:not([hidden]))>:is(header,.modes){margin-right:-324px}
   .padbox{left:calc(50% + 142px);right:auto;top:var(--padMid,50%);bottom:auto;translate:0 -50%;width:300px;margin:0;

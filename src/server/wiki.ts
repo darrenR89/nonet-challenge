@@ -115,7 +115,7 @@ Every day's points add up on the weekly board, Monday to Sunday. Each Monday the
 
 ## Challenges and crews
 
-Once you've finished today's cube you can dare another player to beat your score; they have to accept before they play. You can also team up with up to two friends in a Nonet Crew (連). Your daily scores add up, and your crew streak grows every day you all play.
+Once you've finished today's cube you can dare another player to beat your score; they have to accept before they play. You can also team up with up to two friends in a Nonet Crew (連). Your daily scores add up, and your crew streak grows every day you all play. A crew's line-up locks for the week: someone who joins an older crew mid-week counts from the next Monday. If a member misses three days in a row, the others can open their seat. The crew board shows once five crews have played in a week.
 
 ## Records
 

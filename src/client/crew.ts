@@ -4,10 +4,14 @@
 import './nonet/crew.css'
 import type {CrewRsp} from '../shared/api.ts'
 import {
+  allPlayed,
   CREW_MARK,
   CREW_SIZE,
   type CrewInfo,
+  type CrewMember,
+  countingMembers,
   playedText,
+  QUIET_DAYS,
 } from '../shared/crew.ts'
 import {
   answerCrew,
@@ -16,6 +20,9 @@ import {
   lastError,
   leaveCrew,
   nudgeCrew,
+  openCrewSeat,
+  postCrewResult,
+  setCrewNudges,
 } from './api.ts'
 import type {CrewCard} from './share-card.ts'
 
@@ -92,6 +99,33 @@ export function crewShareLine(info: Readonly<CrewInfo> | undefined): string {
 const nameInput = (n: string, label: string): string =>
   `<input name="${n}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="username" aria-label="${label}" maxlength="23">`
 
+/** "Mon 23 Nov", for the day a new member starts counting. */
+const shortDay = (day: string): string =>
+  new Date(`${day}T12:00:00Z`).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })
+
+/** The right-hand side of a member's row: their score, or what can be done about it. */
+function memberRight(m: Readonly<CrewMember>): string {
+  if (m.countsFrom)
+    return `<small>counts from ${shortDay(m.countsFrom)}</small>`
+  if (m.score !== undefined) return `<b>${num(m.score)}</b>`
+  if (m.me) return '<small>not played</small>'
+  const seat =
+    m.missed >= QUIET_DAYS
+      ? `<button type="button" class="crew-seat" data-seat="${esc(m.id)}" title="Missed ${m.missed} days in a row">Open seat</button>`
+      : ''
+  const poke = m.nudged
+    ? '<small>nudged</small>'
+    : m.nudgesOff
+      ? '<small>nudges off</small>'
+      : `<button type="button" data-nudge="${esc(m.id)}">Nudge</button>`
+  return `<span class="crew-acts">${poke}${seat}</span>`
+}
+
 /** The panel: your crew, or invitations and a form to start one. */
 export function crewPanelHTML(info: Readonly<CrewInfo>): string {
   const c = info.crew
@@ -100,15 +134,7 @@ export function crewPanelHTML(info: Readonly<CrewInfo>): string {
     const rows = c.members
       .map(m => {
         const who = `u/${esc(m.name)}${m.me ? ' <small>you</small>' : ''}`
-        const right =
-          m.score !== undefined
-            ? `<b>${num(m.score)}</b>`
-            : m.me
-              ? '<small>not played</small>'
-              : m.nudged
-                ? '<small>nudged</small>'
-                : `<button type="button" data-nudge="${esc(m.id)}">Nudge</button>`
-        return `<li${m.score === undefined ? ' class="waiting"' : ''}><span>${who}</span>${right}</li>`
+        return `<li${m.score === undefined ? ' class="waiting"' : ''}><span>${who}</span>${memberRight(m)}</li>`
       })
       .join('')
     const open = Array.from(
@@ -127,7 +153,24 @@ export function crewPanelHTML(info: Readonly<CrewInfo>): string {
     const invite = seats
       ? `<form class="crewForm" data-form="invite">${nameInput('a', 'Reddit username to invite')}<button type="submit">Invite</button></form>`
       : ''
-    return `<div class="crew"><p class="crew-meta">${meta}</p><ul class="crewList">${rows}${open}</ul>${invite}<p class="crew-msg" aria-live="polite">${seats ? 'Invites tag them in a comment on this post.' : ''}</p><button type="button" class="crew-leave" data-leave>Leave crew</button></div>`
+    // once everyone has played, one of the crew can post the day's result in the thread
+    const share =
+      countingMembers(c).length > 1 && allPlayed(c)
+        ? c.posted
+          ? '<p class="crew-msg">Crew result posted in the comments.</p>'
+          : '<button type="button" class="crew-post" data-post>Post crew result</button>'
+        : ''
+    const me = c.members.find(m => m.me)
+    const late = c.members.some(m => m.countsFrom)
+      ? 'New members count from Monday, so the week stays fair.'
+      : ''
+    const msg = [
+      seats ? 'Invites tag them in a comment on this post.' : '',
+      late,
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return `<div class="crew"><p class="crew-meta">${meta}</p><ul class="crewList">${rows}${open}</ul>${invite}${share}<p class="crew-msg" aria-live="polite">${msg}</p><div class="crew-foot"><button type="button" class="crew-leave" data-leave>Leave crew</button><button type="button" class="crew-leave" data-nudges="${me?.nudgesOff ? '1' : '0'}">${me?.nudgesOff ? 'Turn nudges on' : 'Turn nudges off'}</button></div></div>`
   }
   const offers = info.invites
     .map(
@@ -199,6 +242,36 @@ export function wireCrew(
       b.disabled = true
       if (!done(await nudgeCrew({to: b.dataset.nudge ?? ''}), 'crew_nudge'))
         b.disabled = false
+    }
+  for (const b of root.querySelectorAll<HTMLButtonElement>('[data-seat]'))
+    b.onclick = async () => {
+      if (b.dataset.sure !== '1') {
+        b.dataset.sure = '1'
+        b.textContent = 'Tap again to open'
+        return
+      }
+      b.disabled = true
+      if (!done(await openCrewSeat({to: b.dataset.seat ?? ''}), 'crew_seat'))
+        b.disabled = false
+    }
+  const nudges = root.querySelector<HTMLButtonElement>('[data-nudges]')
+  if (nudges)
+    nudges.onclick = async () => {
+      nudges.disabled = true
+      const on = nudges.dataset.nudges === '1'
+      if (
+        !done(
+          await setCrewNudges({on}),
+          on ? 'crew_nudges_on' : 'crew_nudges_off',
+        )
+      )
+        nudges.disabled = false
+    }
+  const post = root.querySelector<HTMLButtonElement>('[data-post]')
+  if (post)
+    post.onclick = async () => {
+      post.disabled = true
+      if (!done(await postCrewResult(), 'crew_post')) post.disabled = false
     }
   const leave = root.querySelector<HTMLButtonElement>('[data-leave]')
   if (leave)
