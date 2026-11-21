@@ -56,6 +56,7 @@ export async function getMyDay(day: string, uid: string): Promise<MyDay> {
     score: num(h.score),
     starsWon: num(h.stars),
     retries: Number(h.retries ?? 0),
+    commented: h.commented === '1',
   }
 }
 
@@ -127,6 +128,25 @@ export async function markScored(
   if (!first) return false
   await redis.hSet(key, {stars: String(starsWon)})
   return true
+}
+
+/** Keeps the counted run's solve time on the day record, for the result comment. */
+export async function noteRunTime(
+  day: string,
+  uid: string,
+  time: number,
+): Promise<void> {
+  await redis.hSet(userDayKey(day, uid), {time: String(Math.round(time))})
+}
+
+/** Claims today's result comment. False if it was already posted. */
+export async function claimComment(day: string, uid: string): Promise<boolean> {
+  return (await redis.hSetNX(userDayKey(day, uid), 'commented', '1')) > 0
+}
+
+/** Gives the claim back when Reddit didn't take the comment, so the player can try again. */
+export async function releaseComment(day: string, uid: string): Promise<void> {
+  await redis.hDel(userDayKey(day, uid), ['commented'])
 }
 
 export async function addToBoards(

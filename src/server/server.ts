@@ -41,6 +41,8 @@ import {
   type NotifyRsp,
   type Preview,
   RETRY_MULT,
+  type ResultCommentReq,
+  type ResultCommentRsp,
   type RetryRsp,
   type ScoreReq,
   type ScoreRsp,
@@ -64,6 +66,7 @@ import {
 } from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {isOffensive} from '../shared/names.ts'
+import {isJourney, resultCommentText} from '../shared/result.ts'
 import {
   addDays,
   dayKey,
@@ -83,6 +86,7 @@ import {
   beatPct,
   boardKey,
   bumpStreak,
+  claimComment,
   getDayRecord,
   getDayStats,
   getMyDay,
@@ -90,8 +94,10 @@ import {
   lockTier,
   markScored,
   namesOf,
+  noteRunTime,
   rankOn,
   readBoard,
+  releaseComment,
   rememberName,
   startGuest,
   takeGuest,
@@ -253,6 +259,9 @@ async function route(
         break
       case Endpoint.CrewPost:
         rsp = await routeCrewPost()
+        break
+      case Endpoint.ResultComment:
+        rsp = await routeResultComment(await readJson<ResultCommentReq>(reqMsg))
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -576,6 +585,7 @@ async function routeScore(
   let dayStats: DayStats
   if (counted) {
     await addToBoards(day, uid, total)
+    await noteRunTime(day, uid, stats.t1 + stats.t2)
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
     await noteBestStreak(uid, streak.best)
@@ -871,6 +881,49 @@ async function routeCrewPost(): Promise<CrewRsp> {
     })
     .catch(err => console.warn(`crew result comment failed: ${err}`))
   return crewInfo(day, uid)
+}
+
+/**
+ * Posts the asker's result for today as their own comment on this post, once a day. The text
+ * is built here from the server's record; the browser only adds the journey squares.
+ */
+async function routeResultComment(
+  req: ResultCommentReq,
+): Promise<ResultCommentRsp> {
+  const uid = await needUser()
+  const day = today()
+  const postId = context.postId
+  if (!postId) throw new HttpError(409, 'Open the daily post to share.')
+  const rec = await getDayRecord(day, uid)
+  if (rec.score === undefined || rec.time === undefined)
+    throw new HttpError(409, "Finish today's cube first.")
+  if (!(await claimComment(day, uid)))
+    throw new HttpError(409, "You've already posted today's result.")
+  const board = await readBoard(boardKey.day(day), 'Today', uid, 0)
+  const text = resultCommentText(
+    {
+      cubeNo: cubeNumber(day),
+      tier: Number(rec.tier ?? 0),
+      time: Number(rec.time),
+      points: Number(rec.score),
+      stars: Number(rec.stars ?? 0),
+      rank: board.me?.rank,
+      players: board.players,
+    },
+    isJourney(req.journey) ? req.journey : undefined,
+  )
+  try {
+    await reddit.submitComment({
+      id: postId as `t3_${string}`,
+      text,
+      runAs: 'USER',
+    })
+  } catch (err) {
+    console.warn(`result comment failed: ${err}`)
+    await releaseComment(day, uid)
+    throw new HttpError(502, "Reddit didn't take the comment. Try again.")
+  }
+  return {commented: true}
 }
 
 /** Uses today's one retry. The run restarts on the same cube and tier. */

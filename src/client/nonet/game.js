@@ -3,7 +3,8 @@ import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ri
 import './style.css';
 import {makeTransitions} from './transitions.js';
 import {makeRoom} from './room.js';
-import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,lastError} from '../api.ts';
+import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,postResult,lastError} from '../api.ts';
+import {journeyLine,resultCommentText} from '../../shared/result.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
@@ -42,6 +43,10 @@ const $=id=>document.getElementById(id);
 // ---------- state ----------
 let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
+// the journey: faces in the order they were finished, and wrong locks on each, for the share line
+let faceOrder=[],faceWrong=[0,0,0,0,0,0];
+const faceOfCell=i=>faceOfNormal.get(k3(cells[i].n));
+const faceCells=F.map((_,fi)=>cells.map((_,i)=>i).filter(i=>faceOfCell(i)===fi));
 let flatOn=false; // the flattened net is showing
 let hold=false; // the clock is held during the intro animation and countdown
 let t0=0,t1=0,t2=0,wrong=0,blanks=0,penMode=false,gaveUp=false,aligned=false;
@@ -300,7 +305,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
-  hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
+  hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;faceOrder=[];faceWrong=[0,0,0,0,0,0];stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
 const WALK=[
@@ -377,8 +382,10 @@ async function finale(){
 // the cube comes back when the result card is closed, or a new cube starts
 function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
-// a spoiler-free line for the daily thread: no digits, no squares, just how it went
-const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
+// a spoiler-free line for the daily thread: no digits from the cube, just how it went, with a
+// square per face in the order finished (yellow clean, orange one wrong lock, red more)
+const journeyNow=()=>journeyLine(faceOrder,faceWrong);
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${journeyNow()} ${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
 // where you stand among the people you've challenged today, once any of them has played
 function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
   const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
@@ -427,7 +434,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ lock-first squares to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
-    <div class="acts"><button id="eComment" class="primary">Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
+    <div class="acts">${canComment(r,scored)?'<button id="ePost" class="primary">Post in the comments</button>':''}<button id="eComment"${canComment(r,scored)?'':' class="primary"'}>Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
@@ -441,6 +448,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   wireDuels(el,d=>{if(D)D.duels=d;journey.interaction('challenge',String(d.length));renderEndCard()});
   if($('eClose'))$('eClose').onclick=()=>{el.hidden=true;$('showRes').hidden=false;landCube()};
   if($('eComment'))$('eComment').onclick=()=>void openShare(s,total,scored&&me?me.rank:0);
+  if($('ePost'))$('ePost').onclick=()=>askPost(total,me,r.boards.day.players);
   // the crew box opens under What next: start one, or see who has played
   if($('eCrew'))$('eCrew').onclick=()=>{crewOpen=!crewOpen;if(crewOpen)journey.interaction('end_crew');renderEndCard()};
   if($('eCrewBox'))wireCrew($('eCrewBox'),crewChanged);
@@ -448,6 +456,15 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
 }
+// the result as the player's own comment on the daily post: only for today's counted run, once
+function canComment(r,scored){let pid;try{pid=context.postId}catch(e){}return !!(scored&&r&&r.counted&&pid&&D&&!D.my.commented&&!D.pastBoards)}
+function askPost(total,me,players){
+  const text=resultCommentText({cubeNo:D.cubeNo,tier:P.tier,time:t1+t2,points:total,stars:starWon.size,rank:me&&me.rank,players},journeyNow());
+  ask('Post your result?',`<pre class="sharetxt">${esc(text)}</pre><p class="meta">It goes in this post's comments under your username. No numbers from the cube, so no spoilers.</p>`,[
+    ['Cancel'],['Post',async()=>{const b=$('ePost');if(b){b.disabled=true;b.textContent='Posting…'}journey.interaction('share','comment');
+      const ok=await postResult({journey:journeyNow()});
+      if(ok&&D){D.my.commented=true;if(b)b.textContent='Posted';return}
+      if(b){b.disabled=false;b.textContent=lastError||'Try again'}},'primary']])}
 // sharing: a picture of the result, points first (no digits, so no spoilers), and the
 // post's link so whoever sees it can tap through and play
 async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=true;
@@ -632,10 +649,10 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;faceWrong[faceOfCell(sel)]++;music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;music.sfx('lock');render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');{const f=faceOfCell(sel);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i]))faceOrder.push(f)}render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');
