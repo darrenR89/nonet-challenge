@@ -464,3 +464,24 @@
 @media (prefers-reduced-motion:reduce){
   .is-loading .cv-title .cv-issue::before,.is-loading .cv-title .cv-issue::after{animation:none;opacity:.4;background-size:100% 3px,3px 100%,100% 3px,3px 100%;transform:none}
 }
+
+/* the celebration once today is done, on the card and at the end of a run: the glitter's two
+   canvases over everything, and the print behind the cover held back until it clears */
+.fd-party {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.fd-print.cv::before,
+.fd-print .cv-mid::before,
+.fd-print .cv-body::before {
+  transition: opacity 1.6s ease;
+}
+.fd-print-off.cv::before,
+.fd-print-off .cv-mid::before,
+.fd-print-off .cv-body::before {
+  opacity: 0;
+}

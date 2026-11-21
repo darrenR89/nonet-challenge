@@ -11,6 +11,7 @@ import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
 import {crewTitle,crewSummary,crewButton,crewShareLine,crewCard,crewPanelHTML,wireCrew} from '../crew.ts';
 import {context,exitExpandedMode,navigateTo,navigateToPost,showLoginPrompt,showShareSheet} from '@devvit/web/client';
 import {renderCard,shareImage,saveImage,postUrl,shareText} from '../share.ts';
+import {celebrate,PARTY} from '../confetti.ts';
 import {RETRY_MULT} from '../../shared/api.ts';
 import {scoreRun,dayKey,msUntilNextDay,levelOf,multOf,maxTurns,tierAllowed,LEVEL_NAMES,kanjiNo} from '../../shared/scoring.ts';
 
@@ -198,7 +199,7 @@ function dnRow(k,label,sub,body,title){dnPanels[k]={title:title||label.replace(/
   return `<div class="dn-row"><button type="button" class="dn-chip dn-go" data-dn="${k}" aria-haspopup="dialog"><b>${label}</b><span>${sub}</span></button></div>`}
 function openPanel(k){const p=dnPanels[k];if(!p)return;ask(p.title,`<div class="dn-panel">${p.body}</div>`,[['Done',null,'primary']]);dnOpen=k;wirePanel();journey.interaction('cover_'+k)}
 function wirePanel(){const box=$('modalBody');
-  wireDuels(box,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderSplashExtras()});wireSides(box);wireCrew(box,crewChanged)}
+  wireDuels(box,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderSplashExtras()});wireSides(box);wireCrew(box,crewChanged);wireResult(box)}
 // after a change, the open modal shows the new state
 function refreshPanel(){if(!dnOpen||$('modal').hidden)return;const p=dnPanels[dnOpen];if(!p){$('modal').hidden=true;return}
   $('modalTitle').textContent=p.title;$('modalBody').innerHTML=`<div class="dn-panel">${p.body}</div>`;wirePanel()}
@@ -208,7 +209,7 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
   const side=(me?`<span class="dn-rank">#${me.rank} today</span>`:'')+(st&&st.current?`<span class="dn-streak">${st.current}-day streak</span>`:'')+(D.my.starsWon?`<span class="dn-streak">${'★'.repeat(D.my.starsWon)}</span>`:'');
   const sent=(D.duels||[]).filter(d=>d.sent).length;
   el.innerHTML=`<div class="dn-res"><div class="dn-main"><p class="dn-cap">Your cube today</p><p class="dn-score"><b>${num(D.my.score)}</b> points</p></div>${side?`<div class="dn-side">${side}</div>`:''}</div>
-    <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
+    <div class="dn-acts">${resultRow()}${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
     ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`):''}
     ${D.crew?dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew)):''}
     ${dnLink('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week')}</div>
@@ -389,7 +390,7 @@ function finishStage2(){
   runScore=score();lastScore=null;
   if(!daily||tkUsed)journey.end(true,true,daily?0:runScore.total);
   flying=true;void submitRun();
-  void finale().then(()=>{flying=false;renderEndCard();const el=$('results');el.classList.remove('slidein');void el.offsetWidth;el.classList.add('slidein');
+  void finale().then(async()=>{const covered=daily&&await toCover();flying=false;if(covered)return;renderEndCard();const el=$('results');el.classList.remove('slidein');void el.offsetWidth;el.classList.add('slidein');
     scrollTo(0,0)});
 }
 // the finish: the solved cube holds a beat, spins faster and faster as it glows brighter, then
@@ -405,12 +406,62 @@ async function finale(){
     a+=(60+1500*t*t*t)*dt; // degrees a second, rising fast
     cubeEl.style.transform=`${base} rotateY(${a}deg)`;
     const g=4+56*t*t;stageEl.style.filter=`drop-shadow(0 0 ${g}px rgba(245,193,46,${.3+.7*t})) brightness(${1+.6*t*t})`;
-    stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px)`;
+    stageEl.style.transform=`translateY(${-f*f*(innerHeight+stageEl.getBoundingClientRect().height)}px) scale(${1-.45*t*t})`;
     if(f>0)stageEl.classList.add('leaving'); // the progress bar goes up and away with the cube
     if(f<1)requestAnimationFrame(step);else done()};requestAnimationFrame(step)});
   stageEl.classList.add('flown');stageEl.style.filter='';stageEl.style.transform='';apply()}
 // the cube comes back when the result card is closed, or a new cube starts
 function landCube(){stageEl.classList.remove('flown','leaving');apply()}
+// A counted run on today's cube ends on the finished cover, the same page the card shows: the
+// cube, gone off the top, drops back in, growing past the screen as the cover comes up under it,
+// and the glitter goes off. A run that isn't counted, or a score that doesn't come back in
+// time, gets the end card instead.
+let coverDone=false;
+async function toCover(){
+  const t0=performance.now();while(!lastScore&&performance.now()-t0<2500)await sleep(100);
+  const r=lastScore;if(!r||!r.counted||!online||!D||D.my.score===undefined||firstTimer())return false;
+  coverDone=true;journey.interaction('end_cover');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,sp=$('splash');
+  renderDone();
+  if(!reduce){sp.style.opacity='0';sp.classList.add('fd-print','fd-print-off')}
+  showSplash();
+  if(!reduce)await dropIn(sp);
+  sp.style.opacity='';landCube();$('showRes').textContent='Back to today';$('showRes').hidden=true;
+  if(!reduce){setTimeout(()=>sp.classList.remove('fd-print-off'),PARTY.pixelFrom+PARTY.pixelFor*.6);void celebrate(document.body)}
+  return true}
+// off the top, the cube grows to about the size of the screen, then sweeps down it: the finished
+// cover is uncovered behind it as it goes, its edge always hidden under the cube
+function dropIn(sp){return new Promise(done=>{
+  stageEl.classList.remove('flown','leaving');stageEl.classList.add('dropping');apply();
+  const W=innerWidth,H=innerHeight,big=Math.max(Math.min(W,H),360)*1.05;
+  const DUR=1300,base=cubeEl.style.transform;let a=0,t0=0,last=0,sc=1;
+  const ease=x=>x<.5?2*x*x:1-2*(1-x)*(1-x);
+  sp.style.opacity='1';sp.style.clipPath='inset(0 0 100% 0)';stageEl.style.transform=`translateY(${-H}px)`;
+  const step=now=>{
+    // measured once the stage has its full-screen layout: the cube is drawn bigger there
+    if(!t0){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const f of cubeEl.querySelectorAll('*')){const r=f.getBoundingClientRect();if(!r.width)continue;x0=Math.min(x0,r.left);y0=Math.min(y0,r.top);x1=Math.max(x1,r.right);y1=Math.max(y1,r.bottom)}
+      sc=x1>x0?big/Math.max(40,Math.min(x1-x0,y1-y0)):1;t0=last=now}
+    const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;a+=240*dt;
+    // the cube's centre, from just above the top to just below the bottom
+    const cy=-big/2+ease(e)*(H+big);
+    stageEl.style.transform=`translateY(${cy-H/2}px) scale(${sc})`;
+    cubeEl.style.transform=`${base} rotateY(${a}deg)`;
+    sp.style.clipPath=`inset(0 0 ${Math.max(0,H-cy)}px 0)`;
+    if(e<1){requestAnimationFrame(step);return}
+    stageEl.classList.remove('dropping');stageEl.style.transform='';cubeEl.style.transform=base;sp.style.clipPath='';done()};
+  requestAnimationFrame(step)})}
+// the run's own details on the finished cover: the points, the result to share or post, and the
+// ping for tomorrow, in one panel
+function resultRow(){if(!coverDone||!runScore)return'';const s=runScore,r=lastScore,pen=daily&&retries?RETRY_MULT:1,scored=online&&daily&&!tkUsed;
+  const body=`<pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
+    <div class="acts">${canComment(r,scored)?'<button id="ePost" class="primary">Post in the comments</button>':''}<button id="eComment"${canComment(r,scored)?'':' class="primary"'}>Share my result</button></div>
+    <label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>
+    <div class="results dn-points">${pointsTable(s,pen)}</div>`;
+  return dnRow('result','Your result',`${fmt(t1+t2)} · ${'★'.repeat(starWon.size)||'no ★'} · share it`,body)}
+function wireResult(box){const s=runScore,r=lastScore;if(!s)return;const me=r&&r.boards.day.me,total=r?r.total:s.total;
+  if(box.querySelector('#eComment'))box.querySelector('#eComment').onclick=()=>void openShare(s,total,me?me.rank:0);
+  if(box.querySelector('#ePost'))box.querySelector('#ePost').onclick=()=>askPost(total,me,r.boards.day.players);
+  if(box.querySelector('#eNotify'))box.querySelector('#eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else e.target.checked=!on}}
 let runScore=null,endTab='';
 // a spoiler-free line for the daily thread: no digits from the cube, just how it went
 const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
@@ -518,7 +569,7 @@ const pageUrl=()=>/^https?:$/.test(location.protocol)?location.href.split('#')[0
 function copyResult(txt,ev){journey.interaction('share','comment');
   const done=()=>{const b=$('eComment');if(b)b.textContent='Copied. Paste it in the thread';try{if(ev)exitExpandedMode(ev)}catch(e){}};
   navigator.clipboard.writeText(txt).then(done,()=>{ask('Your result','<pre class="copy"></pre><p>Copy this, then paste it in the post\'s comments.</p>',[['Done',null,'primary']]);$('modalBody').querySelector('pre').textContent=txt})}
-$('showRes').onclick=()=>{if(!runScore){void tx.leave({covered:showSplash});return}$('results').hidden=false;$('showRes').hidden=true};
+$('showRes').onclick=()=>{if(!runScore||coverDone){void tx.leave({covered:showSplash});return}$('results').hidden=false;$('showRes').hidden=true};
 setInterval(()=>{const n=$('eNext');if(n&&!$('results').hidden)n.textContent=untilNext()},30000);
 function pointsTable(s,pen){return `<table>
    ${s.tut?'':`<tr><td>Dial in turns</td><td>${s.turnPts} / 300</td></tr><tr class="sub"><td>${turns} used, fewest ${s.par}</td><td></td></tr>
