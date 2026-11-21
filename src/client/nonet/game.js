@@ -185,6 +185,7 @@ function renderSplashExtras(){
 }
 // once today is done the cover turns to how you did, and what to do next: challenge someone,
 // the team challenge, the boards. Each opens in place; the feed card can ask for one.
+function dnLink(k,label,sub){return `<div class="dn-row"><button type="button" class="dn-chip dn-go" data-dn="${k}"><b>${label}</b><span>${sub}</span></button></div>`}
 function dnRow(k,label,sub,body){return `<div class="dn-row"><button type="button" class="dn-chip" data-dn="${k}" aria-expanded="false"><b>${label}</b><span>${sub}</span></button><div class="more" hidden>${body}</div></div>`}
 function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefined;el.hidden=!done;$('splash').classList.toggle('is-done',!!done);if(!done)return;
   const open=[...el.querySelectorAll('.dn-chip')].filter(b=>b.getAttribute('aria-expanded')==='true').map(b=>b.dataset.dn);
@@ -195,9 +196,10 @@ function renderDone(){const el=$('spDone'),done=online&&D&&D.my.score!==undefine
     <div class="dn-acts">${dnRow('challenge','Challenge someone',sent?`${sent} sent today`:`Dare them to beat ${num(D.my.score)}`,duelsHTML(D.duels||[],true))}
     ${ev&&ev.teams.length?dnRow('team','Team challenge',`${esc(ev.event.title)} · ${mine?`you're ${esc(mine.team.name)}, #${mine.rank}`:'pick a side'}`,`<div class="event">${eventHTML(ev)}</div>`):''}
     ${D.crew?dnRow('crew',crewTitle(D.crew),crewSummary(D.crew),crewPanelHTML(D.crew)):''}
-    ${dnRow('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week',boardsHTML({boards:D.boards}))}</div>
+    ${dnLink('boards','Leaderboards',me?`You're #${me.rank} today`:'Today and this week')}</div>
     <p class="dn-next">Next cube in <b>${untilNext()}</b></p>`;
-  el.querySelectorAll('.dn-chip').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
+  el.querySelectorAll('.dn-go').forEach(b=>b.onclick=()=>{journey.interaction('cover_'+b.dataset.dn);showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`})});
+  el.querySelectorAll('.dn-chip:not(.dn-go)').forEach(b=>{const m=b.nextElementSibling;if(open.includes(b.dataset.dn)){m.hidden=false;b.setAttribute('aria-expanded','true')}
     b.onclick=()=>{const o=m.hidden;m.hidden=!o;b.setAttribute('aria-expanded',o);if(o)journey.interaction('cover_'+b.dataset.dn)}});
   wireDuels(el,d=>{D.duels=d;journey.interaction('challenge',String(d.length));renderDone()});wireSides(el);wireCrew(el,crewChanged)}
 // your crew on the cover before today is done: one row, open to see who has played, nudge, invite or leave
@@ -212,7 +214,7 @@ function crewChanged(info,what){if(!D)return;D.crew=info;journey.interaction(wha
 // the feed card's buttons ask for one of those to be open when the game comes up
 function openFromCard(){let k=null;try{k=localStorage.getItem('nonet-open');if(k)localStorage.removeItem('nonet-open')}catch(e){}
   if(!k)return;if(k==='rules'){showRules();return}
-  if(k==='pastboard'){if(D&&D.pastBoards)ask('Leaderboard',boardsHTML({boards:D.pastBoards}),[['Close',ev=>{try{exitExpandedMode(ev)}catch(e){}},'primary']]);return}if(k==='practice'){$('spPractice').click();return}
+  if(k==='pastboard'){if(D&&D.pastBoards)showBoards(D.pastBoards,{kicker:'Final standings',back:ev=>{try{exitExpandedMode(ev)}catch(e){}}});return}if(k==='practice'){$('spPractice').click();return}
   const b=$('spDone').querySelector(`.dn-chip[data-dn="${k}"]`);if(b&&b.getAttribute('aria-expanded')!=='true')b.click()}
 addEventListener('storage',e=>{if(e.key==='nonet-open'&&e.newValue)openFromCard()});
 function splashReady(){if(!splashUp)return;splashTwist()}
@@ -501,6 +503,23 @@ function pointsTable(s,pen){return `<table>
    <tr><td>Subtotal × ${s.mult}</td><td>${s.raw} × ${s.mult}</td></tr>
    ${pen<1?`<tr><td>Retry</td><td>× ${pen}</td></tr>`:''}
   </table>`}
+// the full-screen leaderboard: one tab per board, a ranked table with the top three called out, and Back
+let bvBack=null,bvFrom=null;
+function boardTable(b){if(!b.top.length)return '<p class="bv-empty">Nobody has finished this one yet.</p>';
+  const tr=x=>{const mine=b.me&&b.me.rank===x.rank,cls=[x.rank<=3?`p${x.rank}`:'',mine?'mine':''].filter(Boolean).join(' ');
+    return `<tr${cls?` class="${cls}"`:''}><td>${x.rank}</td><td class="bv-name">${esc(x.name)}${mine?'<small>you</small>':''}</td><td>${num(x.score)}</td></tr>`};
+  const tail=b.me&&b.me.rank>b.top.length?`<tr class="gap" aria-hidden="true"><td colspan="3">⋯</td></tr>${tr({...b.me,name:b.me.name||'you'})}`:'';
+  return `<p class="bv-meta"><b>${num(b.players)}</b> player${b.players===1?'':'s'}${b.me?` · you're <b>#${b.me.rank}</b>`:''}</p>
+    <table class="bv-table"><thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Points</th></tr></thead><tbody>${b.top.map(tr).join('')}${tail}</tbody></table>`}
+function showBoards(boards,{kicker='',back=null}={}){const v=$('lbView'),list=[boards.day,boards.week].filter(Boolean),tabs=v.querySelector('.bv-tabs');
+  bvBack=back;bvFrom=document.activeElement;$('lbKicker').textContent=kicker;
+  const pick=i=>{tabs.querySelectorAll('button').forEach((t,j)=>{t.setAttribute('aria-selected',i===j);t.tabIndex=i===j?0:-1});$('lbBody').innerHTML=boardTable(list[i]);$('lbBody').setAttribute('aria-labelledby',`lbTab${i}`)};
+  tabs.innerHTML=list.map((b,i)=>`<button type="button" role="tab" id="lbTab${i}" aria-controls="lbBody">${esc(b.label)}</button>`).join('');
+  tabs.querySelectorAll('button').forEach((t,i)=>{t.onclick=()=>pick(i);t.onkeydown=e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){const n=(i+(e.key==='ArrowRight'?1:list.length-1))%list.length;pick(n);tabs.children[n].focus()}}});
+  pick(0);v.hidden=false;v.scrollTop=0;$('lbTitle').focus()}
+function hideBoards(ev){const v=$('lbView');if(v.hidden)return;v.hidden=true;const b=bvBack;bvBack=null;if(b)b(ev);else if(bvFrom&&bvFrom.focus)bvFrom.focus()}
+$('lbBack').onclick=hideBoards;
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lbView').hidden){e.preventDefault();hideBoards(e)}});
 function boardsHTML(r){const row=b=>`<div class="board"><h4>${esc(b.label)} · ${num(b.players)} player${b.players===1?'':'s'}</h4><ol>${b.top.map(x=>`<li${b.me&&b.me.rank===x.rank?' class="mine"':''}><span>${x.rank}. ${esc(x.name)}</span><span>${num(x.score)}</span></li>`).join('')}${b.me&&b.me.rank>b.top.length?`<li class="mine"><span>${b.me.rank}. you</span><span>${num(b.me.score)}</span></li>`:''}</ol></div>`;
   return row(r.boards.day)+row(r.boards.week)}
 
@@ -890,4 +909,4 @@ $('tkDay').onclick=()=>{if(online){tkMsg('Today is set on the server. A moderato
 // a run that used the test tools is never sent
 tk.addEventListener('click',e=>{if(e.target.closest('.tk button'))tkUsed=true},true);
 window.__test={get sel(){return sel},get P(){return P},get vals(){return vals},get stage(){return stage},get turns(){return turns},slide,select:(c,f)=>{sel=c;selFace=f;render()},
-  nextHomeMove,doTurn:m=>{doTurn(m);render()},pressDigit,setPen:v=>{penMode=v;render()},score,cells,solveCount,N};
+  nextHomeMove,showBoards:()=>showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`}),doTurn:m=>{doTurn(m);render()},pressDigit,setPen:v=>{penMode=v;render()},score,cells,solveCount,N};
