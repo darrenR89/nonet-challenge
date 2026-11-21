@@ -708,7 +708,7 @@ function farDigits(S){if(!S.own.includes(sel))return null;const far=S.far.map(i=
 function flatDraw(){const net=$('net'),g=net.querySelector('.ngrid');g.textContent='';if(sel<0)return;
   const f=F[selFace],n=f.map(1,1),R=v3(f.map(2,1),n,-1),D=v3(f.map(1,2),n,-1);
   const H=crossStrip(R,D,n),V=crossStrip(D,R,n),hx=H.strip.indexOf(sel),vy=V.strip.indexOf(sel);
-  const gap=6,cand=$('nCands').offsetHeight+12,u=Math.floor(Math.min((net.clientWidth-2*gap)/9,(net.clientHeight-60-cand-2*gap)/9)),k=u/60;
+  const gap=12,cand=$('nCands').offsetHeight+12,u=Math.floor(Math.min((net.clientWidth-2*gap)/9,(net.clientHeight-60-cand-2*gap)/9)),k=u/60;
   const pos=c=>c*u+Math.floor(c/3)*gap,size=9*u+2*gap;g.style.width=g.style.height=`${size}px`;
   const block=(c,r,w,h,cls)=>{const b=document.createElement('div');b.className=cls;b.style.left=`${pos(c)}px`;b.style.top=`${pos(r)}px`;
     b.style.width=`${w*u}px`;b.style.height=`${h*u}px`;g.appendChild(b)};
