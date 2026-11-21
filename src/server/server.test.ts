@@ -836,9 +836,7 @@ test('a finished player posts their result as their own comment, once a day', as
   assert.equal(failed.status, 502)
   commentFails = false
 
-  const posted = await post<ResultCommentRsp>(Endpoint.ResultComment, {
-    journey: '🟨🟨🟧🟨🟨🟨',
-  })
+  const posted = await post<ResultCommentRsp>(Endpoint.ResultComment, {})
   assert.equal(posted.status, 200, 'the failed try gave the claim back')
   assert.equal(comments.length, 1)
   assert.equal(comments[0]?.[0], 't3_123')
@@ -846,7 +844,7 @@ test('a finished player posts their result as their own comment, once a day', as
   const text = comments[0]?.[1] ?? ''
   assert.match(
     text,
-    /^Nonet No\.318 · 1 turn · 4:07 · ([\d,]+) pts · #\d of 2\n\n🟨🟨🟧🟨🟨🟨 ★★☆$/,
+    /^Nonet No\.318 · 1 turn · 4:07 · ([\d,]+) pts · #\d of 2\n\n★★☆$/,
   )
   assert.equal(
     text.match(/([\d,]+) pts/)?.[1],
@@ -855,17 +853,6 @@ test('a finished player posts their result as their own comment, once a day', as
   assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.my.commented, true)
   const again = await post<ErrorRsp>(Endpoint.ResultComment, {})
   assert.equal(again.status, 409, 'once a day')
-
-  as('t2_cat', 'cat')
-  await playDay(0, run())
-  await post<ResultCommentRsp>(Endpoint.ResultComment, {
-    journey: 'the answer is 7',
-  })
-  assert.match(
-    comments[1]?.[1] ?? '',
-    /\n\n★★★$/,
-    'anything but squares is dropped',
-  )
 })
 
 test('a challenge is offered, accepted before playing, then settles', async () => {

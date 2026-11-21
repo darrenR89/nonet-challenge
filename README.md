@@ -41,7 +41,7 @@ Your first finished run each day is the one that counts.
 
 - **Daily posts.** The app posts each day's cube and pins it. Every Monday it also posts the week's top nine and the solve of the week. The card in the feed shows today's cube number, how many people have played, the fastest time, and your streak and rank.
 - **Streaks and flair.** A streak counts days in a row with a finished cube. Each week (Monday to Sunday), one missed day is covered by a rest day, so a single bad day doesn't end it. From 3 days in a row, a player's user flair shows their streak, such as "Nonet · 7-day streak". Once a streak lapses, the flair shows their best instead.
-- **Results in the comments.** Once you've finished, "Post in the comments" posts your result on the day's post under your username: the cube number, turns, time, points and rank, then a square per face in the order you finished them (yellow with no wrong locks, orange with one, red with more) and your ★. Nothing from the cube itself, so no spoilers. The share card and text line carry the same squares.
+- **Results in the comments.** Once you've finished, "Post in the comments" posts your result on the day's post under your username: the cube number, turns, time, points, rank and ★. Nothing from the cube itself, so no spoilers.
 - **Founder flair.** The first 100 players to finish a cube in the subreddit get numbered flair, "Nonet founder #1" to "#100", in front of their streak. It's a reason to start playing on day one.
 - **Post flair.** The app tags its own posts as "Daily cube", "Weekly top nine" or "Event results", so players can filter the subreddit by them.
 - **Boards.** There are boards for today, the week and all time, each showing where you stand.

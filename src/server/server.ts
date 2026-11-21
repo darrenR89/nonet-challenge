@@ -41,7 +41,6 @@ import {
   type NotifyRsp,
   type Preview,
   RETRY_MULT,
-  type ResultCommentReq,
   type ResultCommentRsp,
   type RetryRsp,
   type ScoreReq,
@@ -66,7 +65,7 @@ import {
 } from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {isOffensive} from '../shared/names.ts'
-import {isJourney, resultCommentText} from '../shared/result.ts'
+import {resultCommentText} from '../shared/result.ts'
 import {
   addDays,
   dayKey,
@@ -261,7 +260,7 @@ async function route(
         rsp = await routeCrewPost()
         break
       case Endpoint.ResultComment:
-        rsp = await routeResultComment(await readJson<ResultCommentReq>(reqMsg))
+        rsp = await routeResultComment()
         break
       case Endpoint.TelemetryStart:
         rsp = await journey.start()
@@ -885,11 +884,9 @@ async function routeCrewPost(): Promise<CrewRsp> {
 
 /**
  * Posts the asker's result for today as their own comment on this post, once a day. The text
- * is built here from the server's record; the browser only adds the journey squares.
+ * is built here from the server's record, so nothing the browser sends ends up in it.
  */
-async function routeResultComment(
-  req: ResultCommentReq,
-): Promise<ResultCommentRsp> {
+async function routeResultComment(): Promise<ResultCommentRsp> {
   const uid = await needUser()
   const day = today()
   const postId = context.postId
@@ -900,18 +897,15 @@ async function routeResultComment(
   if (!(await claimComment(day, uid)))
     throw new HttpError(409, "You've already posted today's result.")
   const board = await readBoard(boardKey.day(day), 'Today', uid, 0)
-  const text = resultCommentText(
-    {
-      cubeNo: cubeNumber(day),
-      tier: Number(rec.tier ?? 0),
-      time: Number(rec.time),
-      points: Number(rec.score),
-      stars: Number(rec.stars ?? 0),
-      rank: board.me?.rank,
-      players: board.players,
-    },
-    isJourney(req.journey) ? req.journey : undefined,
-  )
+  const text = resultCommentText({
+    cubeNo: cubeNumber(day),
+    tier: Number(rec.tier ?? 0),
+    time: Number(rec.time),
+    points: Number(rec.score),
+    stars: Number(rec.stars ?? 0),
+    rank: board.me?.rank,
+    players: board.players,
+  })
   try {
     await reddit.submitComment({
       id: postId as `t3_${string}`,

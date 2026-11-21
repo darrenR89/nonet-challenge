@@ -235,8 +235,7 @@ export type CrewNudgeReq = {to: string}
 export type CrewSeatReq = {to: string}
 /** Turns crew nudges to the asker on or off. */
 export type CrewNudgesReq = {on: boolean}
-/** Posts the asker's finished result as their own comment on this post. journey is the spoiler-free line of squares. */
-export type ResultCommentReq = {journey?: string}
+/** Posts the asker's finished result as their own comment on this post. */
 export type ResultCommentRsp = {commented: boolean}
 /** The asker's crew afterwards. note says what didn't work, such as an invite that failed. */
 export type CrewRsp = CrewInfo & {note?: string}

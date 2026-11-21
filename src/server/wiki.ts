@@ -112,7 +112,7 @@ ${mult}
 
 ## Streaks
 
-Finish a cube on days in a row to build a streak. Each week, Monday to Sunday, one missed day is covered by a rest day, so a single bad day doesn't end it.${flair}${founders} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
+Finish a cube on days in a row to build a streak. You can take one day off a week, Monday to Sunday, without losing it.${flair}${founders} Lock all three ★ lock-first squares and you get a look at tomorrow's clues.
 
 ## The week
 

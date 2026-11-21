@@ -4,7 +4,7 @@ import './style.css';
 import {makeTransitions} from './transitions.js';
 import {makeRoom} from './room.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,postResult,lastError} from '../api.ts';
-import {journeyLine,resultCommentText} from '../../shared/result.ts';
+import {resultCommentText} from '../../shared/result.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
@@ -43,8 +43,7 @@ const $=id=>document.getElementById(id);
 // ---------- state ----------
 let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
-// the journey: faces in the order they were finished, and wrong locks on each, for the share line
-let faceOrder=[],faceWrong=[0,0,0,0,0,0];
+// each face's squares, to buzz when a face is finished
 const faceOfCell=i=>faceOfNormal.get(k3(cells[i].n));
 const faceCells=F.map((_,fi)=>cells.map((_,i)=>i).filter(i=>faceOfCell(i)===fi));
 let flatOn=false; // the flattened net is showing
@@ -307,7 +306,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
-  hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;faceOrder=[];faceWrong=[0,0,0,0,0,0];stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
+  hintsLeft=3;hintsUsed=0;hintArrow=null;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
 const WALK=[
@@ -384,10 +383,8 @@ async function finale(){
 // the cube comes back when the result card is closed, or a new cube starts
 function landCube(){stageEl.classList.remove('flown','leaving');apply()}
 let runScore=null,endTab='';
-// a spoiler-free line for the daily thread: no digits from the cube, just how it went, with a
-// square per face in the order finished (yellow clean, orange one wrong lock, red more)
-const journeyNow=()=>journeyLine(faceOrder,faceWrong);
-const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${journeyNow()} ${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
+// a spoiler-free line for the daily thread: no digits from the cube, just how it went
+const resultText=s=>`Nonet${D?` No.${D.cubeNo}`:''} · ${P.tier===PRACTICE?s.name:rotName(P.tier)} · ${fmt(t1+t2)} · ${wrong} wrong${lastScore?` · ${num(lastScore.total)} pts`:''}\n${'★'.repeat(starWon.size)}${'☆'.repeat(3-starWon.size)}${hintsUsed?` · ${hintsUsed} helper${hintsUsed===1?'':'s'}`:' · no suggestions'}${retries?' · 1 retry':''}${daily?crewShareLine(D&&D.crew):''}`;
 // where you stand among the people you've challenged today, once any of them has played
 function duelRank(){const ds=(D&&D.duels||[]).filter(d=>d.status==='accepted'&&d.result!=='pending');if(!ds.length)return'';
   const above=ds.filter(d=>d.result==='lost').length,of=ds.length+1,ord=n=>n+(['th','st','nd','rd'][n%100>10&&n%100<14?0:n%10]||'th');
@@ -432,7 +429,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   else if(!r.counted)rank=`<p class="why">Today already counted: your first finished run, ${num(r.total)} points.</p>`;
   else{const bits=[r.boards.day.players>1&&r.beatPct>0?`Better than <b>${r.beatPct}%</b> of today's players`:'',duelRank().replace(/^ · /,''),r.boards.week.me&&r.boards.week.me.rank<=9?'In this week\'s top nine':''].filter(Boolean);
     rank=bits.length?`<p class="rank">${bits.join(' · ')}</p>`:''}
-  const streak=scored&&st&&st.current&&(st.current>1||st.best<=1)?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span title="One missed day a week is covered by a rest day">best ${st.best} · ${st.restUsed?'rest day used':'rest day ready'}</span></p>`:scored&&st&&st.best>1?`<p class="streakline"><i></i><b>New streak</b><span>best ${st.best}</span></p>`:'';
+  const streak=scored&&st&&st.current&&(st.current>1||st.best<=1)?`<p class="streakline"><i></i><b>${st.current}-day streak</b><span>best ${st.best}</span></p>`:scored&&st&&st.best>1?`<p class="streakline"><i></i><b>New streak</b><span>best ${st.best}</span></p>`:'';
   const pv=D&&D.preview?`<div class="peek">${peekHTML(D.preview)}</div>`:scored&&starWon.size<3?'<p class="meta">Lock all three ★ lock-first squares to see tomorrow\'s clues.</p>':'';
   const sub=D&&D.subreddit?`r/${esc(D.subreddit)}`:'the subreddit';
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
@@ -461,10 +458,10 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
 // the result as the player's own comment on the daily post: only for today's counted run, once
 function canComment(r,scored){let pid;try{pid=context.postId}catch(e){}return !!(scored&&r&&r.counted&&pid&&D&&!D.my.commented&&!D.pastBoards)}
 function askPost(total,me,players){
-  const text=resultCommentText({cubeNo:D.cubeNo,tier:P.tier,time:t1+t2,points:total,stars:starWon.size,rank:me&&me.rank,players},journeyNow());
+  const text=resultCommentText({cubeNo:D.cubeNo,tier:P.tier,time:t1+t2,points:total,stars:starWon.size,rank:me&&me.rank,players});
   ask('Post your result?',`<pre class="sharetxt">${esc(text)}</pre><p class="meta">It goes in this post's comments under your username. No numbers from the cube, so no spoilers.</p>`,[
     ['Cancel'],['Post',async()=>{const b=$('ePost');if(b){b.disabled=true;b.textContent='Posting…'}journey.interaction('share','comment');
-      const ok=await postResult({journey:journeyNow()});
+      const ok=await postResult();
       if(ok&&D){D.my.commented=true;if(b)b.textContent='Posted';return}
       if(b){b.disabled=false;b.textContent=lastError||'Try again'}},'primary']])}
 // sharing: a picture of the result, points first (no digits, so no spoilers), and the
@@ -473,7 +470,7 @@ async function openShare(s,total,rank){const b=$('eComment');if(b)b.disabled=tru
   const txt=resultText(s);let pid;try{pid=context.postId}catch(e){}
   const url=postUrl(D&&D.subreddit||undefined,pid)??(pid?undefined:pageUrl()),title=`Nonet${D?` No.${D.cubeNo}`:''}`;
   const card=await renderCard({cubeNo:D?D.cubeNo:undefined,date:longDate(today),level,levelName:LEVEL_NAMES[level],mode:P.tier===PRACTICE?s.name:rotName(P.tier),
-    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,journey:journeyNow(),subreddit:D&&D.subreddit||'',crew:daily?crewCard(D&&D.crew):undefined}).catch(()=>undefined);
+    points:total,time:fmt(t1+t2),stars:starWon.size,wrong,hints:hintsUsed,rank,subreddit:D&&D.subreddit||'',crew:daily?crewCard(D&&D.crew):undefined}).catch(()=>undefined);
   if(b)b.disabled=false;
   if(!card){copyResult(txt);return}
   journey.interaction('share','open');
@@ -653,10 +650,10 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;faceWrong[faceOfCell(sel)]++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
+  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(el.find(x=>x.getBoundingClientRect().width)||el[0]);el.forEach(x=>{x.classList.remove('shake','wrong');void x.offsetWidth;x.classList.add('shake','wrong')});
     setTimeout(()=>el.forEach(x=>x.classList.remove('wrong')),500);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;music.sfx('lock');{const f=faceOfCell(sel);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i])){faceOrder.push(f);buzz([12,40,24])}else buzz(10)}render();
+  vals[sel]=d;pm[sel]=0;music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');
@@ -870,7 +867,7 @@ tk.addEventListener('toggle',()=>{try{localStorage.setItem('nonet-tk',tk.open?'1
 const answer=()=>{const r=solveCount(vals.map((v,i)=>v),1,200000);return r[0]>0?r[1]:null};
 function lockFill(list){if(stage!==2){tkMsg('Fills work once the cube is dialled in. Use Dial in now first.');return}
   const sol=answer();if(!sol){tkMsg('The cube has a wrong digit in it, so there is no answer to fill from.');return}
-  let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++;const f=faceOfCell(c);if(!faceOrder.includes(f)&&faceCells[f].every(i=>vals[i]))faceOrder.push(f)}
+  let n=0;for(const c of list){if(vals[c])continue;if(stars.has(c)&&!regularLocked)starWon.add(c);else if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;n++}
   tkMsg(n?`Filled ${n} square${n===1?'':'s'}.`:'Nothing left to fill there.');render()}
 const needSel=()=>{if(sel<0){tkMsg('Tap a square first.');return false}return true};
 const shownLine=()=>{const by={};for(const k of lineIdxOf[sel])(by[Math.floor(k/6)]??=[]).push(k);const ax=Object.keys(by).sort()[0];const arr=by[ax];return lines[arr[lc%arr.length]]};

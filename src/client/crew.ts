@@ -181,7 +181,7 @@ export function crewPanelHTML(info: Readonly<CrewInfo>): string {
     <input name="name" autocomplete="off" placeholder="Crew name" aria-label="Crew name" maxlength="24" required>
     <div class="crewInvites">${nameInput('a', 'First player to invite')}${nameInput('b', 'Second player to invite')}</div>
     <button type="submit">Start a crew</button></form>
-    <p class="crew-msg" aria-live="polite">Up to three. Your scores add up every day, and the crew streak counts days you all played, with one rest day a week. Invites tag them in a comment on this post.</p></div>`
+    <p class="crew-msg" aria-live="polite">Up to three. Your scores add up every day, and the crew streak counts days you all played. Invites tag them in a comment on this post.</p></div>`
 }
 
 /**
