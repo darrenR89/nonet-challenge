@@ -232,9 +232,7 @@ export function detailLine(
   const bits = [d.levelName, d.mode]
   bits.push(d.wrong ? `${d.wrong} wrong` : 'no wrong locks')
   bits.push(
-    d.hints
-      ? `${d.hints} suggestion${d.hints === 1 ? '' : 's'}`
-      : 'no suggestions',
+    d.hints ? `${d.hints} helper${d.hints === 1 ? '' : 's'}` : 'no helpers',
   )
   return bits.join(' · ')
 }
