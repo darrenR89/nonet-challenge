@@ -141,7 +141,7 @@ function splashTwist(){
   $('spScrCap').textContent=lk?`Set for today · ${rotName(twistDay)} · ×${multOf(level,twistDay)}`:'Turn multiplier';
   const done=online&&D&&D.my.score!==undefined,isPaused=paused&&!sent&&stage<3;
   $('splash').classList.toggle('is-paused',isPaused);
-  const first=firstTimer();$('spSkip').hidden=!first;
+  const first=firstTimer();$('spSkip').hidden=!first;$('spPractice').parentElement.hidden=first; // Learn to play stands in for Practice
   $('spPlay').textContent=isPaused?'Resume':done?'See your solved cube':first?'Learn to play · 1 min':'Play today\'s cube';
   let sub='';
   if(first)sub='New to Nonet? A guided practice cube shows you how, one step at a time. No clock and no score.';

@@ -315,7 +315,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         subreddit: 'nonet_challenge_dev',
         notify: s.notify,
         duels: duels(day, s),
-        crew: crewSample(day, s),
+        crew: s.played ? crewSample(day, s) : undefined,
       })
     case 'api/card': {
       // the prototype's card-state switcher can stand in for a quiet day or a finished one
@@ -393,7 +393,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
         event: EVENTS ? eventState(day, s) : undefined,
         preview: preview(day, s),
         duels: duels(day, s),
-        crew: crewSample(day, s),
+        crew: s.played ? crewSample(day, s) : undefined,
       })
     }
     case 'api/challenge/answer': {

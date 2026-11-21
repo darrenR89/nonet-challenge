@@ -73,7 +73,7 @@
     background:var(--c-print) center/contain no-repeat;mix-blend-mode:multiply;opacity:.16;
     -webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent);mask-image:radial-gradient(closest-side,#000 55%,transparent)}
 }
-.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%}
+.cv-first{font:500 14px/1.4 var(--c-code);text-wrap:balance;border-top:1px solid var(--c-ink);padding-top:10px;width:100%;text-align:center}
 .cv-first[hidden],.cv-stats[hidden]{display:none}
 .cv p,.cv h1{margin:0;text-wrap:balance}
 
@@ -127,7 +127,7 @@
   font:500 14px var(--c-code);letter-spacing:.04em;color:var(--c-ink);box-shadow:inset 0 0 0 1px var(--c-ink)}
 .cv-skip[hidden]{display:none}
 .cv-skip:focus-visible{outline:2px solid var(--c-ink);outline-offset:2px}
-.cv-sub{font:500 13px/1.4 var(--c-code);color:var(--c-ink);text-wrap:balance}
+.cv-sub{font:500 13px/1.4 var(--c-code);color:var(--c-ink);text-wrap:balance;text-align:center;justify-self:stretch}
 .cv-sub:empty{display:none}
 
 /* two quiet links under the Play block */
@@ -423,3 +423,5 @@
   .setup .cv-twists b{font-size:18px}
   .su-go{margin-top:2px}
 }
+.cv-links li[hidden]{display:none}
+.cv-go .cv-links:has(li[hidden]) li{grid-column:1/-1}
