@@ -396,7 +396,8 @@
   .cv-streak svg path:first-child{fill:#121316}
   .dn-res .dn-rank{background:#121316;color:#eceae3}
   .is-done .cv-play{color:var(--c-ink)}
-  .cv .event,.cv .peek,.su-guest{background:rgba(255,255,255,.06)}
+  .cv .event,.cv .peek,.su-guest,.cv .crewList li:not(.seat){background:rgba(255,255,255,.06)}
+  .cv .crewForm input{background:rgba(255,255,255,.08)}
   /* the setup screen keeps its yellow page with ink type */
   .cv.setup{--c-ink:#23252b;--c-paper:#f3f2ec;--c-lead:#5b5f69;color-scheme:light}
 }
