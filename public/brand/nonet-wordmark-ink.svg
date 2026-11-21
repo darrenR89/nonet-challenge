@@ -22,7 +22,16 @@
   <rect x="240" y="96" width="40" height="40" rx="7" fill="#23252b" />
   <rect x="288" y="96" width="40" height="40" rx="7" fill="#23252b" />
   <rect x="336" y="96" width="40" height="40" rx="7" fill="#23252b" />
-  <rect x="336" y="144" width="40" height="40" rx="7" fill="#f5c12e" />
+  <rect
+    x="340"
+    y="148"
+    width="32"
+    height="32"
+    rx="5"
+    fill="#f5c12e"
+    stroke="#23252b"
+    stroke-width="8"
+  />
   <rect x="432" y="0" width="40" height="40" rx="7" fill="#23252b" />
   <rect x="480" y="0" width="40" height="40" rx="7" fill="#23252b" />
   <rect x="576" y="0" width="40" height="40" rx="7" fill="#23252b" />
