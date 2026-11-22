@@ -22,6 +22,7 @@ import {
 import {boardKey, readBoard} from './board.ts'
 import {FLAIR_FROM, FOUNDERS} from './flair.ts'
 import {longestStreaks, pastWeeks, type WeekRecord} from './records.ts'
+import {markdownToHtml} from './wikihtml.ts'
 
 export const WIKI_PAGE = 'nonet'
 /** Past weeks listed on the page, newest first. */
@@ -33,14 +34,6 @@ export const WIKI_WEEKS = 12
  */
 export const wikiUrl = (sub: string, page = WIKI_PAGE): string =>
   `https://old.reddit.com/r/${sub}/wiki/${page}`
-
-/**
- * What the newer wiki gets instead of a page: it shows text from apps as one plain paragraph,
- * links included, so each page there is one line pointing to the full page on old Reddit.
- * Pure, for tests.
- */
-export const pointerPage = (sub: string, page: string): string =>
-  `The Nonet ${page === 'index' ? 'wiki' : 'page'} is on old Reddit: ${wikiUrl(sub, page === 'index' ? WIKI_PAGE : page)}`
 
 const pts = (n: number): string => n.toLocaleString('en-GB')
 
@@ -463,10 +456,11 @@ async function writePages(
       .getWikiPage(sub, page, {wikiVersion})
       .then(() => true)
       .catch(() => false)
-  // the newer wiki shows app-written pages as plain text, so it gets one line per page that
-  // points to the same page on old Reddit
+  // the newer wiki doesn't parse markdown from apps (a Devvit bug) but shows basic HTML
+  const body = (md: string): string =>
+    wikiVersion === 'v2' ? markdownToHtml(md) : md
   for (const [page, md] of pages) {
-    const content = wikiVersion === 'v2' ? pointerPage(sub, page) : md
+    const content = body(md)
     if (await has(page)) {
       await reddit.updateWikiPage({
         subredditName: sub,
@@ -495,16 +489,38 @@ async function writePages(
       })
       .catch(err => console.warn(`wiki ${wikiVersion} settings failed: ${err}`))
   }
-  // the front page, only when this wiki has none yet
-  if (!(await has('index')))
-    await reddit
-      .createWikiPage({
-        subredditName: sub,
-        page: 'index',
-        content:
-          wikiVersion === 'v2' ? pointerPage(sub, 'index') : indexPage(sub),
-        reason,
-        wikiVersion,
-      })
-      .catch(err => console.warn(`wiki ${wikiVersion} index failed: ${err}`))
+  // the front page: made when this wiki has none, and rewritten only while it is still one the
+  // app wrote (it starts with the app's title), so a mod's own front page is never replaced
+  const front = await reddit
+    .getWikiPage(sub, 'index', {wikiVersion})
+    .then(p => p.content)
+    .catch(() => undefined)
+  const content = body(indexPage(sub))
+  // the markdown or HTML front page, or the one-line pointer an earlier version wrote
+  const ours = [
+    `# r/${sub} wiki`,
+    `<h1>r/${sub} wiki</h1>`,
+    'The Nonet wiki is on old Reddit',
+  ].some(mark => front?.startsWith(mark))
+  const write =
+    front === undefined
+      ? reddit.createWikiPage({
+          subredditName: sub,
+          page: 'index',
+          content,
+          reason,
+          wikiVersion,
+        })
+      : ours && front !== content
+        ? reddit.updateWikiPage({
+            subredditName: sub,
+            page: 'index',
+            content,
+            reason,
+            wikiVersion,
+          })
+        : undefined
+  await write?.catch(err =>
+    console.warn(`wiki ${wikiVersion} index failed: ${err}`),
+  )
 }
