@@ -1,7 +1,7 @@
 // The subreddit's Nonet wiki: a home page and pages for how to play, scoring, streaks, challenges
 // and crews, records and questions. The app writes every page, on install, every Monday and from
 // the moderator menu.
-import {reddit} from '@devvit/web/server'
+import {media, reddit, redis} from '@devvit/web/server'
 import type {Board} from '../shared/api.ts'
 import {RETRY_MULT} from '../shared/api.ts'
 import {
@@ -22,6 +22,7 @@ import {
 import {boardKey, readBoard} from './board.ts'
 import {FLAIR_FROM, FOUNDERS} from './flair.ts'
 import {longestStreaks, pastWeeks, type WeekRecord} from './records.ts'
+import {WIKI_HEADER, WIKI_HEADER_ID} from './wikiheader.ts'
 import {markdownToHtml} from './wikihtml.ts'
 
 export const WIKI_PAGE = 'nonet'
@@ -61,6 +62,8 @@ export type WikiData = {
   streaks: Board
   all: Board
   weeks: WeekRecord[]
+  /** Today's cube post, where the guided practice opens from. */
+  post?: string
 }
 
 /** The wiki's pages, under the main one: path after `nonet/`, and the title in the contents. */
@@ -180,8 +183,16 @@ const BLURBS: Record<WikiPage, string> = {
   faq: 'short answers to common questions.',
 }
 
+/** Today's cube post as a link, or the subreddit when there's none yet. */
+const todayLink = (d: WikiData, sub: string): string =>
+  d.post
+    ? `[today's cube](https://www.reddit.com/r/${sub}/comments/${d.post.replace(/^t3_/, '')}/)`
+    : `today's cube in [r/${sub}](https://www.reddit.com/r/${sub}/)`
+
 function howToPlay(d: WikiData, sub: string): string {
   return `# How to play
+
+New to Nonet? The quickest way to learn is the guided practice: open ${todayLink(d, sub)} and tap **Practice cube**. It walks you through every step on a small cube, with no clock and no score.
 
 ## 1. Dial in
 
@@ -215,7 +226,7 @@ You get 3 helpers per cube. Using none adds 100 points.
 
 ## Practice
 
-"Practice cube" on the start screen is a guided walkthrough on a small cube: one turn to undo, then a half-filled cube. It has no clock and no score, and you can play it any time.
+"Practice cube" on the start screen is a guided walkthrough: rotate the cube back, pick a square, pencil it in, then lock it in. Along the way the game shows you a ★ lock-first square, a wrong lock and the dashed squares, then leaves you the last quarter of the cube to finish. It has no clock and no score, and you can play it any time from ${todayLink(d, sub)}.
 
 ${foot(d, sub)}`
 }
@@ -420,6 +431,7 @@ export async function publishWiki(
   sub: string,
   flair: boolean,
   founders = false,
+  post?: string,
 ): Promise<void> {
   const pages = wikiPages(
     {
@@ -429,6 +441,7 @@ export async function publishWiki(
       streaks: await longestStreaks(),
       all: await readBoard(boardKey.all, 'All time', undefined),
       weeks: await pastWeeks(),
+      post,
     },
     sub,
   )
@@ -438,8 +451,27 @@ export async function publishWiki(
     console.warn(`wiki v2 check failed: ${err}`)
     return false
   })
+  const header = v2 ? await headerImage() : undefined
   for (const wikiVersion of v2 ? (['v1', 'v2'] as const) : (['v1'] as const))
-    await writePages(sub, pages, wikiVersion)
+    await writePages(sub, pages, wikiVersion, header)
+}
+
+/**
+ * The picture at the top of the Nonet page on reddit.com, uploaded to Reddit once and its address
+ * kept. Without it the page is written without a picture.
+ */
+async function headerImage(): Promise<string | undefined> {
+  const key = `wiki:header:${WIKI_HEADER_ID}`
+  const kept = await redis.get(key)
+  if (kept) return kept
+  try {
+    const {mediaUrl} = await media.upload({url: WIKI_HEADER, type: 'image'})
+    await redis.set(key, mediaUrl)
+    return mediaUrl
+  } catch (err) {
+    console.warn(`wiki header upload failed: ${err}`)
+    return undefined
+  }
 }
 
 /** Writes the pages to one version of the wiki, and its front page when it has none. */
@@ -447,6 +479,7 @@ async function writePages(
   sub: string,
   pages: Map<string, string>,
   wikiVersion: 'v1' | 'v2',
+  header?: string,
 ): Promise<void> {
   const reason = 'Nonet: rules and records'
   const has = (page: string): Promise<boolean> =>
@@ -457,8 +490,13 @@ async function writePages(
   // the newer wiki doesn't parse markdown from apps (a Devvit bug) but shows basic HTML
   const body = (md: string): string =>
     wikiVersion === 'v2' ? markdownToHtml(md) : md
+  // the newer wiki shows the name and a cube above the main page; old Reddit can't show pictures
+  const top =
+    header && wikiVersion === 'v2'
+      ? `<p><img src="${header.replace(/"/g, '&quot;')}" alt="Nonet: daily sudoku challenges"></p>\n`
+      : ''
   for (const [page, md] of pages) {
-    const content = body(md)
+    const content = (page === pageName() ? top : '') + body(md)
     if (await has(page)) {
       await reddit.updateWikiPage({
         subredditName: sub,
