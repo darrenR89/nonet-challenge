@@ -344,9 +344,9 @@ const WALK=[
   ['Step 3 of 4 · Pencil it in','Tap the glowing number on the pad. It goes in as a pencil note.'],
   ['Step 4 of 4 · Lock it in','Sure of it? Switch to Lock in, then tap the number again to place it.'],
   ['Your turn','<div class="walkEnd"><p>Fill the rest the same way. Start where only one number fits. Nothing here is timed or scored.</p>'+
-    '<p><b>Dashed outlines.</b> Tap a square in the middle of a line and two sets of three squares get dashed outlines: three on the line, three across the cube. Both sets hold the same three numbers.</p>'+
-    '<p><b>★FIRST squares.</b> On a scored cube, three empty squares are marked ★FIRST. Lock them in before any other square for 50 points each. Get all three and you see tomorrow\'s clues early.</p>'+
-    '<p><b>Wrong locks.</b> Here a wrong lock is just flagged. On a scored cube each one costs 25 points, so pencil in when you\'re not sure.</p></div>']];
+    '<p><b>Dashed squares.</b> Tap a square on a line\'s middle face and two sets of three squares are dashed: three on that face, three across the cube. Both sets hold the same three numbers.</p>'+
+    '<p><b>★ Lock-first squares.</b> On a scored cube, three empty squares are marked ★FIRST. Lock all three before any other square for +50 each, and a look at tomorrow\'s clues.</p>'+
+    '<p><b>Wrong locks.</b> Here a wrong lock is only flagged. On a scored cube a wrong lock shakes, won\'t stay, and costs 25 points, so pencil in until you\'re sure.</p></div>']];
 let walk=-1,walkCell=-1,walkDigit=0;
 function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p]=WALK[n];
   ask(t,p.startsWith('<')?p:`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
