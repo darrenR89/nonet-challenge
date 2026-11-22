@@ -65,6 +65,7 @@ import {
 } from '../shared/crew.ts'
 import {challengeText, cleanName, MAX_CHALLENGES} from '../shared/duel.ts'
 import {isOffensive} from '../shared/names.ts'
+import {checkLog} from '../shared/replay.ts'
 import {resultCommentText} from '../shared/result.ts'
 import {
   addDays,
@@ -146,6 +147,7 @@ import {
   getSpot,
   noteBestStreak,
   noteSolve,
+  saveRunLog,
   saveWeek,
   spotText,
 } from './records.ts'
@@ -668,6 +670,11 @@ async function routeScore(
   const total = Math.round(breakdown.total * penalty)
 
   const counted = await markScored(day, uid, total, stats.starsWon)
+  // a log that doesn't match the run is dropped; the run still counts, it just can't be replayed
+  const log =
+    counted && req.log && checkLog(puzzle, stats, req.log) === undefined
+      ? req.log
+      : undefined
   const event = await activeEvent(day)
   let streak: Streak
   let dayStats: DayStats
@@ -677,12 +684,14 @@ async function routeScore(
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
     await noteBestStreak(uid, streak.best)
+    if (log) await saveRunLog(day, uid, log)
     await noteSolve(day, uid, {
       score: total,
       tier,
       time: stats.t1 + stats.t2,
       stars: stats.starsWon,
       wrong: stats.wrong,
+      log,
     })
     await flairSolve(day, uid, streak)
     dayStats = await addSolve(day, stats.t1 + stats.t2, tier, total)

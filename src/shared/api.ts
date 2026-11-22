@@ -193,6 +193,8 @@ export type ScoreReq = {
   day: string
   tier: number
   stats: RunStats
+  /** The run's moves, for checking and replays (shared/replay.ts). Optional: older clients send none. */
+  log?: number[]
   forfeit?: boolean
   /** A run played logged out, claimed by the player who just signed up. */
   guest?: string

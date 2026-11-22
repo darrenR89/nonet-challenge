@@ -29,6 +29,9 @@ export type WeekRecord = {
 }
 
 const spotKey = (week: string): string => `spot:${week}`
+const logKey = (day: string): string => `runlog:${day}`
+/** Checked move logs stay ten days: long enough for the Monday post to pick from the week before. */
+const LOG_TTL = 10 * 86400
 export const streaksKey = 'streaks:best'
 const weeksKey = 'weeks'
 
@@ -42,6 +45,8 @@ export async function noteSolve(
     time: number
     stars: number
     wrong: number
+    /** The run's move log, if it checked out. The spotlight keeps it for the play of the week. */
+    log?: readonly number[]
   },
 ): Promise<void> {
   const key = spotKey(weekKey(day))
@@ -55,7 +60,41 @@ export async function noteSolve(
     time: String(Math.round(run.time)),
     stars: String(run.stars),
     wrong: String(run.wrong),
+    log: run.log ? JSON.stringify(run.log) : '',
   })
+}
+
+/** Keeps a counted run's checked move log for ten days. */
+export async function saveRunLog(
+  day: string,
+  uid: string,
+  log: readonly number[],
+): Promise<void> {
+  await redis.hSet(logKey(day), {[uid]: JSON.stringify(log)})
+  await redis.expire(logKey(day), LOG_TTL)
+}
+
+/** A counted run's checked move log, if it was kept. */
+export async function runLog(
+  day: string,
+  uid: string,
+): Promise<number[] | undefined> {
+  return parseLog(await redis.hGet(logKey(day), uid))
+}
+
+/** The move log of the week's spotlight run, if it had a checked one. */
+export async function spotLog(week: string): Promise<number[] | undefined> {
+  return parseLog(await redis.hGet(spotKey(week), 'log'))
+}
+
+function parseLog(raw: string | undefined): number[] | undefined {
+  if (!raw) return
+  try {
+    const v: unknown = JSON.parse(raw)
+    return Array.isArray(v) && v.every(Number.isInteger) ? v : undefined
+  } catch {
+    return
+  }
 }
 
 export async function getSpot(week: string): Promise<Spot | undefined> {

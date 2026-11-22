@@ -25,7 +25,9 @@ import {
   type ScoreRsp,
   type StartRsp,
 } from '../shared/api.ts'
-import type {RunStats} from '../shared/scoring.ts'
+import type {Puzzle} from '../shared/model.js'
+import {code, type MoveLog} from '../shared/replay.ts'
+import {type RunStats, weekKey} from '../shared/scoring.ts'
 import {eventsSwitch} from './events.ts'
 import {clock, onReq, runDaily} from './server.ts'
 import {
@@ -402,6 +404,55 @@ test('a run scores, ranks, and only the first one counts', async () => {
   })
   assert.equal(second.body.counted, false)
   assert.equal(second.body.total, first.body.total)
+})
+
+/** A clean run of a cube and its move log: undo the scramble, then lock ★ squares first, a square a second. */
+function cleanRun(p: Puzzle): {stats: RunStats; log: MoveLog} {
+  const log: MoveLog = []
+  let t = 0
+  for (const m of p.moves.slice().reverse()) {
+    t += 100
+    log.push(t, code.turn([m[0], m[1], -m[2]]))
+  }
+  const t1 = t / 10
+  log.push(t, code.dial)
+  for (const s of p.stars) log.push(t, code.star(s))
+  const blanks = p.given.map((v, c) => (v ? -1 : c)).filter(c => c >= 0)
+  for (const c of [...p.stars, ...blanks.filter(c => !p.stars.includes(c))]) {
+    t += 30
+    log.push(t, code.lock(c, p.sol[c] ?? 0))
+  }
+  const stats = run({turns: p.moves.length, t1, t2: t / 10 - t1})
+  return {stats: {...stats, blanks: blanks.length}, log}
+}
+
+test('a run’s move log is kept when it matches the run, and the week’s best keeps its own', async () => {
+  const start = await post<StartRsp>(Endpoint.Start, {tier: 2})
+  const {stats, log} = cleanRun(start.body.puzzle)
+  later(stats.t1 + stats.t2 + 5)
+  const day = now.toISOString().slice(0, 10)
+  const r = await post<ScoreRsp>(Endpoint.Score, {day, tier: 2, stats, log})
+  assert.equal(r.body.counted, true)
+  assert.deepEqual(
+    JSON.parse((await redis.hGet(`runlog:${day}`, 't2_ann')) ?? ''),
+    log,
+  )
+  const spot = await redis.hGetAll(`spot:${weekKey(day)}`)
+  assert.deepEqual(JSON.parse(spot.log ?? ''), log)
+
+  // a log that doesn't match is dropped, and the run still counts
+  as('t2_bob', 'bob')
+  const s2 = await post<StartRsp>(Endpoint.Start, {tier: 2})
+  const bad = cleanRun(s2.body.puzzle)
+  later(bad.stats.t1 + bad.stats.t2 + 5)
+  const r2 = await post<ScoreRsp>(Endpoint.Score, {
+    day,
+    tier: 2,
+    stats: {...bad.stats, wrong: 1},
+    log: bad.log,
+  })
+  assert.equal(r2.body.counted, true)
+  assert.equal(await redis.hGet(`runlog:${day}`, 't2_bob'), undefined)
 })
 
 test('runs that cannot have happened are refused', async () => {

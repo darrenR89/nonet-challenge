@@ -5,6 +5,7 @@ import {makeTransitions} from './transitions.js';
 import {makeRoom} from './room.js';
 import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,postResult,lastError} from '../api.ts';
 import {resultCommentText} from '../../shared/result.ts';
+import {code as logCode} from '../../shared/replay.ts';
 import {journey} from '../journey.ts';
 import {music} from '../music.ts';
 import {duelsHTML,wireDuels,splashDuelsHTML,wireAnswers} from '../duels.ts';
@@ -42,7 +43,7 @@ let scaleK=1;const setH=()=>{const st=document.getElementById('stage');scaleK=Ma
 const $=id=>document.getElementById(id);
 
 // ---------- state ----------
-let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,hintCell=-1,stage=1,turns=0,playerMoves=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
+let tier=1,P,vals,locked,pm,sel=-1,selFace=-1,hintCell=-1,stage=1,turns=0,playerMoves=[],moveLog=[],hintsLeft=3,hintsUsed=0,hintArrow=null;
 let stars=new Set(),starWon=new Set(),regularLocked=false;
 // each face's squares, to buzz when a face is finished
 const faceOfCell=i=>faceOfNormal.get(k3(cells[i].n));
@@ -285,12 +286,12 @@ window.addEventListener('pagehide',()=>{if(stage<3&&P){pauseNow();saveRun()}if(j
 // today's run is kept on this device, so leaving and coming back resumes it
 const RUN_KEY='nonet-run';
 function saveRun(){if(!daily||sent||!P||stage===3)return;
-  try{localStorage.setItem(RUN_KEY,JSON.stringify({day:today,tier:P.tier,vals,locked,pm,stage,turns,playerMoves,hintsLeft,hintsUsed,wrong,
+  try{localStorage.setItem(RUN_KEY,JSON.stringify({day:today,tier:P.tier,vals,locked,pm,stage,turns,playerMoves,moveLog,hintsLeft,hintsUsed,wrong,
     stars:[...stars],starWon:[...starWon],regularLocked,t:nowSec(),t1,blanks,retries}))}catch(e){}}
 function clearRun(){try{localStorage.removeItem(RUN_KEY)}catch(e){}}
 function restoreRun(){let v;try{v=JSON.parse(localStorage.getItem(RUN_KEY)||'null')}catch(e){}
   if(!v||v.day!==today||v.tier!==P.tier||(v.retries||0)!==retries)return false;
-  ({vals,locked,pm,stage,turns,playerMoves,hintsLeft,hintsUsed,wrong,regularLocked,t1,blanks}=v);
+  ({vals,locked,pm,stage,turns,playerMoves,hintsLeft,hintsUsed,wrong,regularLocked,t1,blanks}=v);moveLog=Array.isArray(v.moveLog)?v.moveLog:[];
   stars=new Set(v.stars);starWon=new Set(v.starWon);t0=performance.now()-v.t*1000;
   $('banner').hidden=true;
   lastStage=stage;render();return true}
@@ -334,7 +335,7 @@ $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
 // How to play has three tabs: the game, what the squares and controls look like, and scoring
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
-function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
+function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];moveLog=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;$('showRes').textContent='Show result';penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
 // Doing it brings up the next step.
@@ -357,6 +358,8 @@ function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;if(tx.bu
 function walkFill(){const c=singlesOrder(vals).find(i=>!vals[i]);const sol=c>=0?answer():null;
   if(c===undefined||!sol){walkTo(WALK.length-1);return}walkCell=c;walkDigit=sol[c];focusFace(faceOfNormal.get(k3(cells[c].n)));walkTo(1)}
 const nowSec=()=>Math.max(0,((paused||hold?pausedAt:performance.now())-t0)/1000);
+// the move log sent with a scored run, for checking and replays (shared/replay.ts): the run clock in tenths, then a code
+const logMove=c=>{if(!isPrac())moveLog.push(Math.round(((stage===2?t1:0)+nowSec())*10),c)};
 function holdClock(){if(!hold&&!paused){hold=true;pausedAt=performance.now()}}
 function releaseClock(){if(hold){t0+=performance.now()-pausedAt;hold=false}}
 const fmt=s=>{s=Math.max(0,Math.round(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`};
@@ -381,6 +384,7 @@ function finishStage1(){
   const order=singlesOrder(vals);const pool=order.length?order.slice(0,10):vals.map((v,i)=>v?-1:i).filter(i=>i>=0);
   const fixed=(P.stars||[]).filter(i=>!vals[i]);
   stars=isPrac()?new Set():new Set([...fixed,...shuffle(pool.filter(i=>!fixed.includes(i)))].slice(0,3));
+  logMove(logCode.dial);for(const c of stars)logMove(logCode.star(c));
   if(P.k>0)journey.progress(.5,'aligned');
   if(isPrac()){$('banner').hidden=true;setTimeout(walkFill,0);return}
   $('banner').hidden=true; // a scored run goes straight on to Fill in, with no summary banner over the board
@@ -496,7 +500,7 @@ function signupHTML(total){
 // after signing up the page reloads logged in: a run finished as a guest today is sent as this player's
 async function claimPending(r){const p=readPending();if(!p)return;
   if(r.my.tier!==undefined||r.my.score!==undefined){clearPending();return}
-  const s=await sendScore({day:p.day,tier:p.tier,stats:p.stats,guest:p.guest},journey.id());clearPending();
+  const s=await sendScore({day:p.day,tier:p.tier,stats:p.stats,log:p.log,guest:p.guest},journey.id());clearPending();
   if(!s){ask('Run not saved',`<p>${esc(lastError||'Could not reach the server.')} Today's cube is still yours to play.</p>`,[['OK',null,'primary']]);return}
   journey.interaction('guest_claimed');
   D.my={...D.my,tier:p.tier,score:s.total,starsWon:p.stars};D.streak=s.streak;D.boards=s.boards;D.stats=s.stats;D.preview=s.preview;D.duels=s.duels;D.crew=s.crew;twistDay=p.tier;applyTwistLock();
@@ -617,11 +621,11 @@ function boardsHTML(r){const row=b=>`<div class="board"><h4>${esc(b.label)} · $
 // sends a finished run of today's cube; only the first finished run each day counts
 async function submitRun(){
   if(!daily||tkUsed)return;
-  if(!online){if(guestId)try{localStorage.setItem(PENDING,JSON.stringify({day:today,tier:P.tier,guest:guestId,stats:runStats(),total:runScore.total,stars:starWon.size}))}catch(e){}
+  if(!online){if(guestId)try{localStorage.setItem(PENDING,JSON.stringify({day:today,tier:P.tier,guest:guestId,stats:runStats(),log:moveLog,total:runScore.total,stars:starWon.size}))}catch(e){}
     journey.interaction('guest_finish');renderEndCard();return}
   if(sent){lastScore=null;if(D&&D.my.score!==undefined)lastScore={counted:false,total:D.my.score,boards:D.boards,beatPct:0};renderEndCard();return}
   sent=true;
-  const r=await sendScore({day:today,tier:P.tier,stats:runStats()},journey.id());
+  const r=await sendScore({day:today,tier:P.tier,stats:runStats(),log:moveLog},journey.id());
   journey.endedByServer();
   if(!r){const m=$('srvMsg');if(m)m.textContent=`Not counted: ${lastError||'could not reach the server'}`;return}
   lastScore=r;
@@ -766,11 +770,11 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(shownSticker(sel));// the square goes red and pulses twice, on the cube and in the flattened cross
+  if(!ok){wrong++;logMove(logCode.miss(sel,d));buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(shownSticker(sel));// the square goes red and pulses twice, on the cube and in the flattened cross
     const red=[...el,...document.querySelectorAll(`#net .st[data-c="${sel}"]`)];red.forEach(x=>{x.classList.remove('shake','wrong');x.style.animation='';void x.offsetWidth;x.classList.add('wrong')});
     setTimeout(()=>red.forEach(x=>x.classList.remove('wrong')),1400);updateStatus();return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
-  vals[sel]=d;pm[sel]=0;music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
+  vals[sel]=d;pm[sel]=0;logMove(logCode.lock(sel,d));music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
   if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
 }
 const pad=$('pad');
@@ -783,7 +787,7 @@ const sub=(a,b)=>a.map((v,i)=>v-b[i]);
 function moveFor(fi,c,kind,dirSign){const f=F[fi],n=f.map(1,1),rowDir=sub(f.map(2,1),n),colDir=sub(f.map(1,2),n);
   const move=kind==='row'?rowDir:colDir,axisVec=kind==='row'?colDir:rowDir;const a=axisOf(axisVec),v=cells[c].c[a];
   const want=move.map(x=>x*dirSign);return[a,v,k3(rotV(n,a,1))===k3(want)?1:-1]}
-function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);music.sfx('turn');
+function doTurn(m){ensureRunning();vals=turnArr(vals,...m);locked=turnArr(locked,...m);pm=turnArr(pm,...m);turns++;playerMoves.push(m);logMove(logCode.turn(m));music.sfx('turn');
   cells.forEach((x,i)=>{if(x.c[m[0]]===m[1])stickers[i].forEach(el=>{el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')})})}
 function slide(kind,dirSign){
   if(sel<0||stage!==1)return;
@@ -811,6 +815,7 @@ function hintSquare(){const sol=answer();
   const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
   sel=c;selFace=fi;hintArrow=null;focusFace(fi);render();
   hintCell=c;
+  logMove(sol?logCode.helpLock(c,sol[c]):logCode.help);
   if(sol){if(!stars.has(c))regularLocked=true;vals[c]=sol[c];pm[c]=0;music.sfx('lock');buzz(10)}
   render();if(stage!==2)return;const marks=()=>[...stickers[c],...document.querySelectorAll(`#net .st[data-c="${c}"]`)];
   marks().forEach(el=>{el.classList.remove('hintme','hintquiet');el.style.animation='';void el.offsetWidth;el.classList.add('hintme')});
@@ -825,7 +830,7 @@ function showHint(free){
   const faces=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a));
   for(const fi of faces)for(const st of document.querySelectorAll(`#cube .face:nth-child(${fi+1}) .st`)){const c=+st.dataset.c;
     for(const [kind,dir,ai] of [['row',-1,0],['row',1,1],['col',-1,2],['col',1,3]]){const mm=moveFor(fi,c,kind,dir);
-      if(mm[0]===m[0]&&mm[1]===m[1]&&mm[2]===m[2]){if(!free){hintsLeft--;hintsUsed++;journey.interaction('hint')}sel=c;selFace=fi;hintArrow=[fi,ai];render();return}}}
+      if(mm[0]===m[0]&&mm[1]===m[1]&&mm[2]===m[2]){if(!free){hintsLeft--;hintsUsed++;logMove(logCode.help);journey.interaction('hint')}sel=c;selFace=fi;hintArrow=[fi,ai];render();return}}}
 }
 $('suggest').onclick=()=>showHint(false);
 // flatten, one of the three helpers. First the main clock stops for up to 5 seconds while the player turns
@@ -885,7 +890,7 @@ function flatClock(){const left=$('nWhy').hidden?Math.max(0,flatEnd-Date.now()):
 // one clock for both steps, in the same place at the top of the stage, with the fold-back button in it
 function clockDraw(left,total){$('fTime').textContent=`0:${String(Math.ceil(left/1000)).padStart(2,'0')}`;$('fclock').style.setProperty('--left',String(left/total))}
 function pickDraw(){const left=Math.max(0,pickEnd-Date.now());clockDraw(left,PICK_MS);if(left<=0){const fi=[0,1,2,3,4,5].sort((a,b)=>facing(b)-facing(a))[0],n=F[fi].map(1,1);pickFace(fi,idx.get(key(n,n)))}}
-function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;journey.interaction('flatten');
+function flatStart(){if(flatOn||hintsLeft<=0||!P||stage===3)return;ensureRunning();hintsLeft--;hintsUsed++;logMove(logCode.help);journey.interaction('flatten');
   flatOn=true;holdClock();pickEnd=Date.now()+PICK_MS;$('pick').hidden=$('fclock').hidden=false;pickDraw();flatTick=setInterval(pickDraw,100);render()}
 function pickFace(fi,c){if(!flatOn||!$('net').hidden)return;sel=c;selFace=fi;lc=0;hintArrow=null;render();clearInterval(flatTick);releaseClock();$('pick').hidden=true;
   flatFace=fi;flatAnchor=c;flatEnd=Date.now()+FLAT_MS;$('net').hidden=false;flatBuild();flatClock();flatTick=setInterval(flatClock,200)}
@@ -1015,5 +1020,5 @@ $('tkDay').onclick=()=>{if(online){tkMsg('Today is set on the server. A moderato
   twistDay=null;try{localStorage.removeItem('nonet-twist')}catch(e){}applyTwistLock();tkMsg('Day reset: pick again.')};
 // a run that used the test tools is never sent
 tk.addEventListener('click',e=>{if(e.target.closest('.tk button'))tkUsed=true},true);
-window.__test={get sel(){return sel},get P(){return P},get vals(){return vals},get stage(){return stage},get turns(){return turns},slide,select:(c,f)=>{sel=c;selFace=f;render()},
+window.__test={get sel(){return sel},get P(){return P},get vals(){return vals},get stage(){return stage},get turns(){return turns},get moveLog(){return moveLog},runStats,slide,select:(c,f)=>{sel=c;selFace=f;render()},
   nextHomeMove,showBoards:()=>showBoards(D.boards,{kicker:`Nonet No.${D.cubeNo}`}),doTurn:m=>{doTurn(m);render()},pressDigit,setPen:v=>{penMode=v;render()},score,cells,solveCount,N};
