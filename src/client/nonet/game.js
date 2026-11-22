@@ -343,10 +343,13 @@ const WALK=[
   ['Step 2 of 4 · Pick a square','Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each line of nine across three faces. Tap the glowing square: only one number fits there.'],
   ['Step 3 of 4 · Pencil it in','Tap the glowing number on the pad. It goes in as a pencil note.'],
   ['Step 4 of 4 · Lock it in','Sure of it? Switch to Lock in, then tap the number again to place it.'],
-  ['Your turn','Fill the rest the same way. Start where only one number fits. A wrong lock is flagged so you can learn from it. Nothing is timed or scored.']];
+  ['Your turn','<div class="walkEnd"><p>Fill the rest the same way. Start where only one number fits. Nothing here is timed or scored.</p>'+
+    '<p><b>Dashed outlines.</b> Tap a square in the middle of a line and two sets of three squares get dashed outlines: three on the line, three across the cube. Both sets hold the same three numbers.</p>'+
+    '<p><b>★FIRST squares.</b> On a scored cube, three empty squares are marked ★FIRST. Lock them in before any other square for 50 points each. Get all three and you see tomorrow\'s clues early.</p>'+
+    '<p><b>Wrong locks.</b> Here a wrong lock is just flagged. On a scored cube each one costs 25 points, so pencil in when you\'re not sure.</p></div>']];
 let walk=-1,walkCell=-1,walkDigit=0;
 function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p]=WALK[n];
-  ask(t,`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
+  ask(t,p.startsWith('<')?p:`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
 // a first practice opens with what the game is before the first step
 let welcome=false;
 function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;if(tx.busy){setTimeout(coachTurn,200);return} // after the countdown, not over it
