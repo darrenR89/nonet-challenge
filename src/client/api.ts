@@ -21,6 +21,7 @@ import {
   type JoinTeamReq,
   type JoinTeamRsp,
   type NotifyRsp,
+  type RaceRsp,
   type ReplayRsp,
   type ResultCommentRsp,
   type RetryRsp,
@@ -89,6 +90,9 @@ export const useRetry = (): Promise<RetryRsp | undefined> =>
 /** Switches off (or back on) being featured as the play of the week. */
 export const setFeature = (on: boolean): Promise<FeatureRsp | undefined> =>
   call<FeatureRsp>(Endpoint.Feature, {on})
+/** A weekly top nine post's race. */
+export const getRace = (): Promise<RaceRsp | undefined> =>
+  call<RaceRsp>(Endpoint.Race)
 /** The run a play of the week post plays back. */
 export const getReplay = (): Promise<ReplayRsp | undefined> =>
   call<ReplayRsp>(Endpoint.Replay)

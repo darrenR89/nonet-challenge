@@ -20,6 +20,7 @@ import {
   EndpointMethod,
   type ErrorRsp,
   type JoinTeamRsp,
+  type RaceRsp,
   type ReplayRsp,
   type ResultCommentRsp,
   type ScoreReq,
@@ -41,7 +42,9 @@ let server: Server
 let serverURL: string
 let user: {userId?: string; username?: string} = {}
 /** The open post's data, as Devvit passes it: daily posts carry their day. */
-let postData: {day?: string; play?: string} | undefined
+let postData:
+  | {day?: string; play?: string; race?: string; from?: string; final?: boolean}
+  | undefined
 let now = new Date('2026-11-14T12:00:00Z')
 const posts: string[] = []
 /** Each interactive post's entrypoint and data, in order. */
@@ -120,9 +123,11 @@ before(async () => {
     title: string
     entry?: string
     postData?: unknown
+    textFallback?: {text?: string}
   }) => {
     posts.push(o.title)
     customPosts.push({entry: o.entry, postData: o.postData})
+    if (o.textFallback?.text) texts.push(o.textFallback.text)
     return madePost('t3_post', 'https://reddit.com/x', o.title)
   }
   r.submitPost = async (o: {title: string; text: string}) => {
@@ -415,6 +420,9 @@ test('a run scores, ranks, and only the first one counts', async () => {
   assert.equal(second.body.total, first.body.total)
 })
 
+const sumOf = (xs: unknown): number =>
+  (xs as number[]).reduce((a, b) => a + b, 0)
+
 /** A clean run of a cube and its move log: undo the scramble, then lock ★ squares first, a square a second. */
 function cleanRun(p: Puzzle): {stats: RunStats; log: MoveLog} {
   const log: MoveLog = []
@@ -610,6 +618,31 @@ test('the week board adds up days and ranks players', async () => {
     ['ann', 'bob'],
   )
   assert.equal(daily.body.boards.week.me?.rank, 2)
+})
+
+test('the weekly top nine post plays the week back from each day’s points', async () => {
+  // Saturday 14 Nov: ann and bob play; Sunday: only bob
+  const sat = await playDay(2, run())
+  as('t2_bob', 'bob')
+  const bobSat = await playDay(0, run({wrong: 4}))
+  now = new Date('2026-11-15T12:00:00Z')
+  const bobSun = await playDay(1, run())
+  postData = {race: weekKey('2026-11-15'), from: '2026-11-09', final: true}
+  const r = (await get<RaceRsp>(Endpoint.Race)).body.race
+  postData = undefined
+  assert.equal(r?.players, 2)
+  assert.deepEqual(
+    r?.rows.map(x => [x.name, x.points]),
+    [
+      ['bob', [0, 0, 0, 0, 0, bobSat.body.total, bobSun.body.total]],
+      ['ann', [0, 0, 0, 0, 0, sat.body.total, 0]],
+    ].sort((a, b) => sumOf(b[1]) - sumOf(a[1])),
+  )
+  assert.equal(r?.myName, 'bob')
+  assert.equal(r?.me, undefined)
+  assert.deepEqual(r?.streak, {name: 'bob', days: 2})
+  // a post that isn't a weekly post has no race
+  assert.equal((await get<RaceRsp>(Endpoint.Race)).body.race, undefined)
 })
 
 test('events are switched off: a saved event shows nowhere', async () => {
@@ -1490,7 +1523,7 @@ test("the app's posts get mod-only post flair, made once and then reused", async
   )
   assert.deepEqual(postFlairs, [
     ['t3_post', 'tpl1'],
-    ['t3_text', 'tpl2'],
+    ['t3_post', 'tpl2'],
   ])
   now = new Date('2026-11-17T08:01:00Z')
   await daily()
@@ -1514,6 +1547,11 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     "Nonet: today's cube · Mon 23 Nov",
     'Nonet · weekly top nine · week of Mon 16 Nov',
   ])
+  // the week's post plays the week back; the text is what old Reddit shows
+  assert.deepEqual(customPosts.at(-1), {
+    entry: 'race',
+    postData: {race: weekKey('2026-11-16'), from: '2026-11-16', final: true},
+  })
   assert.deepEqual(pins, [
     "Nonet: today's cube · Mon 23 Nov @ 1",
     'Nonet · weekly top nine · week of Mon 16 Nov @ 2',

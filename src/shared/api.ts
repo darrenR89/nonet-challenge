@@ -231,6 +231,33 @@ export type NotifyRsp = {notify: boolean}
 export type FeatureReq = {on: boolean}
 export type FeatureRsp = {feature: boolean}
 
+/** One player's points on each day of a week, Monday to Sunday (0 for a day not played). */
+export type RaceRow = {name: string; points: number[]}
+
+/** A weekly top nine post: the week played back day by day. */
+export type RaceRsp = {
+  race:
+    | {
+        week: string
+        /** The week's Monday. */
+        from: string
+        /** True on the Monday post for a finished week; false for a week so far. */
+        final: boolean
+        players: number
+        /** The week's top nine, best first by the week's total. */
+        rows: RaceRow[]
+        /** The asker, when they played this week and aren't in the top nine. */
+        me: (RaceRow & {rank: number}) | undefined
+        /** The asker's name when they are in the top nine, to pick out their bar. */
+        myName: string | undefined
+        /** The longest current streak among the top nine. */
+        streak: {name: string; days: number} | undefined
+        /** The week's top crew, once there are enough crews for a board. */
+        crew: {name: string; points: number} | undefined
+      }
+    | undefined
+}
+
 /** A play of the week post: the run, and the cube as it started, to play it back. */
 export type ReplayRsp = {
   play:
@@ -299,6 +326,7 @@ export const Endpoint = {
   Notify: 'api/notify',
   Feature: 'api/feature',
   Replay: 'api/replay',
+  Race: 'api/race',
   JoinSub: 'api/join',
   Challenge: 'api/challenge',
   Answer: 'api/challenge/answer',
@@ -341,6 +369,7 @@ export const EndpointMethod = {
   [Endpoint.Notify]: 'POST',
   [Endpoint.Feature]: 'POST',
   [Endpoint.Replay]: 'GET',
+  [Endpoint.Race]: 'GET',
   [Endpoint.JoinSub]: 'POST',
   [Endpoint.Challenge]: 'POST',
   [Endpoint.Answer]: 'POST',

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "devvit playtest",
     "build": "npm run build:client -- --metafile=dist/client.meta.json --minify && npm run build:server -- --metafile=dist/server.meta.json --minify",
-    "build:client": "node tools/entries.mjs && esbuild --bundle --log-level=warning --sourcemap=linked --target=es2023 --format=esm --outdir=public --platform=browser src/client/splash.ts src/client/game.ts src/client/replay.ts --external:/brand/* --external:/fonts/*",
+    "build:client": "node tools/entries.mjs && esbuild --bundle --log-level=warning --sourcemap=linked --target=es2023 --format=esm --outdir=public --platform=browser src/client/splash.ts src/client/game.ts src/client/replay.ts src/client/race.ts --external:/brand/* --external:/fonts/*",
     "build:server": "esbuild --bundle --log-level=warning --sourcemap=linked --target=es2023 --format=cjs --outdir=dist/server --platform=node src/server/index.ts",
     "check:setup": "playwright install chromium webkit",
     "check:ui": "node tools/check/sweep.mjs",

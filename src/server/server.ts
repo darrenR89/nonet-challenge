@@ -42,6 +42,7 @@ import {
   type NotifyReq,
   type NotifyRsp,
   type Preview,
+  type RaceRsp,
   RETRY_MULT,
   type ReplayRsp,
   type ResultCommentRsp,
@@ -146,6 +147,7 @@ import {
 } from './events.ts'
 import {cubeList} from './export.ts'
 import {claimFounder, flairAfterSolve, lapseFlair} from './flair.ts'
+import {weekRace} from './race.ts'
 import {
   clockTime,
   featureOn,
@@ -255,6 +257,9 @@ async function route(
         break
       case Endpoint.Replay:
         rsp = await routeReplay()
+        break
+      case Endpoint.Race:
+        rsp = await routeRace()
         break
       case Endpoint.JoinSub:
         rsp = await routeJoinSub()
@@ -1113,6 +1118,18 @@ async function routeFeature(req: FeatureReq): Promise<FeatureRsp> {
   return {feature: req.on}
 }
 
+/** A weekly top nine post's race. The week comes from the post. */
+async function routeRace(): Promise<RaceRsp> {
+  const d = context.postData as
+    | {race?: unknown; from?: unknown; final?: unknown}
+    | undefined
+  if (typeof d?.race !== 'string' || typeof d.from !== 'string')
+    return {race: undefined}
+  return {
+    race: await weekRace(d.race, d.from, d.final === true, context.userId),
+  }
+}
+
 /** A play of the week post's run: the week comes from the post, the run was fixed when it went up. */
 async function routeReplay(): Promise<ReplayRsp> {
   const todayPost = (await redis.hGet(DAILY_POSTS, today())) ?? ''
@@ -1500,9 +1517,12 @@ async function postWeekResults(
       ? `Rules, records and past weeks are on [the Nonet wiki](${wikiUrl(sub)}).`
       : '',
   ]
-  const post = await reddit.submitPost({
+  // an interactive post that plays the week back; old Reddit and other apps show the text
+  const post = await reddit.submitCustomPost({
     title: `Nonet · weekly top nine${final ? '' : ' so far'} · week of ${shortDate(from)}`,
-    text: text.filter(Boolean).join('\n\n'),
+    entry: 'race',
+    postData: {race: week, from, final},
+    textFallback: {text: text.filter(Boolean).join('\n\n')},
   })
   await flairPost(post.id, 'week')
   await pin(post, 2)

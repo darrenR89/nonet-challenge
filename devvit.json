@@ -29,6 +29,9 @@
       },
       "replay": {
         "entry": "replay.html"
+      },
+      "race": {
+        "entry": "race.html"
       }
     }
   },
