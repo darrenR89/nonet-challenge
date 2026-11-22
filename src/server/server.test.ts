@@ -1397,7 +1397,15 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.match(text, /\[the Nonet wiki\]\(\/r\/nonetdaily\/wiki\/nonet\)/)
 
-  assert.equal(wiki.created, 7, 'the home page and six more')
+  assert.equal(
+    wiki.created,
+    8,
+    'the home page, six more, and the front page the subreddit had none of',
+  )
+  assert.match(
+    wiki.pages.get('index') ?? '',
+    /\(\/r\/nonetdaily\/wiki\/nonet\)/,
+  )
   assert.match(
     wiki.pages.get('nonet/records') ?? '',
     /\| Mon 16 Nov \| u\/(ann|bob) · [\d,]+ \| u\/bob · /,
@@ -1415,7 +1423,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     menu.body.navigateTo,
     'https://www.reddit.com/r/nonetdaily/wiki/nonet',
   )
-  assert.equal(wiki.created, 7, 'the menu rewrites the same pages')
+  assert.equal(wiki.created, 8, 'the menu rewrites the same pages')
 })
 
 test('a mod can message themselves the cube list; players never get it', async () => {

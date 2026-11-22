@@ -393,6 +393,23 @@ export function wikiPages(d: WikiData, sub: string): Map<string, string> {
   ])
 }
 
+/**
+ * The subreddit's wiki front page, `index`, when it has none: the page Reddit's own Wiki link
+ * opens. It points to the Nonet pages. The app writes it only once, so a mod's own front page is
+ * never replaced. Pure, for tests.
+ */
+export function indexPage(sub: string): string {
+  const contents = WIKI_PAGES.map(([p]) => `- ${link(sub, p)}`).join('\n')
+  return `# r/${sub} wiki
+
+## ${link(sub, undefined, 'Nonet: the daily 3D sudoku')}
+
+Rules, scoring, streaks, crews and records for the game in today's pinned post.
+
+${contents}
+`
+}
+
 /** Writes every page, making each on the first run. Only mods and approved editors can change them. */
 export async function publishWiki(
   day: string,
@@ -430,4 +447,18 @@ export async function publishWiki(
       permLevel: 1,
     })
   }
+  // the front page, only when the subreddit has none yet
+  const hasIndex = await reddit
+    .getWikiPage(sub, 'index')
+    .then(() => true)
+    .catch(() => false)
+  if (!hasIndex)
+    await reddit
+      .createWikiPage({
+        subredditName: sub,
+        page: 'index',
+        content: indexPage(sub),
+        reason,
+      })
+      .catch(err => console.warn(`wiki index failed: ${err}`))
 }
