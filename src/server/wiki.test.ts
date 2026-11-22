@@ -168,3 +168,21 @@ test('the wiki front page links to the Nonet home page and each of its pages', (
       `no link to ${p}`,
     )
 })
+
+test('How to play sends newcomers to the guided practice in today’s post', () => {
+  const how = (post?: string) =>
+    wikiPages({...data, post}, 's').get(pageName('how-to-play')) ?? ''
+  const withPost = how('t3_abc12')
+  assert.match(
+    withPost,
+    /open \[today's cube\]\(https:\/\/www\.reddit\.com\/r\/s\/comments\/abc12\/\) and tap \*\*Practice cube\*\*/,
+  )
+  assert.match(
+    withPost,
+    /a ★ lock-first square, a wrong lock and the dashed squares/,
+  )
+  assert.match(
+    how(),
+    /open today's cube in \[r\/s\]\(https:\/\/www\.reddit\.com\/r\/s\/\)/,
+  )
+})

@@ -61,6 +61,8 @@ export type WikiData = {
   streaks: Board
   all: Board
   weeks: WeekRecord[]
+  /** Today's cube post, where the guided practice opens from. */
+  post?: string
 }
 
 /** The wiki's pages, under the main one: path after `nonet/`, and the title in the contents. */
@@ -180,8 +182,16 @@ const BLURBS: Record<WikiPage, string> = {
   faq: 'short answers to common questions.',
 }
 
+/** Today's cube post as a link, or the subreddit when there's none yet. */
+const todayLink = (d: WikiData, sub: string): string =>
+  d.post
+    ? `[today's cube](https://www.reddit.com/r/${sub}/comments/${d.post.replace(/^t3_/, '')}/)`
+    : `today's cube in [r/${sub}](https://www.reddit.com/r/${sub}/)`
+
 function howToPlay(d: WikiData, sub: string): string {
   return `# How to play
+
+New to Nonet? The quickest way to learn is the guided practice: open ${todayLink(d, sub)} and tap **Practice cube**. It walks you through every step on a small cube, with no clock and no score.
 
 ## 1. Dial in
 
@@ -215,7 +225,7 @@ You get 3 helpers per cube. Using none adds 100 points.
 
 ## Practice
 
-"Practice cube" on the start screen is a guided walkthrough on a small cube: one turn to undo, then a half-filled cube. It has no clock and no score, and you can play it any time.
+"Practice cube" on the start screen is a guided walkthrough: rotate the cube back, pick a square, pencil it in, then lock it in. Along the way the game shows you a ★ lock-first square, a wrong lock and the dashed squares, then leaves you the last quarter of the cube to finish. It has no clock and no score, and you can play it any time from ${todayLink(d, sub)}.
 
 ${foot(d, sub)}`
 }
@@ -420,6 +430,7 @@ export async function publishWiki(
   sub: string,
   flair: boolean,
   founders = false,
+  post?: string,
 ): Promise<void> {
   const pages = wikiPages(
     {
@@ -429,6 +440,7 @@ export async function publishWiki(
       streaks: await longestStreaks(),
       all: await readBoard(boardKey.all, 'All time', undefined),
       weeks: await pastWeeks(),
+      post,
     },
     sub,
   )
