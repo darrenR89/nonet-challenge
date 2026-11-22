@@ -7,7 +7,7 @@ import {
   redis,
   type Widget,
 } from '@devvit/web/server'
-import {wikiPath} from './wiki.ts'
+import {wikiUrl} from './wiki.ts'
 
 export const FLAIR_WIDGET = 'Nonet posts'
 export const WIKI_WIDGET = 'New to Nonet?'
@@ -35,7 +35,7 @@ export function wikiWidget(sub: string): AddWidgetData {
       {
         kind: 'text',
         text: 'How to play: Nonet wiki',
-        url: `https://www.reddit.com${wikiPath(sub)}`,
+        url: wikiUrl(sub),
         color: '#121316',
         fillColor: '#f5c12e',
         textColor: '#121316',

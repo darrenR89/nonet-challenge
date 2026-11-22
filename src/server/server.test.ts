@@ -1411,7 +1411,10 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
       `\\*\\*Solve of the week\\.\\*\\* u/bob scored ${bob.body.total.toLocaleString('en-GB')} on Mon 16 Nov \\(cube #320\\): 3 turns, 2:10, all three ★, no misses\\.`,
     ),
   )
-  assert.match(text, /\[the Nonet wiki\]\(\/r\/nonetdaily\/wiki\/nonet\)/)
+  assert.match(
+    text,
+    /\[the Nonet wiki\]\(https:\/\/old\.reddit\.com\/r\/nonetdaily\/wiki\/nonet\)/,
+  )
 
   assert.equal(
     wiki.created,
@@ -1419,11 +1422,14 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     'the home page, six more and a front page, in both the old and the new wiki',
   )
   assert.equal(
-    JSON.parse(wiki.pages.get('v2:nonet/records') ?? '{}').document?.[0]?.e,
-    'h',
-    'the new wiki gets the pages as rich text',
+    wiki.pages.get('v2:nonet/records'),
+    'The Nonet page is on old Reddit: https://old.reddit.com/r/nonetdaily/wiki/nonet/records',
+    'the new wiki points to the full page on old Reddit',
   )
-  assert.ok(wiki.pages.has('v2:index'))
+  assert.equal(
+    wiki.pages.get('v2:index'),
+    'The Nonet wiki is on old Reddit: https://old.reddit.com/r/nonetdaily/wiki/nonet',
+  )
   assert.match(
     wiki.pages.get('index') ?? '',
     /\(\/r\/nonetdaily\/wiki\/nonet\)/,
@@ -1443,7 +1449,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.equal(
     menu.body.navigateTo,
-    'https://www.reddit.com/r/nonetdaily/wiki/nonet',
+    'https://old.reddit.com/r/nonetdaily/wiki/nonet',
   )
   assert.equal(wiki.created, 16, 'the menu rewrites the same pages')
 })

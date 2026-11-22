@@ -22,13 +22,25 @@ import {
 import {boardKey, readBoard} from './board.ts'
 import {FLAIR_FROM, FOUNDERS} from './flair.ts'
 import {longestStreaks, pastWeeks, type WeekRecord} from './records.ts'
-import {markdownToRichtext} from './richtext.ts'
 
 export const WIKI_PAGE = 'nonet'
 /** Past weeks listed on the page, newest first. */
 export const WIKI_WEEKS = 12
 
-export const wikiPath = (sub: string): string => `/r/${sub}/wiki/${WIKI_PAGE}`
+/**
+ * A page of the Nonet wiki on old Reddit, where it is shown as written. The newer wiki that
+ * reddit.com shows displays pages written by apps as plain text, so links go to old Reddit.
+ */
+export const wikiUrl = (sub: string, page = WIKI_PAGE): string =>
+  `https://old.reddit.com/r/${sub}/wiki/${page}`
+
+/**
+ * What the newer wiki gets instead of a page: it shows text from apps as one plain paragraph,
+ * links included, so each page there is one line pointing to the full page on old Reddit.
+ * Pure, for tests.
+ */
+export const pointerPage = (sub: string, page: string): string =>
+  `The Nonet ${page === 'index' ? 'wiki' : 'page'} is on old Reddit: ${wikiUrl(sub, page === 'index' ? WIKI_PAGE : page)}`
 
 const pts = (n: number): string => n.toLocaleString('en-GB')
 
@@ -451,11 +463,10 @@ async function writePages(
       .getWikiPage(sub, page, {wikiVersion})
       .then(() => true)
       .catch(() => false)
-  // the new wiki shows markdown as plain text, so it gets the pages as rich text
-  const body = (md: string): string =>
-    wikiVersion === 'v2' ? markdownToRichtext(md) : md
+  // the newer wiki shows app-written pages as plain text, so it gets one line per page that
+  // points to the same page on old Reddit
   for (const [page, md] of pages) {
-    const content = body(md)
+    const content = wikiVersion === 'v2' ? pointerPage(sub, page) : md
     if (await has(page)) {
       await reddit.updateWikiPage({
         subredditName: sub,
@@ -490,7 +501,8 @@ async function writePages(
       .createWikiPage({
         subredditName: sub,
         page: 'index',
-        content: body(indexPage(sub)),
+        content:
+          wikiVersion === 'v2' ? pointerPage(sub, 'index') : indexPage(sub),
         reason,
         wikiVersion,
       })

@@ -17,7 +17,7 @@ test('the wiki button opens the Nonet wiki of this subreddit', () => {
   assert.equal(w.buttons[0]?.text, 'How to play: Nonet wiki')
   assert.equal(
     w.buttons[0]?.url,
-    'https://www.reddit.com/r/nonet_challenge_dev/wiki/nonet',
+    'https://old.reddit.com/r/nonet_challenge_dev/wiki/nonet',
   )
 })
 
