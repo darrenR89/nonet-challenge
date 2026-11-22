@@ -28,12 +28,9 @@ export const WIKI_PAGE = 'nonet'
 /** Past weeks listed on the page, newest first. */
 export const WIKI_WEEKS = 12
 
-/**
- * A page of the Nonet wiki on old Reddit, where it is shown as written. The newer wiki that
- * reddit.com shows displays pages written by apps as plain text, so links go to old Reddit.
- */
+/** A page of the Nonet wiki on reddit.com, which shows the HTML copy written for the newer wiki. */
 export const wikiUrl = (sub: string, page = WIKI_PAGE): string =>
-  `https://old.reddit.com/r/${sub}/wiki/${page}`
+  `https://www.reddit.com/r/${sub}/wiki/${page}`
 
 const pts = (n: number): string => n.toLocaleString('en-GB')
 
@@ -131,7 +128,7 @@ function example(): string {
     starsWon: 2,
   })
   const line = (what: string, n: number): string => `| ${what} | ${pts(n)} |`
-  return `Say it's a Medium day and you pick 2 turns. You dial in with 3 turns (one more than you needed) in 30 seconds, then fill the 40 empty squares in 5 minutes with one wrong lock, using no helpers and locking two of the ★ squares first.
+  return `Say it's a Medium day and you pick 2 turns. You dial in with 3 turns (one more than you needed) in 30 seconds, then fill the 40 empty squares in 5 minutes with one wrong lock, using no helpers and locking two of the ★ lock-first squares first.
 
 | | Points |
 |:--|--:|
@@ -140,7 +137,7 @@ ${line(`Dial-in speed (target ${s.T1} seconds)`, s.sp1)}
 ${line(`Fill-in speed (target ${Math.round(s.T2 / 60)} minutes)`, s.sp2)}
 ${line('Accuracy (one wrong lock)', s.acc)}
 ${line('No helpers', s.bonus)}
-${line('Two ★ squares', s.starPts)}
+${line('Two ★ lock-first squares', s.starPts)}
 ${line('Before the multiplier', s.raw)}
 | **×${s.mult} for 2 turns on Medium** | **${pts(s.total)}** |`
 }
@@ -171,7 +168,8 @@ ${foot(d, sub)}`
 }
 
 const BLURBS: Record<WikiPage, string> = {
-  'how-to-play': 'the two stages, the controls, ★ squares and the helpers.',
+  'how-to-play':
+    'the two stages, the controls, ★ lock-first squares and the helpers.',
   scoring:
     'where every point comes from, the multipliers and a worked example.',
   streaks:
@@ -196,7 +194,7 @@ With 0 turns there's nothing to dial in, and you go straight to filling.
 Each face holds 1 to 9 once. So does each **line of nine**: a long row that runs straight across three faces. Tap a square to light up its two lines in blue.
 
 - **Pencil or Lock in.** Pencil numbers in as notes, or switch to Lock in when you're sure. A wrong lock shakes, won't stay, and costs 25 points.
-- **★ Lock-first squares.** Three squares carry a star. Lock all three before any other square for +50 each, and a look at tomorrow's clues.
+- **★ Lock-first squares.** Three empty squares are marked ★FIRST. Lock all three before any other square for +50 each, and a look at tomorrow's clues.
 - **Dashed squares.** Each ring of twelve squares around the cube holds two lines that share six squares. So the three squares on a line's middle face hold the same three numbers as three squares across the cube. Tap one of those middle squares and both sets of three are dashed.
 - **Easy days.** On Easy cubes the back face is a copy of the front.
 
