@@ -49,6 +49,9 @@ const pins: string[] = []
 const flairs = new Map<string, string>()
 /** The wiki pages as the app last wrote them, and how many pages were created. */
 const wiki = {pages: new Map<string, string>(), created: 0}
+/** Pages in the v2 wiki (reddit.com and the apps) are kept under `v2:` + their name. */
+const wikiKey = (page: string, o?: {wikiVersion?: string}): string =>
+  o?.wikiVersion === 'v2' ? `v2:${page}` : page
 let autoPost: boolean | undefined = true
 let pinPosts: boolean | undefined = true
 let crewFlair = false
@@ -142,17 +145,30 @@ before(async () => {
   r.setPostFlair = async (o: {postId: string; flairTemplateId: string}) => {
     postFlairs.push([o.postId, o.flairTemplateId])
   }
-  r.getWikiPage = async (_sub: string, page: string) => {
-    const content = wiki.pages.get(page)
+  r.isWikiV2Enabled = async () => true
+  r.getWikiPage = async (
+    _sub: string,
+    page: string,
+    o?: {wikiVersion?: string},
+  ) => {
+    const content = wiki.pages.get(wikiKey(page, o))
     if (content === undefined) throw new Error('PAGE_NOT_FOUND')
     return {content}
   }
-  r.createWikiPage = async (o: {page: string; content: string}) => {
+  r.createWikiPage = async (o: {
+    page: string
+    content: string
+    wikiVersion?: string
+  }) => {
     wiki.created++
-    wiki.pages.set(o.page, o.content)
+    wiki.pages.set(wikiKey(o.page, o), o.content)
   }
-  r.updateWikiPage = async (o: {page: string; content: string}) => {
-    wiki.pages.set(o.page, o.content)
+  r.updateWikiPage = async (o: {
+    page: string
+    content: string
+    wikiVersion?: string
+  }) => {
+    wiki.pages.set(wikiKey(o.page, o), o.content)
   }
   r.updateWikiPageSettings = async () => ({})
   // every name is a Reddit user except "ghost"
@@ -1397,7 +1413,21 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.match(text, /\[the Nonet wiki\]\(\/r\/nonetdaily\/wiki\/nonet\)/)
 
-  assert.equal(wiki.created, 7, 'the home page and six more')
+  assert.equal(
+    wiki.created,
+    16,
+    'the home page, six more and a front page, in both the old and the new wiki',
+  )
+  assert.equal(
+    wiki.pages.get('v2:nonet/records'),
+    wiki.pages.get('nonet/records'),
+    'the new wiki has the same pages',
+  )
+  assert.ok(wiki.pages.has('v2:index'))
+  assert.match(
+    wiki.pages.get('index') ?? '',
+    /\(\/r\/nonetdaily\/wiki\/nonet\)/,
+  )
   assert.match(
     wiki.pages.get('nonet/records') ?? '',
     /\| Mon 16 Nov \| u\/(ann|bob) · [\d,]+ \| u\/bob · /,
@@ -1415,7 +1445,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     menu.body.navigateTo,
     'https://www.reddit.com/r/nonetdaily/wiki/nonet',
   )
-  assert.equal(wiki.created, 7, 'the menu rewrites the same pages')
+  assert.equal(wiki.created, 16, 'the menu rewrites the same pages')
 })
 
 test('a mod can message themselves the cube list; players never get it', async () => {

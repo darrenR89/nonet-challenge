@@ -4,7 +4,7 @@ import type {Board} from '../shared/api.ts'
 import {crewFlair} from '../shared/crew.ts'
 import {streakFlair} from './flair.ts'
 import {clockTime, spotText} from './records.ts'
-import {pageName, WIKI_PAGES, wikiPages} from './wiki.ts'
+import {indexPage, pageName, WIKI_PAGES, wikiPages} from './wiki.ts'
 
 const board = (rows: [string, number][]): Board => ({
   key: 'k',
@@ -157,4 +157,14 @@ test('streaks, flair, crews and records each have their page', () => {
   const quiet = wikiPages({...data, flair: false, founders: false}, 's')
   for (const md of quiet.values())
     assert.doesNotMatch(md, /flair here|founder #/)
+})
+
+test('the wiki front page links to the Nonet home page and each of its pages', () => {
+  const md = indexPage('nonet_challenge_dev')
+  assert.ok(md.includes('(/r/nonet_challenge_dev/wiki/nonet)'))
+  for (const [p] of WIKI_PAGES)
+    assert.ok(
+      md.includes(`(/r/nonet_challenge_dev/wiki/${pageName(p)})`),
+      `no link to ${p}`,
+    )
 })
