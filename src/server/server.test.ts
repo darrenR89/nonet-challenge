@@ -1421,14 +1421,14 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     16,
     'the home page, six more and a front page, in both the old and the new wiki',
   )
-  assert.equal(
-    wiki.pages.get('v2:nonet/records'),
-    'The Nonet page is on old Reddit: https://old.reddit.com/r/nonetdaily/wiki/nonet/records',
-    'the new wiki points to the full page on old Reddit',
+  assert.match(
+    wiki.pages.get('v2:nonet/records') ?? '',
+    /^<h1>Records<\/h1>/,
+    'the new wiki gets the pages as HTML',
   )
-  assert.equal(
-    wiki.pages.get('v2:index'),
-    'The Nonet wiki is on old Reddit: https://old.reddit.com/r/nonetdaily/wiki/nonet',
+  assert.match(
+    wiki.pages.get('v2:index') ?? '',
+    /<a href="https:\/\/www\.reddit\.com\/r\/nonetdaily\/wiki\/nonet">/,
   )
   assert.match(
     wiki.pages.get('index') ?? '',
