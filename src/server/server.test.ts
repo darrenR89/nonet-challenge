@@ -1419,9 +1419,9 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     'the home page, six more and a front page, in both the old and the new wiki',
   )
   assert.equal(
-    wiki.pages.get('v2:nonet/records'),
-    wiki.pages.get('nonet/records'),
-    'the new wiki has the same pages',
+    JSON.parse(wiki.pages.get('v2:nonet/records') ?? '{}').document?.[0]?.e,
+    'h',
+    'the new wiki gets the pages as rich text',
   )
   assert.ok(wiki.pages.has('v2:index'))
   assert.match(
