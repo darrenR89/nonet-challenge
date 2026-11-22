@@ -28,12 +28,9 @@ export const WIKI_PAGE = 'nonet'
 /** Past weeks listed on the page, newest first. */
 export const WIKI_WEEKS = 12
 
-/**
- * A page of the Nonet wiki on old Reddit, where it is shown as written. The newer wiki that
- * reddit.com shows displays pages written by apps as plain text, so links go to old Reddit.
- */
+/** A page of the Nonet wiki on reddit.com, which shows the HTML copy written for the newer wiki. */
 export const wikiUrl = (sub: string, page = WIKI_PAGE): string =>
-  `https://old.reddit.com/r/${sub}/wiki/${page}`
+  `https://www.reddit.com/r/${sub}/wiki/${page}`
 
 const pts = (n: number): string => n.toLocaleString('en-GB')
 
