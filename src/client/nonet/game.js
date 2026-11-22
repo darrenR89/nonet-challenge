@@ -382,8 +382,18 @@ function finishStage1(){
   $('banner').hidden=true; // a scored run goes straight on to Fill in, with no summary banner over the board
   $('banner').textContent=P.k===0?`No turns today: fill the cube. Lock the three ★ lock-first squares before any others for +50 each.`:`Dialled in with ${turns} turn${turns===1?'':'s'} (fewest ${P.k}) in ${fmt(t1)}. Fill in the cube. Lock the three ★ lock-first squares before any others for +50 each.`;
 }
+// where the cube is drawn on screen: the box round its faces, since the cube element itself has no size
+function cubeBox(){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const f of cubeEl.querySelectorAll('*')){const r=f.getBoundingClientRect();if(!r.width)continue;x0=Math.min(x0,r.left);y0=Math.min(y0,r.top);x1=Math.max(x1,r.right);y1=Math.max(y1,r.bottom)}
+  return x1>x0?{x:(x0+x1)/2,y:(y0+y1)/2,w:x1-x0,h:y1-y0}:null}
+// when the keypad goes away on a solve the board lays out again and the cube would jump to its new
+// place: it glides there from where it was instead
+let glideFrom=null;
+function glideCube(){const a=glideFrom;glideFrom=null;if(!a||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const b=cubeBox();if(!b)return;const dx=a.x-b.x,dy=a.y-b.y,k=Math.max(a.w,a.h)/Math.max(b.w,b.h);
+  if(Math.abs(dx)<2&&Math.abs(dy)<2&&Math.abs(k-1)<.02)return;
+  cubeEl.animate([{translate:`${dx}px ${dy}px`,scale:`${k}`},{translate:'0 0',scale:'1'}],{duration:900,easing:'cubic-bezier(.45,0,.2,1)'})}
 function finishStage2(){
-  t2=nowSec();stage=3;sel=-1;clearRun();
+  glideFrom=cubeBox();t2=nowSec();stage=3;sel=-1;clearRun();
   $('banner').hidden=true;updateRunButtons();
   if(isPrac()){journey.end(true,true,0);$('results').hidden=false;$('results').innerHTML=`<h2>Practice complete</h2><p>You cleared the conflicts and filled the cube${wrong?` with ${wrong} wrong lock${wrong===1?'':'s'}`:' with no wrong locks'}. Today's cube works the same way, with fewer clues. Pick how many turns scramble it, or none and just fill it in.</p><button id="toEasy" class="primary">Play today's cube</button>`;
     $('toEasy').onclick=()=>{tier=twistDay??Math.min(1,maxTurns(level));showSplash();if(!(D&&(D.past||D.my&&D.my.score!==undefined)))setTimeout(()=>$('spPlay').click(),450)};return}
@@ -439,8 +449,7 @@ function dropIn(sp){return new Promise(done=>{
   sp.style.opacity='1';sp.style.clipPath='inset(0 0 100% 0)';stageEl.style.transform=`translateY(${-H}px)`;
   const step=now=>{
     // measured once the stage has its full-screen layout: the cube is drawn bigger there
-    if(!t0){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const f of cubeEl.querySelectorAll('*')){const r=f.getBoundingClientRect();if(!r.width)continue;x0=Math.min(x0,r.left);y0=Math.min(y0,r.top);x1=Math.max(x1,r.right);y1=Math.max(y1,r.bottom)}
-      sc=x1>x0?big/Math.max(40,Math.min(x1-x0,y1-y0)):1;t0=last=now}
+    if(!t0){const c=cubeBox();sc=c?big/Math.max(40,Math.min(c.w,c.h)):1;t0=last=now}
     const e=Math.min(1,(now-t0)/DUR),dt=(now-last)/1000;last=now;a+=240*dt;
     // the cube's centre, from just above the top to just below the bottom
     const cy=-big/2+ease(e)*(H+big);
@@ -681,6 +690,7 @@ function render(){
   moments(home);
   updateStatus();
   placeArrows();
+  if(glideFrom)glideCube();
 }
 // bigger moments as the cube comes together: a clue home pops, a finished line sweeps yellow,
 // a finished face glows, and a word over the cube marks the big steps. A new cube starts quiet.
