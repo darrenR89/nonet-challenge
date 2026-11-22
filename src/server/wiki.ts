@@ -428,37 +428,66 @@ export async function publishWiki(
     },
     sub,
   )
+  // old Reddit reads the v1 wiki; reddit.com and the apps read v2 where the subreddit has it on.
+  // The two are separate wikis, so the pages are written to each.
+  const v2 = await reddit.isWikiV2Enabled(sub).catch(err => {
+    console.warn(`wiki v2 check failed: ${err}`)
+    return false
+  })
+  for (const wikiVersion of v2 ? (['v1', 'v2'] as const) : (['v1'] as const))
+    await writePages(sub, pages, wikiVersion)
+}
+
+/** Writes the pages to one version of the wiki, and its front page when it has none. */
+async function writePages(
+  sub: string,
+  pages: Map<string, string>,
+  wikiVersion: 'v1' | 'v2',
+): Promise<void> {
   const reason = 'Nonet: rules and records'
-  for (const [page, content] of pages) {
-    const exists = await reddit
-      .getWikiPage(sub, page)
+  const has = (page: string): Promise<boolean> =>
+    reddit
+      .getWikiPage(sub, page, {wikiVersion})
       .then(() => true)
       .catch(() => false)
-    if (exists) {
-      await reddit.updateWikiPage({subredditName: sub, page, content, reason})
+  for (const [page, content] of pages) {
+    if (await has(page)) {
+      await reddit.updateWikiPage({
+        subredditName: sub,
+        page,
+        content,
+        reason,
+        wikiVersion,
+      })
       continue
     }
-    await reddit.createWikiPage({subredditName: sub, page, content, reason})
-    await reddit.updateWikiPageSettings({
+    await reddit.createWikiPage({
       subredditName: sub,
       page,
-      listed: true,
-      // approved contributors only (the enum is exported as a type only)
-      permLevel: 1,
+      content,
+      reason,
+      wikiVersion,
     })
+    await reddit
+      .updateWikiPageSettings({
+        subredditName: sub,
+        page,
+        listed: true,
+        // approved contributors only (the enum is exported as a type only)
+        permLevel: 1,
+        wikiVersion,
+      })
+      .catch(err => console.warn(`wiki ${wikiVersion} settings failed: ${err}`))
   }
-  // the front page, only when the subreddit has none yet
-  const hasIndex = await reddit
-    .getWikiPage(sub, 'index')
-    .then(() => true)
-    .catch(() => false)
-  if (!hasIndex)
+  // the front page, only when this wiki has none yet
+  if (!(await has('index')))
     await reddit
       .createWikiPage({
         subredditName: sub,
         page: 'index',
         content: indexPage(sub),
         reason,
+        wikiVersion,
       })
-      .catch(err => console.warn(`wiki index failed: ${err}`))
+      .catch(err => console.warn(`wiki ${wikiVersion} index failed: ${err}`))
 }
