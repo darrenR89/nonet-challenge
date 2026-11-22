@@ -5,6 +5,7 @@ import {after, before, beforeEach, test} from 'node:test'
 import {telemetry} from '@devvit/analytics/server/reddit'
 import {
   type Context,
+  media,
   notifications,
   reddit,
   redis,
@@ -73,6 +74,7 @@ let commentFails = false
 const messages: [string, string][] = []
 
 const r = reddit as unknown as Record<string, unknown>
+let uploads = 0
 const s = settings as unknown as Record<string, unknown>
 const was = {
   submitCustomPost: r.submitCustomPost,
@@ -146,6 +148,10 @@ before(async () => {
     postFlairs.push([o.postId, o.flairTemplateId])
   }
   r.isWikiV2Enabled = async () => true
+  ;(media as unknown as Record<string, unknown>).upload = async () => {
+    uploads++
+    return {mediaId: 'm1', mediaUrl: 'https://i.redd.it/nonet-header.jpg'}
+  }
   r.getWikiPage = async (
     _sub: string,
     page: string,
@@ -1385,6 +1391,7 @@ test("the app's posts get mod-only post flair, made once and then reused", async
 
 test("Monday's post has the weekly top nine and the solve of the week, is pinned, and the wiki is written", async () => {
   now = new Date('2026-11-16T12:00:00Z') // Monday, week of 16 Nov
+  const uploadsBefore = uploads
   const ann = await playDay(1, run())
   as('t2_bob', 'bob')
   const bob = await playDay(3, run({turns: 3, t1: 30, t2: 100}))
@@ -1427,6 +1434,17 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     'the new wiki gets the pages as HTML',
   )
   assert.match(
+    wiki.pages.get('v2:nonet') ?? '',
+    /^<p><img src="https:\/\/i\.redd\.it\/nonet-header\.jpg" alt="Nonet: daily sudoku challenges"><\/p>\n<h1>/,
+    'the new wiki shows the name and a cube above the main page',
+  )
+  assert.doesNotMatch(wiki.pages.get('nonet') ?? '', /<img/)
+  assert.equal(
+    uploads - uploadsBefore,
+    1,
+    'the picture is uploaded once and its address kept',
+  )
+  assert.match(
     wiki.pages.get('v2:index') ?? '',
     /<a href="https:\/\/www\.reddit\.com\/r\/nonetdaily\/wiki\/nonet">/,
   )
@@ -1452,6 +1470,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
     'https://www.reddit.com/r/nonetdaily/wiki/nonet',
   )
   assert.equal(wiki.created, 16, 'the menu rewrites the same pages')
+  assert.equal(uploads - uploadsBefore, 1, 'and uses the picture it kept')
 })
 
 test('a mod can message themselves the cube list; players never get it', async () => {

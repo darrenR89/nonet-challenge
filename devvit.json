@@ -129,6 +129,7 @@
   },
   "permissions": {
     "journeys": true,
+    "media": true,
     "reddit": {
       "enable": true,
       "asUser": ["SUBMIT_COMMENT"]

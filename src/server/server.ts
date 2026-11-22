@@ -1348,6 +1348,7 @@ async function writeWiki(day: string): Promise<string | undefined> {
     sub,
     await setting('streakFlair'),
     await setting('founderFlair'),
+    await redis.hGet(DAILY_POSTS, day),
   )
   return wikiUrl(sub)
 }
