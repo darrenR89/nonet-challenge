@@ -106,6 +106,8 @@ export function makeRoom(canvas) {
     if (instant || reduce()) { view = to; if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; draw(); }); } return; }
     from = view; t0 = performance.now(); raf = requestAnimationFrame(frame);
   }
-  new ResizeObserver(() => draw()).observe(canvas);
+  // drawn on the next frame, not inside the observer, so sizing the canvas can't start a resize loop
+  let sized = 0;
+  new ResizeObserver(() => { if (!sized) sized = requestAnimationFrame(() => { sized = 0; draw(); }); }).observe(canvas);
   return {set};
 }
