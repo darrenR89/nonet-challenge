@@ -29,6 +29,9 @@ export type WeekRecord = {
 }
 
 const spotKey = (week: string): string => `spot:${week}`
+const logKey = (day: string): string => `runlog:${day}`
+/** Checked move logs stay ten days: long enough for the Monday post to pick from the week before. */
+const LOG_TTL = 10 * 86400
 export const streaksKey = 'streaks:best'
 const weeksKey = 'weeks'
 
@@ -56,6 +59,122 @@ export async function noteSolve(
     stars: String(run.stars),
     wrong: String(run.wrong),
   })
+}
+
+/** A counted run with a checked move log, kept for the play of the week. */
+export type LoggedRun = {
+  log: number[]
+  score: number
+  tier: number
+  /** Seconds, both stages. */
+  time: number
+  stars: number
+  wrong: number
+}
+
+/** The play of the week, as its post shows it. */
+export type PlayOfWeek = LoggedRun & {uid: string; name: string; day: string}
+
+const candKey = (week: string): string => `playweek:${week}`
+const featuredKey = (week: string): string => `playweek:${week}:post`
+const noFeatureKey = 'nofeature'
+
+/** Keeps a counted run's checked move log for ten days, as a candidate for the play of the week. */
+export async function saveRunLog(
+  day: string,
+  uid: string,
+  run: LoggedRun,
+): Promise<void> {
+  await redis.hSet(logKey(day), {[uid]: JSON.stringify(run)})
+  await redis.expire(logKey(day), LOG_TTL)
+  const cand = candKey(weekKey(day))
+  await redis.zAdd(cand, {member: `${day} ${uid}`, score: run.score})
+  await redis.expire(cand, LOG_TTL + 7 * 86400)
+}
+
+/** A counted run's checked move log, if it was kept. */
+export async function runLog(
+  day: string,
+  uid: string,
+): Promise<LoggedRun | undefined> {
+  const raw = await redis.hGet(logKey(day), uid)
+  if (!raw) return
+  try {
+    const v = JSON.parse(raw) as Partial<LoggedRun>
+    const log = parseLog(JSON.stringify(v.log))
+    if (!log) return
+    const n = (x: unknown): number => (typeof x === 'number' ? x : 0)
+    return {
+      log,
+      score: n(v.score),
+      tier: n(v.tier),
+      time: n(v.time),
+      stars: n(v.stars),
+      wrong: n(v.wrong),
+    }
+  } catch {
+    return
+  }
+}
+
+/** Whether a player lets the app feature their runs. Everyone does until they switch it off. */
+export async function featureOn(uid: string): Promise<boolean> {
+  return (await redis.hGet(noFeatureKey, uid)) === undefined
+}
+
+export async function setFeature(uid: string, on: boolean): Promise<void> {
+  if (on) await redis.hDel(noFeatureKey, [uid])
+  else await redis.hSet(noFeatureKey, {[uid]: '1'})
+}
+
+/** The week's best run that has a kept log, from a player who hasn't switched featuring off. */
+export async function pickPlayOfWeek(
+  week: string,
+): Promise<PlayOfWeek | undefined> {
+  const rows = await redis.zRange(candKey(week), 0, 49, {
+    by: 'rank',
+    reverse: true,
+  })
+  for (const {member} of rows) {
+    const [day, uid] = member.split(' ')
+    if (!day || !uid || !(await featureOn(uid))) continue
+    const run = await runLog(day, uid)
+    if (!run) continue
+    const [name] = await namesOf([uid])
+    return {...run, uid, day, name: name ?? 'someone'}
+  }
+  return
+}
+
+/** Keeps the featured run for good, so its post plays the same run after the logs expire. */
+export async function keepPlayOfWeek(
+  week: string,
+  play: PlayOfWeek,
+): Promise<void> {
+  await redis.hSet(featuredKey(week), {run: JSON.stringify(play)})
+}
+
+export async function playOfWeek(
+  week: string,
+): Promise<PlayOfWeek | undefined> {
+  const raw = await redis.hGet(featuredKey(week), 'run')
+  if (!raw) return
+  try {
+    const v = JSON.parse(raw) as PlayOfWeek
+    return parseLog(JSON.stringify(v.log)) ? v : undefined
+  } catch {
+    return
+  }
+}
+
+function parseLog(raw: string | undefined): number[] | undefined {
+  if (!raw) return
+  try {
+    const v: unknown = JSON.parse(raw)
+    return Array.isArray(v) && v.every(Number.isInteger) ? v : undefined
+  } catch {
+    return
+  }
 }
 
 export async function getSpot(week: string): Promise<Spot | undefined> {

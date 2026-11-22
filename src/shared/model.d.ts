@@ -77,3 +77,10 @@ export declare function solveCount(
   budget?: number,
 ): [number, number[] | null]
 export declare function singlesOrder(given: readonly number[]): number[]
+/** The grid after one layer turn: axis a, layer v, direction s. */
+export declare function turnArr<T>(
+  arr: readonly T[],
+  a: number,
+  v: number,
+  s: number,
+): T[]

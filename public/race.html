@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nonet · weekly top nine</title>
+    <link rel="modulepreload" href="race.js">
+    <link rel="stylesheet" href="race.css">
+    <meta
+      name="theme-color"
+      content="#121316"
+      media="(prefers-color-scheme: dark)"
+    >
+    <meta
+      name="theme-color"
+      content="#f3f2ec"
+      media="(prefers-color-scheme: light)"
+    >
+  </head>
+  <body>
+    <main class="wr" id="wr" aria-busy="true">
+      <header class="wr-head">
+        <span class="wr-kicker" id="wrKicker">Weekly top nine</span>
+        <h1 id="wrTitle">The week's top nine</h1>
+        <small id="wrMeta"></small>
+      </header>
+      <div class="wr-days" id="wrDays"></div>
+      <ol class="wr-race" id="wrRace" aria-live="polite"></ol>
+      <p class="wr-gap" id="wrGap"></p>
+      <div class="wr-trio" id="wrTrio"></div>
+      <div class="wr-ctrls">
+        <button type="button" id="wrPlay">Replay the week</button>
+      </div>
+      <p class="wr-empty" id="wrEmpty" hidden>
+        No one has played this week yet.
+      </p>
+    </main>
+    <script src="race.js" type="module"></script>
+  </body>
+</html>

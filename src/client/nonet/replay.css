@@ -1,0 +1,67 @@
+/* The play of the week post: the week's best run played back on the cube. Colours follow the game. */
+:root{
+  --sumi:#121316; --slate:#1c1e23; --tile:#23252b; --edge:#2c2f37; --washi:#eceae3; --lead:#8d919b;
+  --yellow:#f5c12e; --on-yellow:#16130a; --ai:#8fb0ff; --beni:#f08a8a; --body-ink:#0b0c0e; --gold:#f5c12e;
+  --cell-top:#3b3e47; --cell-right:#30333b; --cell-left:#272a31;
+  --display:"DotGothic16","M PLUS 1 Code",ui-monospace,monospace;
+  --body:"IBM Plex Sans JP",system-ui,sans-serif;
+  --code:"M PLUS 1 Code",ui-monospace,"SFMono-Regular",monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --sumi:#f3f2ec; --slate:#e6e4dc; --tile:#e9e7df; --edge:#cfccc2; --washi:#23252b; --lead:#5b5f69;
+  --ai:#2f55b8; --beni:#b3261e; --body-ink:#2a2c33; --gold:#8a6400;
+  --cell-top:#ffffff; --cell-right:#f1efe8; --cell-left:#e4e1d8;
+  color-scheme:light}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--sumi);color:var(--washi);font:14px/1.5 var(--body)}
+.rp{position:relative;height:100%;max-width:480px;margin:0 auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.rp-who{display:flex;flex-direction:column;min-width:0}
+.rp-who b{font:500 15px var(--code);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-who small{color:var(--lead);font:11px var(--code)}
+.rp-kicker{font:500 10px var(--code);letter-spacing:.1em;text-transform:uppercase;color:var(--lead)}
+.rp-clock{font:500 24px var(--code);font-variant-numeric:tabular-nums}
+.rp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font:11px var(--code);color:var(--lead);text-align:center}
+.rp-stats b{display:block;font:500 16px var(--code);color:var(--washi);font-variant-numeric:tabular-nums}
+.rp-stats .rp-miss b{color:var(--beni)}
+.rp-stage{flex:1;min-height:180px;display:grid;place-items:center;perspective:900px}
+.rp-cube{--h:66px;width:132px;height:132px;position:relative;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.4,.1,.2,1)}
+.rp-face{position:absolute;inset:0;background:var(--body-ink);border-radius:9px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.rp-st{border-radius:7px;display:grid;place-items:center;font:500 20px var(--code);color:var(--ai);background:var(--cell-top);position:relative}
+.rp-face.r .rp-st{background:var(--cell-right)}
+.rp-face.l .rp-st{background:var(--cell-left)}
+.rp-st.given{color:var(--washi);font-weight:700}
+.rp-st.star::after{content:"";position:absolute;right:4px;top:4px;width:6px;height:6px;border-radius:2px;background:var(--gold)}
+.rp-st.sel{outline:2px solid var(--washi);outline-offset:-2px}
+.rp-st.flash{animation:rpflash .6s ease-out}
+@keyframes rpflash{0%{background:var(--yellow);color:var(--on-yellow)}}
+.rp-st.pop{animation:rppop .35s ease-out}
+@keyframes rppop{0%{transform:scale(.4)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.rp-st.wrong{color:var(--beni);animation:rpwrong .9s ease-out}
+@keyframes rpwrong{0%,60%{outline:2px solid var(--beni);outline-offset:-2px}}
+.rp-cap{margin:0;min-height:21px;text-align:center;color:var(--lead)}
+.rp-cap b{color:var(--washi);font-weight:500}
+.rp-track{position:relative;height:28px;cursor:pointer;touch-action:none}
+.rp-track .rail,.rp-track .fill{position:absolute;left:0;top:13px;height:2px;border-radius:2px}
+.rp-track .rail{right:0;background:var(--edge)}
+.rp-track .fill{background:var(--washi);width:0}
+.rp-track i{position:absolute;top:8px;width:3px;height:12px;border-radius:2px;translate:-50% 0}
+.rp-track i.t{background:var(--ai)} .rp-track i.s{background:var(--gold);height:16px;top:6px} .rp-track i.w{background:var(--beni)} .rp-track i.g{background:var(--washi);opacity:.6}
+.rp-track .knob{position:absolute;top:7px;left:0;width:14px;height:14px;border-radius:50%;background:var(--washi);translate:-50% 0;box-shadow:0 0 0 3px var(--sumi)}
+.rp-track:focus-visible{outline:2px solid var(--ai);outline-offset:2px;border-radius:4px}
+.rp-ctrls,.rp-row{display:flex;gap:6px}
+button{font:500 13px var(--code);border:1px solid var(--edge);background:var(--tile);color:var(--washi);border-radius:7px;min-height:36px;padding:0 12px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--washi);color:var(--sumi);border-color:var(--washi)}
+button:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+.rp-ctrls button{flex:1}
+.rp-cta{background:var(--yellow);color:var(--on-yellow);border-color:var(--yellow);flex:1}
+.rp-end{position:absolute;inset:0;background:color-mix(in srgb,var(--sumi) 92%,transparent);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:20px;text-align:center}
+.rp-end p{margin:0;color:var(--lead)}
+.rp-big{font:400 32px var(--display)}
+.rp-row{width:100%;max-width:300px}
+.rp-row button{flex:1}
+.rp-empty{margin:auto;color:var(--lead)}
+@media (prefers-reduced-motion:reduce){.rp-cube{transition:none}.rp-st.flash,.rp-st.pop,.rp-st.wrong{animation:none}}

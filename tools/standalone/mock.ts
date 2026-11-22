@@ -273,6 +273,7 @@ async function route(path: string, body: Record<string, unknown>): Promise<Respo
       stats: stats(day, s),
       subreddit: 'nonet_challenge_dev',
       notify: false,
+      feature: true,
       duels: [],
       crew: {crew: undefined, invites: []},
     })

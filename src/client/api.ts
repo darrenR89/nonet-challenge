@@ -16,10 +16,13 @@ import {
   type CrewSeatReq,
   type DailyRsp,
   Endpoint,
+  type FeatureRsp,
   type JoinRsp,
   type JoinTeamReq,
   type JoinTeamRsp,
   type NotifyRsp,
+  type RaceRsp,
+  type ReplayRsp,
   type ResultCommentRsp,
   type RetryRsp,
   type ScoreReq,
@@ -84,6 +87,15 @@ export const sendScore = (
   )
 export const useRetry = (): Promise<RetryRsp | undefined> =>
   call<RetryRsp>(Endpoint.Retry, {})
+/** Switches off (or back on) being featured as the play of the week. */
+export const setFeature = (on: boolean): Promise<FeatureRsp | undefined> =>
+  call<FeatureRsp>(Endpoint.Feature, {on})
+/** A weekly top nine post's race. */
+export const getRace = (): Promise<RaceRsp | undefined> =>
+  call<RaceRsp>(Endpoint.Race)
+/** The run a play of the week post plays back. */
+export const getReplay = (): Promise<ReplayRsp | undefined> =>
+  call<ReplayRsp>(Endpoint.Replay)
 export const setNotify = (on: boolean): Promise<NotifyRsp | undefined> =>
   call<NotifyRsp>(Endpoint.Notify, {on})
 export const joinSub = (): Promise<JoinRsp | undefined> =>

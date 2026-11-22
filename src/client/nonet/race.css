@@ -1,0 +1,53 @@
+/* The weekly top nine post: the week's board played back day by day. Colours follow the game. */
+:root{
+  --sumi:#121316; --slate:#1c1e23; --tile:#23252b; --edge:#2c2f37; --washi:#eceae3; --lead:#8d919b;
+  --yellow:#f5c12e; --on-yellow:#16130a; --ai:#8fb0ff; --beni:#f08a8a;
+  --display:"DotGothic16","M PLUS 1 Code",ui-monospace,monospace;
+  --body:"IBM Plex Sans JP",system-ui,sans-serif;
+  --code:"M PLUS 1 Code",ui-monospace,"SFMono-Regular",monospace;
+  --row:27px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --sumi:#f3f2ec; --slate:#e6e4dc; --tile:#e3e0d7; --edge:#cfccc2; --washi:#23252b; --lead:#5b5f69;
+  --ai:#2f55b8; --beni:#b3261e;
+  color-scheme:light}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--sumi);color:var(--washi);font:14px/1.5 var(--body)}
+.wr{min-height:100%;max-width:520px;margin:0 auto;padding:10px 16px;display:flex;flex-direction:column;gap:7px}
+.wr-head{display:flex;flex-direction:column}
+.wr-head h1{margin:0;font:400 20px/1.2 var(--display)}
+.wr-head small{color:var(--lead);font:11px var(--code)}
+.wr-kicker{font:500 10px var(--code);letter-spacing:.1em;text-transform:uppercase;color:var(--lead)}
+.wr-days{display:flex;gap:4px}
+.wr-days button{flex:1;min-width:0;min-height:28px;padding:0;font:500 11px var(--code);border:0;border-radius:5px;color:var(--lead);background:var(--tile);cursor:pointer}
+.wr-days button.done{color:var(--washi)}
+.wr-days button[aria-pressed="true"]{background:var(--washi);color:var(--sumi)}
+.wr-race{position:relative;margin:0;padding:0;list-style:none;flex:none}
+.wr-bar{position:absolute;left:0;right:0;height:calc(var(--row) - 4px);display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:center;transition:transform .7s cubic-bezier(.4,.1,.2,1)}
+.wr-bar.cut{border-top:1px dashed var(--edge);padding-top:2px}
+.wr-rk{font:500 12px var(--code);color:var(--lead);text-align:right;font-variant-numeric:tabular-nums}
+.wr-lane{position:relative;height:100%;min-width:0}
+.wr-len{position:absolute;inset:0 auto 0 0;background:var(--tile);border-radius:5px;transition:width .7s cubic-bezier(.4,.1,.2,1);min-width:4px}
+.wr-lbl{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 8px;font:12px var(--code);white-space:nowrap}
+.wr-lbl span{overflow:hidden;text-overflow:ellipsis}
+.wr-lbl em{font-style:normal;color:var(--lead);font-variant-numeric:tabular-nums}
+.wr-mv{font:500 11px var(--code);margin-left:6px}
+.wr-mv.up{color:var(--ai)} .wr-mv.dn{color:var(--beni)}
+.wr-bar.me .wr-len{background:var(--yellow)}
+.wr-bar.me .wr-lbl>span{color:var(--on-yellow)}
+.wr-bar.me .wr-lbl em{color:var(--washi)}
+.wr-bar.me.full .wr-lbl em{color:var(--on-yellow)}
+.wr-gap{margin:0;font:12px var(--code);color:var(--lead);text-align:center;min-height:18px}
+.wr-gap b{color:var(--washi);font-weight:500}
+.wr-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:6px}
+.wr-trio div{background:var(--tile);border-radius:8px;padding:6px 8px;font:11px/1.35 var(--code);color:var(--lead);min-width:0}
+.wr-trio b{display:block;color:var(--washi);font-weight:500;font-size:12px;overflow-wrap:anywhere}
+.wr-ctrls{display:flex}
+button{font:500 13px var(--code);border:1px solid var(--edge);background:var(--tile);color:var(--washi);border-radius:7px;min-height:36px;padding:0 12px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+.wr-ctrls button{flex:1}
+.wr-empty{margin:auto;color:var(--lead)}
+@media (prefers-reduced-motion:reduce){.wr-bar,.wr-len{transition:none}}

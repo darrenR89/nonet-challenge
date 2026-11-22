@@ -26,6 +26,12 @@
       },
       "pastboard": {
         "entry": "open-pastboard.html"
+      },
+      "replay": {
+        "entry": "replay.html"
+      },
+      "race": {
+        "entry": "race.html"
       }
     }
   },
@@ -45,6 +51,13 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/on/menu/week-post"
+      },
+      {
+        "label": "Nonet: post the play of the week",
+        "description": "Post this week's best run so far as a replay. It goes up on its own each Monday.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/replay-post"
       },
       {
         "label": "Nonet: update the wiki",
@@ -111,6 +124,12 @@
         "type": "boolean",
         "label": "Add post flair to the app's posts",
         "helpText": "Tags the daily cube, the weekly top nine and event results with mod-only post flair, so players can filter by them. The app makes the flair the first time.",
+        "defaultValue": true
+      },
+      "playPost": {
+        "type": "boolean",
+        "label": "Post the play of the week",
+        "helpText": "Each Monday, posts the week's best run as a replay that plays it back. Players can switch off being featured in the game.",
         "defaultValue": true
       },
       "crewFlair": {
