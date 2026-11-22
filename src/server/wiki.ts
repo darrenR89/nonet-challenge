@@ -22,6 +22,7 @@ import {
 import {boardKey, readBoard} from './board.ts'
 import {FLAIR_FROM, FOUNDERS} from './flair.ts'
 import {longestStreaks, pastWeeks, type WeekRecord} from './records.ts'
+import {markdownToRichtext} from './richtext.ts'
 
 export const WIKI_PAGE = 'nonet'
 /** Past weeks listed on the page, newest first. */
@@ -450,7 +451,11 @@ async function writePages(
       .getWikiPage(sub, page, {wikiVersion})
       .then(() => true)
       .catch(() => false)
-  for (const [page, content] of pages) {
+  // the new wiki shows markdown as plain text, so it gets the pages as rich text
+  const body = (md: string): string =>
+    wikiVersion === 'v2' ? markdownToRichtext(md) : md
+  for (const [page, md] of pages) {
+    const content = body(md)
     if (await has(page)) {
       await reddit.updateWikiPage({
         subredditName: sub,
@@ -485,7 +490,7 @@ async function writePages(
       .createWikiPage({
         subredditName: sub,
         page: 'index',
-        content: indexPage(sub),
+        content: body(indexPage(sub)),
         reason,
         wikiVersion,
       })
