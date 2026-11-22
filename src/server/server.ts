@@ -151,7 +151,7 @@ import {
 } from './records.ts'
 import {journey} from './telemetry.ts'
 import {flairWidget, syncWidgets, wikiWidget} from './widgets.ts'
-import {publishWiki, wikiPath} from './wiki.ts'
+import {publishWiki, wikiUrl} from './wiki.ts'
 
 /** The clock, swappable in tests. */
 export const clock = {now: (): Date => new Date()}
@@ -1349,7 +1349,7 @@ async function writeWiki(day: string): Promise<string | undefined> {
     await setting('streakFlair'),
     await setting('founderFlair'),
   )
-  return `https://www.reddit.com${wikiPath(sub)}`
+  return wikiUrl(sub)
 }
 
 function boardText(b: Board): string {
@@ -1391,7 +1391,7 @@ async function postWeekResults(
       ? "A new week starts today. Every day's cube adds to your total."
       : 'The week ends Sunday at midnight Pacific time.',
     sub
-      ? `Rules, records and past weeks are on [the Nonet wiki](${wikiPath(sub)}).`
+      ? `Rules, records and past weeks are on [the Nonet wiki](${wikiUrl(sub)}).`
       : '',
   ]
   const post = await reddit.submitPost({

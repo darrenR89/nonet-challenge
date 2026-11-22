@@ -327,9 +327,10 @@ function showRules(){journey.interaction('rules');const r=$('rules');ask('How to
   // always opens on the first tab, scrolled to the top
   rtabs[0]?.click();box.scrollTop=0;requestAnimationFrame(()=>{box.scrollTop=0})}
 $('spHelp').onclick=showRules;$('helpBtn').onclick=showRules;
-// the subreddit's Nonet wiki, which the app writes: the full rules, streaks, crews and records
+// the subreddit's Nonet wiki, which the app writes: the full rules, streaks, crews and records.
+// It opens on old Reddit, where the pages are shown as written
 {let sub='';try{sub=context.subredditName??''}catch(e){}
-  if(sub){$('rulesWikiRow').hidden=false;$('rulesWiki').onclick=()=>navigateTo(`https://www.reddit.com/r/${sub}/wiki/nonet`)}}
+  if(sub){$('rulesWikiRow').hidden=false;$('rulesWiki').onclick=()=>navigateTo(`https://old.reddit.com/r/${sub}/wiki/nonet`)}}
 // How to play has three tabs: the game, what the squares and controls look like, and scoring
 const rtabs=[...document.querySelectorAll('#rules [role=tab]')];
 rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute('aria-selected',String(on));$(b.getAttribute('aria-controls')).hidden=!on})});
