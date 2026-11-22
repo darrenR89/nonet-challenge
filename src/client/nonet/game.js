@@ -3,7 +3,7 @@ import {F,k3,key,cells,idx,faceOfNormal,axisOf,groups,lines,N,peers,lineIdxOf,ri
 import './style.css';
 import {makeTransitions} from './transitions.js';
 import {makeRoom} from './room.js';
-import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,joinSub,postResult,lastError} from '../api.ts';
+import {getDaily,startDay,sendScore,joinTeam,useRetry,setNotify,setFeature,joinSub,postResult,lastError} from '../api.ts';
 import {resultCommentText} from '../../shared/result.ts';
 import {code as logCode} from '../../shared/replay.ts';
 import {journey} from '../journey.ts';
@@ -532,6 +532,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   const more=`<div class="more"><h3>What next?</h3><pre class="sharetxt" aria-label="Your result, ready to share">${esc(resultText(s))}</pre>
     <div class="acts">${canComment(r,scored)?'<button id="ePost" class="primary">Post in the comments</button>':''}<button id="eComment"${canComment(r,scored)?'':' class="primary"'}>Share my result</button>${online&&D&&D.crew?`<button id="eCrew" aria-expanded="${crewOpen?'true':'false'}">${crewButton(D.crew)}</button>`:''}${online?`<button id="eJoin">Join ${sub}</button>`:''}</div>
     ${online?`<label class="toggle"><input type="checkbox" id="eNotify"${D&&D.notify?' checked':''}><span>Notify me when tomorrow's cube is out</span></label>`:''}
+    ${online&&D&&D.loggedIn?`<label class="toggle"><input type="checkbox" id="eFeature"${D.feature!==false?' checked':''}><span>Show my run if it's the play of the week</span></label>`:''}
     <p class="next">Next cube in <b id="eNext">${untilNext()}</b></p></div>${crewOpen&&online&&D&&D.crew?`<div class="crewBox" id="eCrewBox"><h3>${crewTitle(D.crew)}</h3>${crewPanelHTML(D.crew)}</div>`:''}`;
   const tabs=[['points','Points'],...(r?[['boards','Boards']]:[]),...(D&&D.event?[['event',esc(D.event.event.title)]]:[])];
   const panel=t=>t==='points'?pointsTable(s,pen):t==='boards'?boardsHTML(r):t==='event'?`<div class="event">${eventHTML(D.event)}</div>`:'';
@@ -551,6 +552,7 @@ function renderEndCard(){const s=runScore;if(!s||flying)return;const r=lastScore
   if($('eSignup'))$('eSignup').onclick=()=>{journey.interaction('signup_prompt','results');showLoginPrompt()};
   if($('eJoin'))$('eJoin').onclick=async()=>{$('eJoin').disabled=true;journey.interaction('join');const j=await joinSub();$('eJoin').textContent=j?'Joined':lastError||'Try again';if(!j)$('eJoin').disabled=false};
   if($('eNotify'))$('eNotify').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'notify_on':'notify_off');const n=await setNotify(on);if(n&&D)D.notify=n.notify;else{e.target.checked=!on;$('eNext').textContent=lastError||'Notifications are unavailable'}};
+  if($('eFeature'))$('eFeature').onchange=async e=>{const on=e.target.checked;journey.interaction(on?'feature_on':'feature_off');const n=await setFeature(on);if(n&&D)D.feature=n.feature;else{e.target.checked=!on;$('eNext').textContent=lastError||'Could not save that. Try again.'}};
 }
 // the result as the player's own comment on the daily post: only for today's counted run, once
 function canComment(r,scored){let pid;try{pid=context.postId}catch(e){}return !!(scored&&r&&r.counted&&pid&&D&&!D.my.commented&&!D.pastBoards)}

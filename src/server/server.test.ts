@@ -20,6 +20,7 @@ import {
   EndpointMethod,
   type ErrorRsp,
   type JoinTeamRsp,
+  type ReplayRsp,
   type ResultCommentRsp,
   type ScoreReq,
   type ScoreRsp,
@@ -40,9 +41,11 @@ let server: Server
 let serverURL: string
 let user: {userId?: string; username?: string} = {}
 /** The open post's data, as Devvit passes it: daily posts carry their day. */
-let postData: {day?: string} | undefined
+let postData: {day?: string; play?: string} | undefined
 let now = new Date('2026-11-14T12:00:00Z')
 const posts: string[] = []
+/** Each interactive post's entrypoint and data, in order. */
+const customPosts: {entry?: string; postData?: unknown}[] = []
 /** Text post bodies, in order. */
 const texts: string[] = []
 /** Pinned posts, as "title @ slot". */
@@ -113,8 +116,13 @@ const daily = (): Promise<void> =>
 before(async () => {
   installFakeRedis()
   clock.now = () => now
-  r.submitCustomPost = async (o: {title: string}) => {
+  r.submitCustomPost = async (o: {
+    title: string
+    entry?: string
+    postData?: unknown
+  }) => {
     posts.push(o.title)
+    customPosts.push({entry: o.entry, postData: o.postData})
     return madePost('t3_post', 'https://reddit.com/x', o.title)
   }
   r.submitPost = async (o: {title: string; text: string}) => {
@@ -262,6 +270,7 @@ after(async () => {
 beforeEach(() => {
   clearFakeRedis()
   posts.length = 0
+  customPosts.length = 0
   texts.length = 0
   pins.length = 0
   flairs.clear()
@@ -426,19 +435,19 @@ function cleanRun(p: Puzzle): {stats: RunStats; log: MoveLog} {
   return {stats: {...stats, blanks: blanks.length}, log}
 }
 
-test('a run’s move log is kept when it matches the run, and the week’s best keeps its own', async () => {
+test('a run’s move log is kept when it matches the run', async () => {
   const start = await post<StartRsp>(Endpoint.Start, {tier: 2})
   const {stats, log} = cleanRun(start.body.puzzle)
   later(stats.t1 + stats.t2 + 5)
   const day = now.toISOString().slice(0, 10)
   const r = await post<ScoreRsp>(Endpoint.Score, {day, tier: 2, stats, log})
   assert.equal(r.body.counted, true)
-  assert.deepEqual(
-    JSON.parse((await redis.hGet(`runlog:${day}`, 't2_ann')) ?? ''),
-    log,
-  )
-  const spot = await redis.hGetAll(`spot:${weekKey(day)}`)
-  assert.deepEqual(JSON.parse(spot.log ?? ''), log)
+  const kept = JSON.parse(
+    (await redis.hGet(`runlog:${day}`, 't2_ann')) ?? '',
+  ) as {log: number[]; score: number; tier: number}
+  assert.deepEqual(kept.log, log)
+  assert.equal(kept.score, r.body.total)
+  assert.equal(kept.tier, 2)
 
   // a log that doesn't match is dropped, and the run still counts
   as('t2_bob', 'bob')
@@ -453,6 +462,61 @@ test('a run’s move log is kept when it matches the run, and the week’s best 
   })
   assert.equal(r2.body.counted, true)
   assert.equal(await redis.hGet(`runlog:${day}`, 't2_bob'), undefined)
+})
+
+test('the play of the week posts the best run with a replay, skipping players who switched it off', async () => {
+  const day = now.toISOString().slice(0, 10)
+  /** Plays today's 2-turn cube cleanly as this player, `secs` a square, and sends the log. */
+  const playLogged = async (secs: number): Promise<ScoreRsp> => {
+    const start = await post<StartRsp>(Endpoint.Start, {tier: 2})
+    const p = start.body.puzzle
+    const clean = cleanRun(p)
+    // spread the fill out: each lock `secs` apart
+    const log = clean.log.slice()
+    const dialAt = log.findIndex((c, i) => i % 2 === 1 && c === code.dial) - 1
+    let k = 0
+    for (let i = dialAt + 2; i < log.length; i += 2)
+      if ((log[i + 1] ?? 0) >= 1000)
+        log[i] = (log[dialAt] ?? 0) + ++k * secs * 10
+      else log[i] = log[dialAt] ?? 0
+    const t2 = ((log.at(-2) ?? 0) - (log[dialAt] ?? 0)) / 10
+    const stats = {...clean.stats, t2}
+    later(stats.t1 + t2 + 5)
+    return (await post<ScoreRsp>(Endpoint.Score, {day, tier: 2, stats, log}))
+      .body
+  }
+  const ann = await playLogged(12)
+  as('t2_bob', 'bob')
+  const bob = await playLogged(5)
+  assert.ok(bob.total > ann.total, 'bob is faster, so scores more')
+  // bob switches featuring off
+  assert.deepEqual((await post(Endpoint.Feature, {on: false})).body, {
+    feature: false,
+  })
+  assert.equal((await get<DailyRsp>(Endpoint.Daily)).body.feature, false)
+
+  const menu = await post<{showToast?: {text: string}}>(
+    Endpoint.OnMenuReplayPost,
+  )
+  assert.equal(menu.body.showToast?.text, 'The play of the week is posted.')
+  assert.match(posts.at(-1) ?? '', /^Nonet · play of the week · u\/ann on cube/)
+  const week = weekKey(day)
+  assert.deepEqual(customPosts.at(-1), {
+    entry: 'replay',
+    postData: {play: week},
+  })
+
+  // the post plays ann's run back, from the cube as it started
+  postData = {play: week}
+  const rp = (await get<ReplayRsp>(Endpoint.Replay)).body
+  postData = undefined
+  assert.equal(rp.play?.name, 'ann')
+  assert.equal(rp.play?.score, ann.total)
+  assert.equal(rp.play?.tier, 2)
+  assert.equal(rp.play?.start.length, 54)
+  assert.ok((rp.play?.log.length ?? 0) > 40)
+  // a post without a week shows nothing
+  assert.equal((await get<ReplayRsp>(Endpoint.Replay)).body.play, undefined)
 })
 
 test('runs that cannot have happened are refused', async () => {

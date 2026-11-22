@@ -1,6 +1,6 @@
 import type {CrewInfo} from './crew.ts'
 import type {Duel} from './duel.ts'
-import type {Puzzle} from './model.js'
+import type {Layout, Puzzle} from './model.js'
 import type {RunStats, ScoreBreakdown} from './scoring.ts'
 
 /** Generic error detail for all responses. */
@@ -138,6 +138,8 @@ export type DailyRsp = {
   subreddit: string
   /** Whether the asker gets a push notification when each new cube is out. */
   notify: boolean
+  /** Whether the asker lets their best run of a week be posted as the play of the week. */
+  feature: boolean
   /** Today's challenges the asker sent or received. */
   duels: Duel[]
   /** The asker's crew and the crew invitations waiting for them. */
@@ -226,6 +228,34 @@ export type RetryRsp = {retries: number; penalty: number}
 
 export type NotifyReq = {on: boolean}
 export type NotifyRsp = {notify: boolean}
+export type FeatureReq = {on: boolean}
+export type FeatureRsp = {feature: boolean}
+
+/** A play of the week post: the run, and the cube as it started, to play it back. */
+export type ReplayRsp = {
+  play:
+    | {
+        name: string
+        day: string
+        cubeNo: number
+        /** Fill level: 0 Easy, 1 Medium, 2 Hard. */
+        level: number
+        tier: number
+        score: number
+        /** Seconds, both stages. */
+        time: number
+        stars: number
+        wrong: number
+        /** The run's move log (shared/replay.ts). */
+        log: number[]
+        /** The cube as the run started, and how its lines run. */
+        start: number[]
+        layout: Layout
+      }
+    | undefined
+  /** Today's cube post, for "Play today's cube" (its id, or empty). */
+  todayPost: string
+}
 export type JoinRsp = {joined: boolean}
 
 /** Challenge a player to beat the asker's score on today's cube. */
@@ -267,6 +297,8 @@ export const Endpoint = {
   Board: 'api/board',
   Retry: 'api/daily/retry',
   Notify: 'api/notify',
+  Feature: 'api/feature',
+  Replay: 'api/replay',
   JoinSub: 'api/join',
   Challenge: 'api/challenge',
   Answer: 'api/challenge/answer',
@@ -289,6 +321,7 @@ export const Endpoint = {
   OnMenuNewEvent: 'internal/on/menu/new-event',
   OnMenuEndEvent: 'internal/on/menu/end-event',
   OnMenuWeekPost: 'internal/on/menu/week-post',
+  OnMenuReplayPost: 'internal/on/menu/replay-post',
   OnMenuWiki: 'internal/on/menu/wiki',
   OnMenuCubes: 'internal/on/menu/cubes',
   OnMenuDemo: 'internal/on/menu/demo',
@@ -306,6 +339,8 @@ export const EndpointMethod = {
   [Endpoint.Board]: 'POST',
   [Endpoint.Retry]: 'POST',
   [Endpoint.Notify]: 'POST',
+  [Endpoint.Feature]: 'POST',
+  [Endpoint.Replay]: 'GET',
   [Endpoint.JoinSub]: 'POST',
   [Endpoint.Challenge]: 'POST',
   [Endpoint.Answer]: 'POST',
@@ -328,6 +363,7 @@ export const EndpointMethod = {
   [Endpoint.OnMenuNewEvent]: 'POST',
   [Endpoint.OnMenuEndEvent]: 'POST',
   [Endpoint.OnMenuWeekPost]: 'POST',
+  [Endpoint.OnMenuReplayPost]: 'POST',
   [Endpoint.OnMenuWiki]: 'POST',
   [Endpoint.OnMenuCubes]: 'POST',
   [Endpoint.OnMenuDemo]: 'POST',

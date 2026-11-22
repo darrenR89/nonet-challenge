@@ -100,7 +100,10 @@ test('a wrong digit, an unfinished cube or a skipped turn is refused', () => {
 
 test('misses, suggestions and ★ order are counted like the game counts them', () => {
   const {log, stats} = run()
-  const i = log.indexOf(code.dial) + 1 + 2 * p.stars.length
+  const i =
+    log.findIndex((c, k) => k % 2 === 1 && c === code.dial) +
+    1 +
+    2 * p.stars.length
   // a miss on the first ★ square, then a suggestion locks the second ★ (no bonus for it)
   const s0 = at(p.stars, 0)
   const s1 = at(p.stars, 1)

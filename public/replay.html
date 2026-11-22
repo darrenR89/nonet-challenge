@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nonet · play of the week</title>
+    <link rel="modulepreload" href="replay.js">
+    <link rel="stylesheet" href="replay.css">
+    <meta
+      name="theme-color"
+      content="#121316"
+      media="(prefers-color-scheme: dark)"
+    >
+    <meta
+      name="theme-color"
+      content="#f3f2ec"
+      media="(prefers-color-scheme: light)"
+    >
+  </head>
+  <body>
+    <main class="rp" id="rp" aria-busy="true">
+      <header class="rp-head">
+        <div class="rp-who">
+          <span class="rp-kicker">Play of the week</span>
+          <b id="rpName">Nonet</b>
+          <small id="rpMeta"></small>
+        </div>
+        <div class="rp-clock" id="rpClock">0:00</div>
+      </header>
+      <div class="rp-stats">
+        <div>Turns<b id="rpTurns">0</b></div>
+        <div>Locked<b id="rpLocked">0</b></div>
+        <div class="rp-miss">Misses<b id="rpMiss">0</b></div>
+      </div>
+      <div class="rp-stage"><div class="rp-cube" id="rpCube"></div></div>
+      <p class="rp-cap" id="rpCap" aria-live="polite"></p>
+      <div
+        class="rp-track"
+        id="rpTrack"
+        role="slider"
+        tabindex="0"
+        aria-label="Replay position"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div class="rail"></div>
+        <div class="fill" id="rpFill"></div>
+        <div class="knob" id="rpKnob"></div>
+      </div>
+      <div class="rp-ctrls">
+        <button type="button" id="rpPlay">Pause</button>
+        <button type="button" data-sp="slow" aria-pressed="false">Slow</button>
+        <button type="button" data-sp="normal" aria-pressed="true">
+          Normal
+        </button>
+        <button type="button" data-sp="fast" aria-pressed="false">Fast</button>
+      </div>
+      <div class="rp-end" id="rpEnd" hidden>
+        <span class="rp-kicker" id="rpEndTime"></span>
+        <div class="rp-big" id="rpEndScore"></div>
+        <p id="rpEndLine"></p>
+        <div class="rp-row">
+          <button type="button" id="rpAgain">Watch again</button
+          ><button type="button" class="rp-cta" id="rpToday">
+            Play today's cube
+          </button>
+        </div>
+      </div>
+      <p class="rp-empty" id="rpEmpty" hidden>This replay isn't available.</p>
+    </main>
+    <script src="replay.js" type="module"></script>
+  </body>
+</html>

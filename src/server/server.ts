@@ -33,6 +33,8 @@ import {
   EndpointMethod,
   type ErrorRsp,
   type EventState,
+  type FeatureReq,
+  type FeatureRsp,
   type GameEvent,
   type JoinRsp,
   type JoinTeamReq,
@@ -41,6 +43,7 @@ import {
   type NotifyRsp,
   type Preview,
   RETRY_MULT,
+  type ReplayRsp,
   type ResultCommentRsp,
   type RetryRsp,
   type ScoreReq,
@@ -144,11 +147,17 @@ import {
 import {cubeList} from './export.ts'
 import {claimFounder, flairAfterSolve, lapseFlair} from './flair.ts'
 import {
+  clockTime,
+  featureOn,
   getSpot,
+  keepPlayOfWeek,
   noteBestStreak,
   noteSolve,
+  pickPlayOfWeek,
+  playOfWeek,
   saveRunLog,
   saveWeek,
+  setFeature,
   spotText,
 } from './records.ts'
 import {journey} from './telemetry.ts'
@@ -240,6 +249,12 @@ async function route(
         break
       case Endpoint.Notify:
         rsp = await routeNotify(await readJson<NotifyReq>(reqMsg))
+        break
+      case Endpoint.Feature:
+        rsp = await routeFeature(await readJson<FeatureReq>(reqMsg))
+        break
+      case Endpoint.Replay:
+        rsp = await routeReplay()
         break
       case Endpoint.JoinSub:
         rsp = await routeJoinSub()
@@ -338,6 +353,9 @@ async function route(
         break
       case Endpoint.OnMenuWeekPost:
         rsp = await routeMenuWeekPost()
+        break
+      case Endpoint.OnMenuReplayPost:
+        rsp = await routeMenuReplayPost()
         break
       case Endpoint.OnMenuWiki:
         rsp = await routeMenuWiki()
@@ -468,6 +486,7 @@ async function routeDaily(): Promise<DailyRsp> {
     notify: uid
       ? await notifications.isOptedIn(uid as `t2_${string}`).catch(() => false)
       : false,
+    feature: uid ? await featureOn(uid) : true,
     duels: uid ? await duelsFor(day, uid) : [],
     crew: uid ? await crewInfo(day, uid) : NO_CREW,
     ...(uid ? await demoView(uid, day, my.score) : undefined),
@@ -684,15 +703,15 @@ async function routeScore(
     if (event) await addToEvent(event, uid, total)
     streak = await bumpStreak(day, uid)
     await noteBestStreak(uid, streak.best)
-    if (log) await saveRunLog(day, uid, log)
-    await noteSolve(day, uid, {
+    const run = {
       score: total,
       tier,
       time: stats.t1 + stats.t2,
       stars: stats.starsWon,
       wrong: stats.wrong,
-      log,
-    })
+    }
+    if (log) await saveRunLog(day, uid, {...run, log})
+    await noteSolve(day, uid, run)
     await flairSolve(day, uid, streak)
     dayStats = await addSolve(day, stats.t1 + stats.t2, tier, total)
     await settleDuels(day, uid)
@@ -1086,6 +1105,78 @@ async function routeRetry(): Promise<RetryRsp> {
 }
 
 /** Turns the "new cube is out" push notification on or off. */
+/** Lets a player switch off (or back on) being featured as the play of the week. */
+async function routeFeature(req: FeatureReq): Promise<FeatureRsp> {
+  const uid = await needUser()
+  if (typeof req?.on !== 'boolean') throw new HttpError(400, 'bad switch')
+  await setFeature(uid, req.on)
+  return {feature: req.on}
+}
+
+/** A play of the week post's run: the week comes from the post, the run was fixed when it went up. */
+async function routeReplay(): Promise<ReplayRsp> {
+  const todayPost = (await redis.hGet(DAILY_POSTS, today())) ?? ''
+  const week = (context.postData as {play?: unknown} | undefined)?.play
+  const play = typeof week === 'string' ? await playOfWeek(week) : undefined
+  if (!play) return {play: undefined, todayPost}
+  const p = await dayPuzzle(play.day, play.tier)
+  return {
+    play: {
+      name: play.name,
+      day: play.day,
+      cubeNo: cubeNumber(play.day),
+      level: levelOf(play.day),
+      tier: play.tier,
+      score: play.score,
+      time: play.time,
+      stars: play.stars,
+      wrong: play.wrong,
+      log: play.log,
+      start: p.start,
+      layout: p.layout ?? 'mirror',
+    },
+    todayPost,
+  }
+}
+
+/**
+ * Posts the week's best run as a replay: an interactive post that plays it back. Players who
+ * switched featuring off are skipped, and so are runs without a checked move log. Returns the
+ * post's link, or undefined when no run qualifies.
+ */
+async function postPlayOfWeek(week: string): Promise<string | undefined> {
+  const play = await pickPlayOfWeek(week)
+  if (!play) return
+  await keepPlayOfWeek(week, play)
+  const time = clockTime(play.time)
+  const post = await reddit.submitCustomPost({
+    title: `Nonet · play of the week · u/${play.name} on cube #${cubeNumber(play.day)} · ${play.score.toLocaleString('en-GB')} points`,
+    entry: 'replay',
+    postData: {play: week},
+    textFallback: {
+      text: `The week's best run: u/${play.name} scored ${play.score.toLocaleString('en-GB')} on ${shortDate(play.day)} (cube #${cubeNumber(play.day)}) in ${time}. Open the post in the Reddit app or on the new site to watch it played back.`,
+    },
+  })
+  await flairPost(post.id, 'play')
+  return post.url
+}
+
+async function routeMenuReplayPost(): Promise<UiResponse> {
+  const url = await postPlayOfWeek(weekKey(today()))
+  return url
+    ? {
+        showToast: {
+          text: 'The play of the week is posted.',
+          appearance: 'success',
+        },
+        navigateTo: url,
+      }
+    : {
+        showToast:
+          'No run to show yet this week: none with a replay from a player who allows it.',
+      }
+}
+
 async function routeNotify(req: NotifyReq): Promise<NotifyRsp> {
   const uid = await needUser()
   const r = req.on
@@ -1182,7 +1273,8 @@ async function setting(
     | 'streakFlair'
     | 'crewFlair'
     | 'founderFlair'
-    | 'postFlair',
+    | 'postFlair'
+    | 'playPost',
 ): Promise<boolean> {
   const v = await settings.get<boolean>(name).catch(() => undefined)
   // crew flair is opt-in; the rest are on unless a moderator turned them off
@@ -1199,6 +1291,11 @@ export const POST_FLAIRS = {
   },
   event: {
     text: 'Event results',
+    backgroundColor: '#121316',
+    textColor: 'light',
+  },
+  play: {
+    text: 'Play of the week',
     backgroundColor: '#121316',
     textColor: 'light',
   },
@@ -1585,6 +1682,10 @@ export async function runDaily(): Promise<void> {
   if (weekday(day) === 1 && (await claim('week', lastWeek))) {
     await saveWeek(lastWeek, addDays(day, -7))
     if (auto) await postWeekResults(lastWeek, addDays(day, -7), true)
+    if (auto && (await setting('playPost')))
+      await postPlayOfWeek(lastWeek).catch(err =>
+        console.warn(`play of the week failed: ${err}`),
+      )
     await writeWiki(day).catch(err => console.warn(`wiki failed: ${err}`))
   }
   if (!auto) return
