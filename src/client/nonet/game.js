@@ -973,7 +973,10 @@ window.addEventListener('resize',setH);// the page leaves exactly the pad's heig
 const padRoom=()=>{const b=$('padbox'),r=$('stage').getBoundingClientRect(),h=b.hidden?0:b.offsetHeight,css=document.documentElement.style;css.setProperty('--padH',`${h}px`);
   // on wide screens the pad stands beside the board: centred on the board's area, never above its top
   css.setProperty('--padMid',`${Math.round(Math.max(r.top+r.height/2,r.top+h/2+28))}px`)};
-if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{padRoom();setH()});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
+// sizes are set on the next frame, not inside the observer: setting --padH there can resize the stage
+// again in the same pass, which WebKit reports as a ResizeObserver loop
+let roFrame=0;
+if(typeof ResizeObserver!=='undefined'){const ro=new ResizeObserver(()=>{if(roFrame)return;roFrame=requestAnimationFrame(()=>{roFrame=0;padRoom();setH()})});ro.observe(document.getElementById('stage'));ro.observe($('padbox'))}setH();apply();applyTwistLock();newGame();void loadDaily();
 // "Learn to play" on the card: straight into the guided practice cube, with no start screen first
 if(openedAs==='practice'){openedDone=true;try{localStorage.removeItem(PRACTICED)}catch(e){}$('splash').classList.remove('is-loading');hideSplashNow();$('spPractice').click()}
 // ---------- test tools (prototype only) ----------
