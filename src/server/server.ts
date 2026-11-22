@@ -150,6 +150,7 @@ import {
   spotText,
 } from './records.ts'
 import {journey} from './telemetry.ts'
+import {flairWidget, syncWidgets, wikiWidget} from './widgets.ts'
 import {publishWiki, wikiPath} from './wiki.ts'
 
 /** The clock, swappable in tests. */
@@ -1196,41 +1197,69 @@ export const POST_FLAIRS = {
 const postFlairKey = 'postFlair'
 
 /**
- * Tags one of the app's posts with its post flair, if the subreddit wants that. The flair is a
- * mod-only template the app makes the first time, so it shows in the subreddit's flair filter.
+ * The id of one of the app's post flair templates: a mod-only template the app makes the first
+ * time, so it shows in the subreddit's flair filter. `fresh` looks it up again instead of
+ * trusting the saved id.
  */
+async function postFlairId(
+  sub: string,
+  kind: keyof typeof POST_FLAIRS,
+  fresh = false,
+): Promise<string> {
+  const f = POST_FLAIRS[kind]
+  const saved = fresh ? undefined : await redis.hGet(postFlairKey, kind)
+  if (saved) return saved
+  const all = await reddit.getPostFlairTemplates(sub)
+  const id =
+    all.find(t => t.text === f.text)?.id ??
+    (
+      await reddit.createPostFlairTemplate({
+        subredditName: sub,
+        ...f,
+        modOnly: true,
+      })
+    ).id
+  await redis.hSet(postFlairKey, {[kind]: id})
+  return id
+}
+
+/** Tags one of the app's posts with its post flair, if the subreddit wants that. */
 async function flairPost(
   postId: string,
   kind: keyof typeof POST_FLAIRS,
 ): Promise<void> {
   const sub = context.subredditName
   if (!sub || !(await setting('postFlair'))) return
-  const f = POST_FLAIRS[kind]
   try {
-    let id = await redis.hGet(postFlairKey, kind)
-    if (!id) {
-      const all = await reddit.getPostFlairTemplates(sub)
-      id =
-        all.find(t => t.text === f.text)?.id ??
-        (
-          await reddit.createPostFlairTemplate({
-            subredditName: sub,
-            ...f,
-            modOnly: true,
-          })
-        ).id
-      await redis.hSet(postFlairKey, {[kind]: id})
-    }
     await reddit.setPostFlair({
       subredditName: sub,
       postId: postId as `t3_${string}`,
-      flairTemplateId: id,
+      flairTemplateId: await postFlairId(sub, kind),
     })
   } catch (err) {
     // a template a mod deleted: forget it, so the next post makes it again
     await redis.hDel(postFlairKey, [kind])
     console.warn(`post flair failed: ${err}`)
   }
+}
+
+/**
+ * Adds or updates the sidebar widgets: a button to the Nonet wiki, and when post flair is on, a
+ * list of the app's post flairs that filters the subreddit by each.
+ */
+async function writeWidgets(): Promise<void> {
+  const sub = context.subredditName
+  if (!sub) return
+  const specs: Parameters<typeof syncWidgets>[1] = [['wiki', wikiWidget(sub)]]
+  if (await setting('postFlair')) {
+    const kinds = Object.keys(POST_FLAIRS) as (keyof typeof POST_FLAIRS)[]
+    await Promise.all(kinds.map(k => postFlairId(sub, k, true)))
+      .then(ids => specs.push(['flair', flairWidget(sub, ids)]))
+      .catch(err => console.warn(`flair widget failed: ${err}`))
+  }
+  await syncWidgets(sub, specs).catch(err =>
+    console.warn(`widgets failed: ${err}`),
+  )
 }
 
 /** Pins a post as a community highlight, if the subreddit wants that. */
@@ -1307,6 +1336,7 @@ async function routeAppInstall(): Promise<TriggerResponse> {
   await ensureDay(day)
   if (await claim('post', day)) await postDaily(day)
   await writeWiki(day).catch(err => console.warn(`wiki failed: ${err}`))
+  await writeWidgets()
   return {}
 }
 
@@ -1506,6 +1536,8 @@ async function routeMenuDemo(): Promise<UiResponse> {
 async function routeMenuWiki(): Promise<UiResponse> {
   try {
     const url = await writeWiki(today())
+    // the sidebar's wiki button and flair list; failures are logged, the wiki is what matters here
+    await writeWidgets()
     return {
       showToast: {
         text: 'The Nonet wiki page is up to date.',

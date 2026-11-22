@@ -153,6 +153,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .rules p{margin:10px 0 0;color:var(--lead);font-size:13px}
 .rules p.lead{margin:0 0 10px;color:inherit;font-size:14px}
 .rules p.lead.drag{margin:12px 0 0}
+.rules p.wiki{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--edge)}
+.rules .linkish{font:inherit;color:var(--gold-ink,var(--gold));background:none;border:0;padding:6px 0;min-height:0;min-width:0;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .rules .ptbox{margin:0 0 10px;background:var(--sumi);border:1px solid var(--edge);border-radius:var(--r);padding:6px 10px 4px}
 .rules .pts tr:last-child td{border-bottom:0}
 .rules table.pts{width:100%;border-collapse:collapse;margin:0;font-size:13px;font-variant-numeric:tabular-nums}
