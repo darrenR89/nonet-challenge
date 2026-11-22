@@ -337,28 +337,57 @@ rtabs.forEach(t=>{t.onclick=()=>rtabs.forEach(b=>{const on=b===t;b.setAttribute(
 function restart(){landCube();setLayout(P.layout||'mirror');alignMemo.clear();paused=false;tkUsed=false;vals=P.start.slice();locked=P.start.map(Boolean);pm=new Array(N).fill(0);sel=-1;selFace=-1;stage=1;turns=0;playerMoves=[];
   hintsLeft=3;hintsUsed=0;hintArrow=null;hintCell=-1;wrong=0;stars=new Set();starWon=new Set();regularLocked=false;gaveUp=false;t0=performance.now();t1=t2=0;$('banner').hidden=true;$('results').hidden=true;$('showRes').hidden=true;$('showRes').textContent='Show result';penMode=false;render();updateRunButtons();coachTurn()}
 // Practice is a walkthrough: each step shows over the cube, OK closes it, and the thing to do glows.
-// Doing it brings up the next step.
+// Doing it brings up the next step. The wrong lock and the dashed squares are shown by the game itself
+// after OK, and then it fills in the cube until a quarter of the empty squares are left for the player.
 const WALK=[
-  ['Step 1 of 4 · Rotate','The cube has been rotated once, so a few numbers conflict. Tap the pulsing arrow to rotate it back.'],
-  ['Step 2 of 4 · Pick a square','Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each line of nine across three faces. Tap the glowing square: only one number fits there.'],
-  ['Step 3 of 4 · Pencil it in','Tap the glowing number on the pad. It goes in as a pencil note.'],
-  ['Step 4 of 4 · Lock it in','Sure of it? Switch to Lock in, then tap the number again to place it.'],
-  ['Your turn','<div class="walkEnd"><p>Fill the rest the same way. Start where only one number fits. Nothing here is timed or scored.</p>'+
-    '<p><b>Dashed squares.</b> Tap a square on a line\'s middle face and two sets of three squares are dashed: three on that face, three across the cube. Both sets hold the same three numbers.</p>'+
-    '<p><b>★ Lock-first squares.</b> On a scored cube, three empty squares are marked ★FIRST. Lock all three before any other square for +50 each, and a look at tomorrow\'s clues.</p>'+
-    '<p><b>Wrong locks.</b> Here a wrong lock is only flagged. On a scored cube a wrong lock shakes, won\'t stay, and costs 25 points, so pencil in until you\'re sure.</p></div>']];
-let walk=-1,walkCell=-1,walkDigit=0;
-function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p]=WALK[n];
-  ask(t,p.startsWith('<')?p:`<p>${p}</p>`,[[n===WALK.length-1?'Got it':'OK',()=>render(),'primary']])}
+  ['Step 1 of 6 · Rotate','The cube has been rotated once, so a few numbers conflict. Tap the pulsing arrow to rotate it back.'],
+  ['Step 2 of 6 · Pick a square','Lined up! Half the cube is filled in for you. Every face holds 1 to 9 once, and so does each line of nine across three faces. Tap the glowing square: only one number fits there.'],
+  ['Step 3 of 6 · Pencil it in','Tap the glowing number on the pad. It goes in as a pencil note.'],
+  ['Step 4 of 6 · Lock it in','<p>Sure of it? Switch to Lock in, then tap the number again to place it.</p><p>This square is marked ★FIRST, one of the <b>★ lock-first squares</b>. On a scored cube there are three. Lock all three before any other square for +50 each, and a look at tomorrow\'s clues.</p>'],
+  ['Step 5 of 6 · Wrong locks','<p>Locked in, and the star shows +50. Now watch a <b>wrong lock</b>: it shakes, won\'t stay, and on a scored cube costs 25 points. Here it\'s only flagged, but pencil in until you\'re sure.</p>',()=>walkWrong()],
+  ['Step 6 of 6 · Dashed squares','<p>Watch the <b>dashed squares</b>. Tap a square on a line\'s middle face and two sets of three squares are dashed: three on that face, and three on the far side of the cube. Both sets hold the same three numbers. Watch the cube turn to show the far set.</p>',()=>walkDashed()],
+  ['Your turn','<p>Most of the cube is filled in now. Finish the last quarter the same way: start where only one number fits. Nothing here is timed or scored.</p>']];
+let walk=-1,walkCell=-1,walkDigit=0,walkRun=0;
+function walkTo(n){if(n<=walk)return;walk=n;render();const [t,p,act]=WALK[n];
+  ask(t,`<div class="walkEnd">${p.startsWith('<')?p:`<p>${p}</p>`}</div>`,[[n===WALK.length-1?'Got it':'OK',()=>{render();if(act)act()},'primary']])}
+// a demo step waits a beat between moves, and stops if the practice was restarted or left
+const walkWait=(run,ms)=>new Promise(res=>setTimeout(()=>res(run===walkRun&&isPrac()&&stage===2),ms));
+/** Puts the cube's best view on a square and selects it. */
+function walkSelect(c){const fi=[0,1,2,3,4,5].filter(f=>stickers[c].some(x=>+x.dataset.f===f)).sort((a,b)=>facing(b)-facing(a))[0];
+  lc=0;sel=c;selFace=fi;hintArrow=null;focusFace(fi);render()}
+/** Step 5: the game locks a wrong number into an empty square. It shakes and shows −25, but isn't counted. */
+async function walkWrong(){const run=walkRun,sol=answer();const c=sol&&singlesOrder(vals).find(i=>!vals[i]);
+  if(!sol||c===undefined){walkTo(6);return}
+  walkSelect(c);if(!await walkWait(run,700))return;penMode=true;render();
+  const d=sol[c]%9+1,b=$('pad').querySelector(`button[data-d="${d}"]`);b?.classList.add('walkglow');
+  if(!await walkWait(run,700))return;b?.classList.remove('walkglow');missAt(c);
+  if(await walkWait(run,1900))walkTo(5)}
+/** Step 6: the game taps a square on a line's middle face, so both sets of three are dashed. */
+async function walkDashed(){const run=walkRun;
+  const own=c=>{const by={};for(const k of lineIdxOf[c])(by[Math.floor(k/6)]??=[]).push(k);return Object.values(by).some(a=>!lines[(a[0]??0)^1].includes(c))};
+  const pick=vals.map((v,i)=>i).filter(i=>!vals[i]&&own(i));const c=pick[0];
+  // the two sets are on opposite faces, so the view turns to the far set and back
+  if(c!==undefined){walkSelect(c);if(!await walkWait(run,2600))return;
+    const far=[...cubeEl.querySelectorAll('.st.twin')].map(x=>+x.dataset.f).find(f=>f!==selFace);
+    if(far!==undefined){focusFace(far);if(!await walkWait(run,2800))return;focusFace(selFace);if(!await walkWait(run,1400))return}}
+  walkAutofill(run)}
+/** Then the game locks in squares until a quarter of the empty ones are left, a few at a time. */
+async function walkAutofill(run){const sol=answer();if(!sol){walkTo(6);return}
+  sel=-1;penMode=false;const keep=Math.ceil(blanks/4);
+  const todo=shuffle(vals.map((v,i)=>i).filter(i=>!vals[i]));
+  while(todo.length>keep){const c=todo.pop();if(c===undefined||vals[c])continue;vals[c]=sol[c];pm[c]=0;render();
+    stickers[c].forEach(el=>{el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash')});
+    if(!await walkWait(run,45))return}
+  regularLocked=true;music.sfx('lock');walkTo(6)}
 // a first practice opens with what the game is before the first step
 let welcome=false;
-function coachTurn(){walk=-1;walkCell=-1;if(!isPrac()||stage!==1)return;if(tx.busy){setTimeout(coachTurn,200);return} // after the countdown, not over it
+function coachTurn(){walk=-1;walkCell=-1;walkRun++;if(!isPrac()||stage!==1)return;if(tx.busy){setTimeout(coachTurn,200);return} // after the countdown, not over it
   showHint(true);
   if(!welcome){walkTo(0);return}welcome=false;
   ask('Welcome to Nonet','<p>Nonet is sudoku on a cube. Every day has two stages: <b>Dial in</b>, where you rotate the scrambled cube until no numbers clash, then <b>Fill in</b>, where you complete it. This practice cube walks you through both, one step at a time.</p>',[['Start',()=>walkTo(0),'primary']])}
-/** Step 2 on: the first square that only one number fits, and that number. */
+/** Step 2 on: the first square that only one number fits, and that number. It's the practice's ★ lock-first square. */
 function walkFill(){const c=singlesOrder(vals).find(i=>!vals[i]);const sol=c>=0?answer():null;
-  if(c===undefined||!sol){walkTo(WALK.length-1);return}walkCell=c;walkDigit=sol[c];focusFace(faceOfNormal.get(k3(cells[c].n)));walkTo(1)}
+  if(c===undefined||!sol){walkTo(WALK.length-1);return}walkCell=c;walkDigit=sol[c];stars=new Set([c]);focusFace(faceOfNormal.get(k3(cells[c].n)));walkTo(1)}
 const nowSec=()=>Math.max(0,((paused||hold?pausedAt:performance.now())-t0)/1000);
 function holdClock(){if(!hold&&!paused){hold=true;pausedAt=performance.now()}}
 function releaseClock(){if(hold){t0+=performance.now()-pausedAt;hold=false}}
@@ -769,13 +798,15 @@ function pressDigit(d){ensureRunning();
   if(!penMode){pm[sel]=pm[sel]===(1<<d)?0:1<<d;music.sfx('pencil');render();if(walk===2&&sel===walkCell&&d===walkDigit&&pm[sel])walkTo(3);return}
   const g=vals.slice();g[sel]=d;
   const ok=solveCount(g,1,80000)[0]!==0;
-  if(!ok){wrong++;buzz([30,40,30]);music.sfx('wrong');const el=stickers[sel];penaltyAt(shownSticker(sel));// the square goes red and pulses twice, on the cube and in the flattened cross
-    const red=[...el,...document.querySelectorAll(`#net .st[data-c="${sel}"]`)];red.forEach(x=>{x.classList.remove('shake','wrong');x.style.animation='';void x.offsetWidth;x.classList.add('wrong')});
-    setTimeout(()=>red.forEach(x=>x.classList.remove('wrong')),1400);updateStatus();return}
+  if(!ok){wrong++;missAt(sel);return}
   if(stars.has(sel)&&!regularLocked)starWon.add(sel);else if(!stars.has(sel))regularLocked=true;
   vals[sel]=d;pm[sel]=0;music.sfx('lock');buzz(faceCells[faceOfCell(sel)].every(i=>vals[i])?[12,40,24]:10);render();
-  if(walk>=1&&walk<WALK.length-1&&sel===walkCell)walkTo(WALK.length-1);
+  if(walk>=1&&walk<=3&&sel===walkCell)walkTo(4);
 }
+/** A wrong lock: a buzz, a −25 over the square, and the square goes red and pulses twice, on the cube and in the flattened cross. */
+function missAt(c){buzz([30,40,30]);music.sfx('wrong');penaltyAt(shownSticker(c));
+  const red=[...stickers[c],...document.querySelectorAll(`#net .st[data-c="${c}"]`)];red.forEach(x=>{x.classList.remove('shake','wrong');x.style.animation='';void x.offsetWidth;x.classList.add('wrong')});
+  setTimeout(()=>red.forEach(x=>x.classList.remove('wrong')),1400);updateStatus()}
 const pad=$('pad');
 for(let d=1;d<=9;d++){const b=document.createElement('button');b.textContent=d;b.dataset.d=d;b.setAttribute('aria-label','Digit '+d);b.onclick=()=>pressDigit(d);pad.appendChild(b)}
 const er=document.createElement('button');er.textContent='⌫';er.setAttribute('aria-label','Clear pencil marks');er.onclick=()=>pressDigit(0);pad.appendChild(er);

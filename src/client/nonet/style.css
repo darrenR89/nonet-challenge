@@ -414,6 +414,7 @@ button.danger{border-color:var(--beni);color:var(--beni)}
 /* the completed page's share line and next steps */
 .results .more .sharetxt{margin:0;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap}
 #modalBody .walkEnd p{margin:0 0 10px}
+#modalBody .walkEnd p:last-child{margin-bottom:0}
 #modalBody .sharetxt{margin:0 0 10px;padding:10px 12px;border-radius:8px;background:rgba(18,19,22,.07);font:500 13px/1.5 var(--code);white-space:pre-wrap;overflow-wrap:anywhere}
 .results .more button small{font-size:11px;opacity:.7;margin-left:4px}
 /* the guest's end card: what signing up saves */
