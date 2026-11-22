@@ -1566,7 +1566,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.match(
     text,
-    /\[the Nonet wiki\]\(https:\/\/old\.reddit\.com\/r\/nonetdaily\/wiki\/nonet\)/,
+    /\[the Nonet wiki\]\(https:\/\/www\.reddit\.com\/r\/nonetdaily\/wiki\/nonet\)/,
   )
 
   assert.equal(
@@ -1602,7 +1602,7 @@ test("Monday's post has the weekly top nine and the solve of the week, is pinned
   )
   assert.equal(
     menu.body.navigateTo,
-    'https://old.reddit.com/r/nonetdaily/wiki/nonet',
+    'https://www.reddit.com/r/nonetdaily/wiki/nonet',
   )
   assert.equal(wiki.created, 16, 'the menu rewrites the same pages')
 })
