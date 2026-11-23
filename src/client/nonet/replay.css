@@ -15,7 +15,8 @@
   color-scheme:light}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{height:100%;margin:0}
+/* no scrolling in the feed (Reddit's rule for posts): the post fits its 512px height */
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
 body{background:var(--sumi);color:var(--washi);font:14px/1.5 var(--body)}
 .rp{position:relative;height:100%;max-width:480px;margin:0 auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
 .rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -65,3 +66,6 @@ button:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
 .rp-row button{flex:1}
 .rp-empty{margin:auto;color:var(--lead)}
 @media (prefers-reduced-motion:reduce){.rp-cube{transition:none}.rp-st.flash,.rp-st.pop,.rp-st.wrong{animation:none}}
+/* the post can't scroll: on a post shorter than 512px the cube shrinks and the counts give way */
+@media (max-height:440px){.rp-stage{min-height:0}.rp-cube{scale:.8}}
+@media (max-height:360px){.rp-stats{display:none}.rp-cube{scale:.62}.rp{gap:4px;padding:8px 16px}}

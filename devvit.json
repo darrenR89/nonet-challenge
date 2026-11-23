@@ -4,7 +4,8 @@
   "post": {
     "entrypoints": {
       "default": {
-        "entry": "splash.html"
+        "entry": "splash.html",
+        "height": "tall"
       },
       "game": {
         "entry": "game.html"
@@ -28,10 +29,12 @@
         "entry": "open-pastboard.html"
       },
       "replay": {
-        "entry": "replay.html"
+        "entry": "replay.html",
+        "height": "tall"
       },
       "race": {
-        "entry": "race.html"
+        "entry": "race.html",
+        "height": "tall"
       }
     }
   },

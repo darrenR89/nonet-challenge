@@ -21,7 +21,9 @@ function listAfter(src: string, marker: string): string[] {
   )
 }
 
-type Devvit = {post: {entrypoints: Record<string, {entry: string}>}}
+type Devvit = {
+  post: {entrypoints: Record<string, {entry: string; height?: string}>}
+}
 const devvit = JSON.parse(read('devvit.json')) as Devvit
 const entries = devvit.post.entrypoints
 const built = listAfter(read('tools/entries.mjs'), 'OPEN_ENTRIES')
@@ -104,5 +106,30 @@ test('the pages load the scripts and styles the build writes, and have no repeat
     const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1])
     const twice = ids.filter((id, i) => ids.indexOf(id) !== i)
     assert.deepEqual(twice, [], `${page} repeats ids`)
+  }
+})
+
+// Reddit doesn't allow scrolling inside a post in the feed ("in-line scroll trap"): the pages
+// that show inline fit a tall post and switch scrolling off. The game and its open-* copies
+// only show in expanded mode, where scrolling is fine.
+test('the pages shown in the feed are tall posts that never scroll', () => {
+  const inline: Record<string, string> = {
+    default: 'src/client/nonet/feed.css',
+    replay: 'src/client/nonet/replay.css',
+    race: 'src/client/nonet/race.css',
+  }
+  for (const [name, css] of Object.entries(inline)) {
+    assert.equal(entries[name]?.height, 'tall', `${name} isn't a tall post`)
+    const src = read(css).replace(/\/\*[\s\S]*?\*\//g, '')
+    assert.match(
+      src,
+      /html,\s*body\s*\{[^}]*overflow:\s*hidden/,
+      `${css}: html and body can scroll`,
+    )
+    assert.doesNotMatch(
+      src,
+      /overflow(-y)?:\s*(auto|scroll)/,
+      `${css}: something in the feed can scroll`,
+    )
   }
 })

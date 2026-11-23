@@ -117,9 +117,53 @@ async function intro(): Promise<void> {
   await Promise.all([formed, flyToCover(svg, mark)])
   if (!skipped) show()
 }
+/**
+ * Keeps the whole card in the post's height, as the card can't scroll (feed.css). It drops the
+ * extras a step at a time (fit-1 to fit-3) until nothing reaches past the top or bottom. On a
+ * tall post nothing is dropped. Waits while the intro still has the cover moved out of place.
+ */
+const FITS = ['fit-1', 'fit-2', 'fit-3']
+function fitCard(): void {
+  const body = document.body
+  if (body.classList.contains('fd-pre') || body.classList.contains('fd-hold'))
+    return
+  const parts = document.querySelectorAll<HTMLElement>(
+    '.cv-title > *, .cv-mid > *, .cv-mid .cv-links, .dn-acts',
+  )
+  const title = document.querySelector<HTMLElement>('.cv-title')
+  // off the top or bottom of the post, or Play's block pushed up over the title block
+  const spills = (): boolean => {
+    const h = window.innerHeight
+    const under = title?.getBoundingClientRect().bottom ?? 0
+    for (const el of parts) {
+      // the streak sticker is tilted over the top edge on purpose
+      if (!el.offsetParent || el.matches('.cv-sr, .cv-streak')) continue
+      const r = el.getBoundingClientRect()
+      if (!r.height) continue
+      if (r.bottom > h + 0.5 || r.top < -0.5) return true
+      if (!title?.contains(el) && r.top < under - 0.5) return true
+    }
+    return false
+  }
+  body.classList.remove(...FITS)
+  for (const f of FITS) {
+    if (!spills()) return
+    body.classList.add(f)
+  }
+}
+let fitTimer = 0
+/** Fits the card now, and again once anything still sliding in has landed. */
+function refit(): void {
+  fitCard()
+  clearTimeout(fitTimer)
+  fitTimer = window.setTimeout(fitCard, 2200)
+}
+window.addEventListener('resize', refit)
+void document.fonts?.ready.then(refit)
+
 // asked for straight away: the intro needs to know if today is already played
 const cardP = getCard()
-void intro()
+void intro().then(refit)
 const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
 const WDAYS = 'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
 
@@ -327,3 +371,5 @@ void cardP.then(card => {
   stats.replaceChildren(...parts)
   stats.removeAttribute('hidden')
 })
+// the card's numbers and next steps change its height: fit it again once they're in
+void cardP.then(() => requestAnimationFrame(refit))
