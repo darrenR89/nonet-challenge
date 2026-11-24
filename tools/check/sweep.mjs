@@ -6,6 +6,8 @@
 //   - buttons and links that are off screen with no way to scroll to them
 //   - accessibility problems axe-core finds (WCAG 2.2 A and AA)
 //   - layout shift after the screen has settled
+//   - the feed card scrolling at all: Reddit doesn't allow scrolling in a post in the feed, so the
+//     card is also checked at a post's own size (512px tall, "tall" in devvit.json)
 // Warnings (small tap targets, clipped text) are reported but don't fail.
 //
 // node tools/check/sweep.mjs [--quick] [--only=name] [--out=dir]
@@ -56,9 +58,14 @@ const SIZES = [
   {name: 'phone-land', width: 844, height: 390, mobile: true},
   {name: 'tablet', width: 768, height: 1024, mobile: true},
   {name: 'desktop', width: 1440, height: 900, mobile: false},
+  // the feed card at the size Reddit shows it in the feed: card screens only
+  {name: 'post', width: 360, height: 512, mobile: true, post: true},
+  {name: 'post-wide', width: 740, height: 512, mobile: false, post: true},
 ]
 const sizes = args.quick
-  ? SIZES.filter(s => s.name === 'phone' || s.name === 'desktop')
+  ? SIZES.filter(
+      s => s.name === 'phone' || s.name === 'desktop' || s.name === 'post',
+    )
   : SIZES
 const schemes = args.quick ? ['dark'] : ['dark', 'light']
 
@@ -394,9 +401,14 @@ let failed = 0
 const runs = []
 for (const scheme of schemes)
   for (const size of sizes)
-    if (scheme === 'dark' || size.name === 'phone' || size.name === 'desktop')
+    if (
+      scheme === 'dark' ||
+      size.name === 'phone' ||
+      size.name === 'desktop' ||
+      size.post
+    )
       for (const sc of screens)
-        if (!sc.sizes || sc.sizes.includes(size.name))
+        if (size.post ? sc.frame : !sc.sizes || sc.sizes.includes(size.name))
           runs.push({scheme, size, sc, motion: false})
 if (!args.quick)
   for (const sc of screens.filter(
@@ -504,6 +516,29 @@ for (const engine of engines) {
           errors.push(`layout shifts after settling (CLS ${cls.toFixed(2)})`)
         const r = await target.evaluate(inspect)
         errors.push(...r.errors)
+        // the feed card never scrolls, at any size
+        if (sc.frame)
+          errors.push(
+            ...(await target.evaluate(() => {
+              const out = []
+              for (const el of [
+                document.documentElement,
+                ...document.querySelectorAll('body, body *'),
+              ]) {
+                const cs = getComputedStyle(el)
+                const scrolls =
+                  el === document.documentElement
+                    ? cs.overflowY !== 'hidden' &&
+                      getComputedStyle(document.body).overflowY !== 'hidden'
+                    : /auto|scroll/.test(cs.overflowY)
+                if (scrolls && el.scrollHeight > el.clientHeight + 1)
+                  out.push(
+                    `the feed card scrolls: ${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''} (${el.scrollHeight} > ${el.clientHeight})`,
+                  )
+              }
+              return out
+            })),
+          )
         warns.push(...r.warns)
         auditing = true
         await target.evaluate(axeSrc)

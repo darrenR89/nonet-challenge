@@ -1,11 +1,56 @@
 /* The post card in the feed: the black intro, then the cover filling the card. The cover itself is in cover.css. */
+/* The card never scrolls: Reddit doesn't allow scrolling inside a post in the feed, as it fights
+   the feed's own scrolling. Everything fits the post's height instead (512px, "tall"); on a
+   shorter post the card drops its extras a step at a time (the fit-1 to fit-3 classes below,
+   set by splash.ts) so Play and its links always stay in view. */
 html,
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
-body.cv {
-  overflow-y: auto;
+
+/* step 1: the chips' second lines, the streak sticker, and tighter space */
+.fit-1 .dn-chip > span,
+.fit-1 .cv-streak {
+  display: none;
+}
+.fit-1 .cv-title {
+  --top: 20px;
+  gap: 8px;
+}
+.fit-1 .cv-mid,
+.fit-1.is-done .cv-mid {
+  gap: 10px;
+}
+.fit-1 .cv-play {
+  height: 40px;
+}
+/* step 2: today's numbers and the line over Play */
+.fit-2 .cv-title .cv-stats,
+.fit-2 .cv-title .cv-first,
+.fit-2 .cv-sub {
+  display: none;
+}
+/* step 3: a smaller name and number */
+.fit-3 .cv-mark {
+  width: min(100%, 200px);
+  margin: 0 auto;
+  align-self: center;
+}
+.fit-3 .cv-no b {
+  font-size: 32px;
+}
+.fit-3 .cv-title {
+  --top: 12px;
+}
+/* played today has the most to show: the name gives way to the score and next steps */
+.fit-3.is-done .cv-mark {
+  display: none;
+}
+.fit-3 .dn-chip {
+  padding-block: 4px;
 }
 
 /* The intro: the card opens black, the Nonet cube comes apart into the wordmark, then the

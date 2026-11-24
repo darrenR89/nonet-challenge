@@ -14,7 +14,8 @@
   color-scheme:light}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{height:100%;margin:0}
+/* no scrolling in the feed (Reddit's rule for posts): the post fits its 512px height */
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
 body{background:var(--sumi);color:var(--washi);font:14px/1.5 var(--body)}
 .wr{min-height:100%;max-width:520px;margin:0 auto;padding:10px 16px;display:flex;flex-direction:column;gap:7px}
 .wr-head{display:flex;flex-direction:column}
@@ -51,3 +52,8 @@ button:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
 .wr-ctrls button{flex:1}
 .wr-empty{margin:auto;color:var(--lead)}
 @media (prefers-reduced-motion:reduce){.wr-bar,.wr-len{transition:none}}
+/* the post is 512px tall and can't scroll: a hair less room per bar on a phone, and on a shorter
+   post the extras give way so the bars and Replay stay in view */
+@media (max-height:540px){:root{--row:26px}.wr{gap:6px}}
+@media (max-height:440px){:root{--row:22px}.wr-trio{display:none}}
+@media (max-height:360px){:root{--row:19px}.wr-gap,.wr-head small{display:none}.wr-head h1{font-size:17px}.wr-ctrls button{min-height:30px}}
