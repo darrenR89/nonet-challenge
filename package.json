@@ -24,11 +24,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
-    "@devvit/analytics": "0.15.4",
-    "@devvit/web": "0.15.4",
+    "@devvit/analytics": "0.15.6",
+    "@devvit/web": "0.15.6",
     "@types/node": "24.19.2",
     "axe-core": "4.10.3",
-    "devvit": "0.15.4",
+    "devvit": "0.15.6",
     "esbuild": "0.28.2",
     "playwright": "1.63.0",
     "typescript": "7.0.2"
