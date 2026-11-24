@@ -1,7 +1,7 @@
 // Builds one self-contained HTML file of the current game, with the stand-in server.
 // node tools/standalone/build.mjs [out.html]
 import {build} from 'esbuild'
-import {readFileSync, writeFileSync} from 'node:fs'
+import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
 import {dirname, join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
@@ -78,5 +78,6 @@ body:has(.padbox:not([hidden])) .demo{display:none}
   .replace('<script src="game.js" type="module"></script>', () => `${cardLayer}
 <button class="demo" id="resetDemo" type="button" hidden title="Prototype: start today over in this browser">Reset demo</button>
 <script type="module">${js.replaceAll('</script', '<\\/script')}</script>`)
+mkdirSync(dirname(out), {recursive: true})
 writeFileSync(out, html)
 console.log(`${out} ${(html.length / 1024).toFixed(1)} KB`)
