@@ -82,6 +82,34 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/on/menu/demo"
+      },
+      {
+        "label": "Nonet demo: daily cube post",
+        "description": "Posts a demo of today's cube for screenshots: everyone who opens it sees a busy day as a regular, with full boards, a streak, a crew and challenges. Runs played on it never reach the real boards.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/demo-daily"
+      },
+      {
+        "label": "Nonet demo: weekly top nine post",
+        "description": "Posts a demo of the Monday top nine, playing back a full sample week with your own bar just off the board.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/demo-race"
+      },
+      {
+        "label": "Nonet demo: play of the week post",
+        "description": "Posts a demo replay of a sample player's run on a made-up cube, so no real answer is shown.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/demo-replay"
+      },
+      {
+        "label": "Nonet demo: remove the demo posts",
+        "description": "Deletes every demo post the app made. Real posts, boards and players are left alone.",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/on/menu/demo-clear"
       }
     ]
   },

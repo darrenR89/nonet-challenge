@@ -44,7 +44,14 @@ let serverURL: string
 let user: {userId?: string; username?: string} = {}
 /** The open post's data, as Devvit passes it: daily posts carry their day. */
 let postData:
-  | {day?: string; play?: string; race?: string; from?: string; final?: boolean}
+  | {
+      day?: string
+      play?: string
+      race?: string
+      from?: string
+      final?: boolean
+      demo?: string
+    }
   | undefined
 let now = new Date('2026-11-14T12:00:00Z')
 const posts: string[] = []
@@ -80,6 +87,8 @@ const commentAs: (string | undefined)[] = []
 let commentFails = false
 /** Private messages the app sent, as [to, subject]. */
 const messages: [string, string][] = []
+/** Posts the app deleted, by id. */
+const deleted: string[] = []
 
 const r = reddit as unknown as Record<string, unknown>
 let uploads = 0
@@ -91,6 +100,7 @@ const was = {
   submitComment: r.submitComment,
   sendPrivateMessage: r.sendPrivateMessage,
   getUserById: r.getUserById,
+  getPostById: r.getPostById,
   setUserFlair: r.setUserFlair,
   getPostFlairTemplates: r.getPostFlairTemplates,
   createPostFlairTemplate: r.createPostFlairTemplate,
@@ -147,6 +157,11 @@ before(async () => {
           : name === 'founderFlair'
             ? founderFlair
             : true
+  r.getPostById = async (id: string) => ({
+    delete: async () => {
+      deleted.push(id)
+    },
+  })
   r.getUserById = async (id: string) => ({
     getUserFlairBySubreddit: async () => ({flairText: flairs.get(id)}),
   })
@@ -262,6 +277,7 @@ after(async () => {
     submitComment: was.submitComment,
     sendPrivateMessage: was.sendPrivateMessage,
     getUserById: was.getUserById,
+    getPostById: was.getPostById,
     setUserFlair: was.setUserFlair,
     getPostFlairTemplates: was.getPostFlairTemplates,
     createPostFlairTemplate: was.createPostFlairTemplate,
@@ -298,6 +314,8 @@ beforeEach(() => {
   commentAs.length = 0
   commentFails = false
   messages.length = 0
+  deleted.length = 0
+  postData = undefined
   optedIn = false
   autoPost = true
   now = new Date('2026-11-14T12:00:00Z')
@@ -1718,6 +1736,134 @@ test('demo mode fills the boards and walks a mod through a crew invite and chall
   assert.equal(bob.crew.crew, undefined)
   assert.equal(bob.crew.invites.length, 0)
   assert.notEqual(bob.boards.day.players, 1284)
+})
+
+test('the demo daily post shows every viewer a busy day as a regular, and its runs never reach the real boards', async () => {
+  const real = await playDay(1, run())
+  assert.equal(real.body.counted, true)
+  const menu = await post<{navigateTo?: string}>(Endpoint.OnMenuDemoDaily)
+  assert.ok(menu.body.navigateTo)
+  assert.deepEqual(customPosts.at(-1), {
+    entry: undefined,
+    postData: {demo: 'daily'},
+  })
+  assert.match(posts.at(-1) ?? '', /^Nonet demo/)
+  assert.deepEqual(pins, [], 'not pinned')
+  assert.deepEqual(postFlairs, [], 'not flaired')
+
+  postData = {demo: 'daily'}
+  const d = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(d.asNew, undefined, 'a regular, not a new player')
+  assert.equal(d.my.score, undefined, 'their real run is not this one')
+  assert.equal(d.streak.current, 12)
+  assert.equal(d.stats.solves, 1031)
+  assert.equal(d.boards.day.top.length, 9)
+  assert.equal(d.boards.week.me?.name, 'ann', 'on the week board already')
+  assert.equal(d.crew.crew?.members.length, 3, 'in the sample crew')
+  assert.equal(d.crew.crew?.streak, 6)
+  assert.equal(d.duels.length, 3)
+  assert.ok(d.duels.some(x => !x.sent && x.status === 'offered'))
+  const card = (await get<CardRsp>(Endpoint.Card)).body
+  assert.equal(card.streak, 12)
+  assert.equal(card.solves, 1031)
+  assert.equal(card.firstTime, undefined)
+  const all = await post<{board: {top: unknown[]; players: number}}>(
+    Endpoint.Board,
+    {kind: 'all'},
+  )
+  assert.equal(all.body.board.players, 6021)
+
+  // a run on the demo post is scored on a demo copy
+  const demoRun = await playDay(2, run())
+  assert.equal(demoRun.status, 200)
+  assert.equal(demoRun.body.counted, true)
+  assert.equal(demoRun.body.streak.current, 13)
+  assert.equal(demoRun.body.boards.day.players, 1284)
+  assert.equal(
+    (await get<CardRsp>(Endpoint.Card)).body.score,
+    demoRun.body.total,
+  )
+  const shared = await post<ErrorRsp>(Endpoint.ResultComment)
+  assert.equal(shared.status, 409, 'no result comment from a demo post')
+  assert.equal(comments.length, 0)
+
+  // logged out, the post is busy too
+  as(undefined)
+  assert.equal(
+    (await get<DailyRsp>(Endpoint.Daily)).body.boards.day.players,
+    1284,
+  )
+
+  // back on a real post, nothing changed
+  postData = undefined
+  as('t2_ann', 'ann')
+  const back = (await get<DailyRsp>(Endpoint.Daily)).body
+  assert.equal(back.my.score, real.body.total)
+  assert.equal(back.stats.solves, 1)
+  assert.equal(back.streak.current, 1)
+  assert.equal(back.crew.crew, undefined)
+  assert.equal(back.duels.length, 0)
+  assert.equal(back.boards.day.players, 1)
+  assert.equal(back.boards.day.top[0]?.score, real.body.total)
+})
+
+test('the demo top nine plays back a full sample week, and the demo replay a checked run', async () => {
+  await post(Endpoint.OnMenuDemoRace)
+  assert.deepEqual(customPosts.at(-1), {
+    entry: 'race',
+    postData: {demo: 'race'},
+  })
+  postData = {demo: 'race'}
+  const race = (await get<RaceRsp>(Endpoint.Race)).body.race
+  assert.ok(race)
+  assert.equal(race.final, true)
+  assert.equal(race.from, '2026-11-02', "last week's Monday")
+  assert.equal(race.rows.length, 9)
+  assert.ok(race.rows.every(r => r.points.length === 7))
+  assert.ok(
+    race.rows.some(r => r.points.includes(0)),
+    'with a rest day',
+  )
+  assert.equal(race.me?.name, 'ann')
+  assert.ok(race.streak && race.crew)
+
+  await post(Endpoint.OnMenuDemoReplay)
+  assert.deepEqual(customPosts.at(-1), {
+    entry: 'replay',
+    postData: {demo: 'replay'},
+  })
+  postData = {demo: 'replay'}
+  const play = (await get<ReplayRsp>(Endpoint.Replay)).body.play
+  assert.ok(play)
+  assert.equal(play.wrong, 1)
+  assert.ok(play.score > 0 && play.log.length > 20)
+  assert.ok(play.day < '2026-11-14', 'never today, so no spoiler')
+})
+
+test('removing the demo posts deletes them all and leaves real posts alone', async () => {
+  const none = await post<{showToast?: string}>(Endpoint.OnMenuDemoClear)
+  assert.match(String(none.body.showToast), /no demo posts/)
+  // each post gets its own id here
+  const submit = r.submitCustomPost as (o: object) => Promise<object>
+  let n = 0
+  r.submitCustomPost = async (o: object) => ({
+    ...(await submit(o)),
+    id: `t3_p${++n}`,
+  })
+  try {
+    await post(Endpoint.OnMenuNewPost)
+    await post(Endpoint.OnMenuDemoDaily)
+    await post(Endpoint.OnMenuDemoRace)
+  } finally {
+    r.submitCustomPost = submit
+  }
+  const gone = await post<{showToast?: {text: string}}>(
+    Endpoint.OnMenuDemoClear,
+  )
+  assert.match(gone.body.showToast?.text ?? '', /Removed 2 demo posts/)
+  assert.deepEqual(deleted, ['t3_p2', 't3_p3'], 'the real daily post stays')
+  const again = await post<{showToast?: string}>(Endpoint.OnMenuDemoClear)
+  assert.match(String(again.body.showToast), /no demo posts/)
 })
 
 test('junk from the browser gets a 4xx, never a crash, and never corrupts what players see', async () => {
