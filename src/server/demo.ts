@@ -2,6 +2,9 @@
 // boards are full, a crew invites them, and other players have challenged them. Everything
 // they do to the crew or the challenges changes only their own demo copy, kept in Redis for
 // the hour. Their own runs, scores and streak are real and untouched; nobody else sees any of it.
+//
+// A demo daily post (see demoposts.ts) uses the same sample, as a regular on a busy day: every
+// viewer is already in the sample crew, with challenges both ways. Their copy is kept a day.
 import {redis} from '@devvit/web/server'
 import type {
   AnswerReq,
@@ -28,11 +31,15 @@ import {BOARD_TOP} from './board.ts'
 
 /** How long demo mode lasts once a moderator turns it on. */
 export const DEMO_SECONDS = 60 * 60
+/** How long a viewer's copy of a demo post's crew and challenges is kept. */
+const DEMO_POST_SECONDS = 24 * 60 * 60
 
-const demoKey = (uid: string): string => `demo:${uid}`
+/** Demo mode's copy, or a demo post's: the two never share. */
+const demoKey = (uid: string, post: boolean | undefined): string =>
+  post ? `demo-post:${uid}` : `demo:${uid}`
 
 /** Sample players, as Reddit usernames. */
-const NAMES = [
+export const NAMES = [
   'sudo_ku',
   'pivot_pat',
   'blockparty',
@@ -82,14 +89,14 @@ type DemoState = {
 }
 
 /** A number from 0 to 1 for a name and a day, so the sample scores hold still all day. */
-function noise(name: string, day: string): number {
+export function noise(name: string, day: string): number {
   let h = 2166136261
   for (const ch of `${name}:${day}`)
     h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
   return ((h >>> 0) % 10000) / 10000
 }
 
-const scoreOf = (name: string, day: string): number =>
+export const scoreOf = (name: string, day: string): number =>
   Math.round(600 + 2200 * noise(name, day) ** 1.4)
 
 /** Who has played today: most of them, and the rest later. */
@@ -146,6 +153,22 @@ export function demoBoards(
     day: board('Today', today, {name: me.name, score: me.today}, 1284),
     week: board('This week', week, {name: me.name, score: me.week}, 2310),
   }
+}
+
+/** The all-time board, full of sample players, with the asker's demo total in among them. */
+export function demoAllBoard(
+  day: string,
+  me: {name: string; score: number | undefined},
+): Board {
+  const all = NAMES.map(
+    n =>
+      [n, Math.round(scoreOf(n, day) * (30 + 90 * noise(n, 'all')))] as [
+        string,
+        number,
+      ],
+  )
+  const mine = me.score === undefined ? undefined : me.score + 61_480
+  return board('All time', all, {name: me.name, score: mine}, 6021)
 }
 
 /** The sample crew the invite is for: two crewmates, one played and one away for three days. */
@@ -212,7 +235,15 @@ function crewInfo(
   return {crew: crewOf(st, day, me), invites: []}
 }
 
-function freshState(day: string, myScore: number | undefined): DemoState {
+/**
+ * A fresh demo copy. Demo mode starts with an invite waiting; a demo post starts already in the
+ * crew, mid streak, with a challenge waiting, one won and one still out.
+ */
+function freshState(
+  day: string,
+  myScore: number | undefined,
+  post?: boolean,
+): DemoState {
   const duel = (
     them: string,
     sent: boolean,
@@ -227,11 +258,11 @@ function freshState(day: string, myScore: number | undefined): DemoState {
     theirs,
     status,
     result: status === 'accepted' ? duelResult(myScore, theirs) : 'pending',
-    record: {won: 2, lost: 1, tied: 0},
+    record: post ? {won: 5, lost: 2, tied: 1} : {won: 2, lost: 1, tied: 0},
   })
   return {
-    until: Date.now() + DEMO_SECONDS * 1000,
-    crew: 'invited',
+    until: Date.now() + (post ? DEMO_POST_SECONDS : DEMO_SECONDS) * 1000,
+    crew: post ? 'member' : 'invited',
     crewName: 'Night Owls',
     invited: [],
     nudged: [],
@@ -241,6 +272,7 @@ function freshState(day: string, myScore: number | undefined): DemoState {
     duels: [
       duel('blockparty', false, 'offered', undefined),
       duel('tessellate', true, 'accepted', scoreOf('tessellate', day)),
+      ...(post ? [duel('lattice_lou', true, 'offered', undefined)] : []),
     ],
   }
 }
@@ -251,18 +283,24 @@ export async function startDemo(
   day: string,
   myScore: number | undefined,
 ): Promise<void> {
-  await save(uid, freshState(day, myScore))
+  const st = freshState(day, myScore)
+  await save({id: uid, name: '', day, score: myScore, week: undefined}, st)
 }
 
-async function load(uid: string): Promise<DemoState | undefined> {
-  const raw = await redis.get(demoKey(uid))
+/** The asker's demo copy. On a demo post there always is one: the first look makes it. */
+async function load(me: DemoMe): Promise<DemoState | undefined> {
+  const raw = await redis.get(demoKey(me.id, me.post))
   const st = raw ? (JSON.parse(raw) as DemoState) : undefined
-  return st && st.until > Date.now() ? st : undefined
+  if (st && st.until > Date.now()) return st
+  if (!me.post) return
+  const fresh = freshState(me.day, me.score, true)
+  await save(me, fresh)
+  return fresh
 }
 
-async function save(uid: string, st: DemoState): Promise<void> {
-  // keeps the hour that's left
-  await redis.set(demoKey(uid), JSON.stringify(st), {
+async function save(me: DemoMe, st: DemoState): Promise<void> {
+  // keeps the time that's left
+  await redis.set(demoKey(me.id, me.post), JSON.stringify(st), {
     expiration: new Date(st.until),
   })
 }
@@ -273,6 +311,8 @@ export type DemoMe = {
   day: string
   score: number | undefined
   week: number | undefined
+  /** True on a demo daily post, where every viewer sees the sample as a regular. */
+  post?: boolean
 }
 
 /** The parts of today's response demo mode replaces, or undefined when it's off. */
@@ -281,7 +321,7 @@ export async function demoDaily(
 ): Promise<
   {boards: {day: Board; week: Board}; crew: CrewInfo; duels: Duel[]} | undefined
 > {
-  const st = await load(me.id)
+  const st = await load(me)
   if (!st) return
   const duels = st.duels.map(d => ({
     ...d,
@@ -301,7 +341,7 @@ export async function demoRoute(
   body: unknown,
   me: DemoMe,
 ): Promise<object | undefined> {
-  const st = await load(me.id)
+  const st = await load(me)
   if (!st) return
   const crew = (note?: string): object => ({
     ...crewInfo(st, me.day, me),
@@ -323,7 +363,7 @@ export async function demoRoute(
     case Endpoint.CrewInvite: {
       const names = (body as CrewInviteReq).names ?? []
       st.invited.push(...names.slice(0, CREW_SIZE - 1))
-      await save(me.id, st)
+      await save(me, st)
       return crew(
         `Demo: ${names.map(n => `u/${n}`).join(' and ')} would be tagged in a comment.`,
       )
@@ -366,7 +406,7 @@ export async function demoRoute(
         result: 'pending',
         record: {won: 0, lost: 0, tied: 0},
       })
-      await save(me.id, st)
+      await save(me, st)
       return {duels: st.duels}
     }
     case Endpoint.Answer: {
@@ -380,12 +420,12 @@ export async function demoRoute(
             }
           : d,
       )
-      await save(me.id, st)
+      await save(me, st)
       return {duels: st.duels}
     }
     default:
       return
   }
-  await save(me.id, st)
+  await save(me, st)
   return crew()
 }

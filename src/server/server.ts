@@ -127,10 +127,22 @@ import {blanksOf, cubeNumber, dayPuzzle, ensureDay} from './cube.ts'
 import {
   DEMO_SECONDS,
   type DemoMe,
+  demoAllBoard,
+  demoBoards,
   demoDaily,
   demoRoute,
   startDemo,
 } from './demo.ts'
+import {
+  type DemoKind,
+  demoKindOf,
+  demoPlay,
+  demoPosts,
+  demoRace,
+  forgetDemoPosts,
+  lastWeekFrom,
+  noteDemoPost,
+} from './demoposts.ts'
 import {addDuel, answerDuel, duelsFor, settleDuels} from './duels.ts'
 import {
   activeEvent,
@@ -371,6 +383,18 @@ async function route(
       case Endpoint.OnMenuDemo:
         rsp = await routeMenuDemo()
         break
+      case Endpoint.OnMenuDemoDaily:
+        rsp = await routeMenuDemoPost('daily')
+        break
+      case Endpoint.OnMenuDemoRace:
+        rsp = await routeMenuDemoPost('race')
+        break
+      case Endpoint.OnMenuDemoReplay:
+        rsp = await routeMenuDemoPost('replay')
+        break
+      case Endpoint.OnMenuDemoClear:
+        rsp = await routeMenuDemoClear()
+        break
       case Endpoint.OnFormNewEvent:
         rsp = await routeFormNewEvent(await readJson<unknown>(reqMsg))
         break
@@ -466,11 +490,13 @@ export function pastDayOf(postData: unknown, now: string): string | undefined {
 
 async function routeDaily(): Promise<DailyRsp> {
   const day = today()
-  const past = pastDayOf(context.postData, day)
+  // a demo daily post is always today's, and every viewer sees the sample as a regular
+  const demoPost = onDemoDaily()
+  const past = demoPost ? undefined : pastDayOf(context.postData, day)
   const uid = await who()
-  const asNew = past ? undefined : await asNewSince(uid)
+  const asNew = past || demoPost ? undefined : await asNewSince(uid)
   const my = uid
-    ? await getMyDay(day, runId(uid, asNew))
+    ? await getMyDay(day, demoPost ? demoPostRun(uid) : runId(uid, asNew))
     : {tier: undefined, score: undefined, starsWon: undefined, retries: 0}
   return {
     day,
@@ -479,10 +505,15 @@ async function routeDaily(): Promise<DailyRsp> {
     level: levelOf(day),
     puzzle: my.tier !== undefined ? await dayPuzzle(day, my.tier) : undefined,
     my,
-    streak: uid && !asNew ? await getStreak(day, uid) : NO_STREAK,
-    preview: asNew ? undefined : await previewFor(day, uid),
+    streak:
+      uid && demoPost
+        ? demoStreak(my.score)
+        : uid && !asNew
+          ? await getStreak(day, uid)
+          : NO_STREAK,
+    preview: asNew || demoPost ? undefined : await previewFor(day, uid),
     boards: await dayBoards(day, uid),
-    event: await eventFor(day, uid),
+    event: demoPost ? undefined : await eventFor(day, uid),
     loggedIn: !!uid,
     ...(asNew ? {asNew} : {}),
     cubeNo: cubeNumber(day),
@@ -494,7 +525,11 @@ async function routeDaily(): Promise<DailyRsp> {
     feature: uid ? await featureOn(uid) : true,
     duels: uid ? await duelsFor(day, uid) : [],
     crew: uid ? await crewInfo(day, uid) : NO_CREW,
-    ...(uid ? await demoView(uid, day, my.score) : undefined),
+    ...(uid
+      ? await demoView(uid, day, my.score)
+      : demoPost
+        ? {boards: demoBoards(day, NO_ONE), stats: DEMO_STATS}
+        : undefined),
     ...(past
       ? {
           past: true,
@@ -511,15 +546,24 @@ async function routeDaily(): Promise<DailyRsp> {
 /** The feed card: the post's own day's number, how many solved, and the asker's streak and result. */
 async function routeCard(): Promise<CardRsp> {
   const now = today()
-  const past = pastDayOf(context.postData, now)
+  const demoPost = onDemoDaily()
+  const past = demoPost ? undefined : pastDayOf(context.postData, now)
   const day = past ?? now
   // no rememberName here: the card is read on every scroll past
   const uid = context.userId
-  // demo mode: the card looks as it would to a new player on a busy day
-  const asNew = past ? undefined : await asNewSince(uid)
-  const score = uid ? (await getMyDay(day, runId(uid, asNew))).score : undefined
-  const st = asNew ? DEMO_STATS : await getDayStats(day)
-  const streak = uid && !asNew ? await getStreak(now, uid) : NO_STREAK
+  // demo mode: the card looks as it would to a new player on a busy day; a demo post, to a regular
+  const asNew = past || demoPost ? undefined : await asNewSince(uid)
+  const score = uid
+    ? (await getMyDay(day, demoPost ? demoPostRun(uid) : runId(uid, asNew)))
+        .score
+    : undefined
+  const st = asNew || demoPost ? DEMO_STATS : await getDayStats(day)
+  const streak =
+    uid && demoPost
+      ? demoStreak(score)
+      : uid && !asNew
+        ? await getStreak(now, uid)
+        : NO_STREAK
   return {
     day,
     no: cubeNumber(day),
@@ -531,7 +575,7 @@ async function routeCard(): Promise<CardRsp> {
     score,
     rank:
       uid && score !== undefined
-        ? asNew
+        ? asNew || demoPost
           ? (await demoDaily(await demoMe(uid, day, score)))?.boards.day.me
               ?.rank
           : await rankOn(boardKey.day(day), uid)
@@ -592,13 +636,14 @@ async function routeStart(req: StartReq): Promise<StartRsp> {
     const guest = await startGuest(day, req.tier, clock.now().getTime())
     return {tier: req.tier, puzzle: await dayPuzzle(day, req.tier), guest}
   }
-  const asNew = await asNewSince(uid)
+  const demoPost = onDemoDaily()
+  const asNew = demoPost ? undefined : await asNewSince(uid)
   const tier = await lockTier(
     day,
-    runId(uid, asNew),
+    demoPost ? demoPostRun(uid) : runId(uid, asNew),
     req.tier,
     clock.now().getTime(),
-    !asNew,
+    !asNew && !demoPost,
   )
   return {tier, puzzle: await dayPuzzle(day, tier)}
 }
@@ -644,8 +689,8 @@ async function routeScore(
   const day = today()
   if (req.day !== day)
     throw new HttpError(409, "That was yesterday's cube. Today's is ready.")
-  const asNew = await asNewSince(uid)
-  if (asNew) return scoreDemoRun(req, uid, day)
+  if (onDemoDaily() || (await asNewSince(uid)))
+    return scoreDemoRun(req, uid, day)
   let rec = await getDayRecord(day, uid)
   // a run played logged out, claimed after signing up: it takes today's place as if
   // started at the logged-out start, so the timing checks still hold
@@ -759,7 +804,8 @@ async function scoreDemoRun(
   uid: string,
   day: string,
 ): Promise<ScoreRsp> {
-  const id = runId(uid, 1)
+  const demoPost = onDemoDaily()
+  const id = demoPost ? demoPostRun(uid) : runId(uid, 1)
   const rec = await getDayRecord(day, id)
   if (rec.tier === undefined) throw new HttpError(409, 'Press Play first.')
   const tier = Number(rec.tier)
@@ -792,7 +838,11 @@ async function scoreDemoRun(
     penalty,
     beatPct: me ? beatPct(me.rank, boards.day.players) : 0,
     stats: DEMO_STATS,
-    streak: req.forfeit ? NO_STREAK : {current: 1, best: 1, played: 1},
+    streak: demoPost
+      ? demoStreak(req.forfeit ? undefined : score)
+      : req.forfeit
+        ? NO_STREAK
+        : {current: 1, best: 1, played: 1},
     boards,
     event: undefined,
     preview: undefined,
@@ -1047,6 +1097,8 @@ async function routeCrewPost(): Promise<CrewRsp> {
   const day = today()
   const postId = context.postId
   if (!postId) throw new HttpError(409, 'Open the daily post to share.')
+  if (onDemoDaily())
+    throw new HttpError(409, 'This is a demo post, so results stay off it.')
   const r = await claimCrewPost(day, uid)
   if (typeof r === 'string') crewFail(r)
   await reddit
@@ -1067,6 +1119,8 @@ async function routeResultComment(): Promise<ResultCommentRsp> {
   const day = today()
   const postId = context.postId
   if (!postId) throw new HttpError(409, 'Open the daily post to share.')
+  if (onDemoDaily())
+    throw new HttpError(409, 'This is a demo post, so results stay off it.')
   const rec = await getDayRecord(day, uid)
   if (rec.score === undefined || rec.time === undefined)
     throw new HttpError(409, "Finish today's cube first.")
@@ -1098,7 +1152,7 @@ async function routeResultComment(): Promise<ResultCommentRsp> {
 
 /** Uses today's one retry. The run restarts on the same cube and tier. */
 async function routeRetry(): Promise<RetryRsp> {
-  const uid = runId(await needUser(), await asNewSince(context.userId))
+  const uid = await playId(await needUser())
   const day = today()
   const rec = await getDayRecord(day, uid)
   if (rec.tier === undefined) throw new HttpError(409, 'Press Play first.')
@@ -1120,6 +1174,8 @@ async function routeFeature(req: FeatureReq): Promise<FeatureRsp> {
 
 /** A weekly top nine post's race. The week comes from the post. */
 async function routeRace(): Promise<RaceRsp> {
+  if (demoKindOf(context.postData) === 'race')
+    return {race: demoRace(today(), context.username)}
   const d = context.postData as
     | {race?: unknown; from?: unknown; final?: unknown}
     | undefined
@@ -1133,6 +1189,8 @@ async function routeRace(): Promise<RaceRsp> {
 /** A play of the week post's run: the week comes from the post, the run was fixed when it went up. */
 async function routeReplay(): Promise<ReplayRsp> {
   const todayPost = (await redis.hGet(DAILY_POSTS, today())) ?? ''
+  if (demoKindOf(context.postData) === 'replay')
+    return {play: demoPlay(today()), todayPost}
   const week = (context.postData as {play?: unknown} | undefined)?.play
   const play = typeof week === 'string' ? await playOfWeek(week) : undefined
   if (!play) return {play: undefined, todayPost}
@@ -1230,6 +1288,7 @@ async function routeJoinTeam(req: JoinTeamReq): Promise<JoinTeamRsp> {
 async function routeBoard(req: BoardReq): Promise<BoardRsp> {
   const uid = await who()
   const day = today()
+  if (onDemoDaily()) return demoBoard(req, uid, day)
   switch (req.kind) {
     case 'day': {
       const d = req.key ?? day
@@ -1605,6 +1664,16 @@ async function demoMe(
   day: string,
   score: number | undefined,
 ): Promise<DemoMe> {
+  // on a demo post the asker is a regular: the earlier days of their week are made up too
+  if (onDemoDaily())
+    return {
+      id: uid,
+      name: context.username ?? 'you',
+      day,
+      score,
+      week: DEMO_WEEK + (score ?? 0),
+      post: true,
+    }
   const week = await redis.zScore(boardKey.week(weekKey(day)), uid)
   return {
     id: uid,
@@ -1629,7 +1698,7 @@ async function demo(
   const uid = context.userId
   if (!uid) return
   const day = today()
-  const id = runId(uid, await asNewSince(uid))
+  const id = await playId(uid)
   const me = await demoMe(uid, day, (await getMyDay(day, id)).score)
   return (await demoRoute(endpoint, body, me)) as AnyRsp | undefined
 }
@@ -1893,4 +1962,114 @@ function writeJson<T extends PartialJsonValue>(
     'Content-Type': 'application/json',
   })
   rsp.end(body)
+}
+
+// ---------- demo posts ----------
+
+/** True on a demo daily post (demoposts.ts): every viewer sees the sample, as a regular. */
+const onDemoDaily = (): boolean => demoKindOf(context.postData) === 'daily'
+
+/** The id a run on a demo daily post is kept under, apart from the player's real run. */
+const demoPostRun = (uid: string): string => `demo-post:${uid}`
+
+/** The id the asker's run today is kept under: their own, or a demo copy. */
+async function playId(uid: string): Promise<string> {
+  if (onDemoDaily()) return demoPostRun(uid)
+  return runId(uid, await asNewSince(uid))
+}
+
+/** A regular's week before today, on a demo post. */
+const DEMO_WEEK = 4815
+
+/** A regular's streak on a demo post: twelve days, and thirteen once today is done. */
+const demoStreak = (score: number | undefined): Streak =>
+  score === undefined
+    ? {current: 12, best: 19, played: 41}
+    : {current: 13, best: 19, played: 42}
+
+/** The sample boards for a logged-out viewer of a demo post. */
+const NO_ONE = {name: '', today: undefined, week: undefined}
+
+/** A board asked for on a demo daily post: the sample one, never a real one. */
+async function demoBoard(
+  req: BoardReq,
+  uid: string | undefined,
+  day: string,
+): Promise<BoardRsp> {
+  const me = uid
+    ? await demoMe(uid, day, (await getMyDay(day, demoPostRun(uid))).score)
+    : undefined
+  const b = demoBoards(
+    day,
+    me ? {name: me.name, today: me.score, week: me.week} : NO_ONE,
+  )
+  switch (req.kind) {
+    case 'day':
+      return {board: b.day}
+    case 'week':
+      return {board: b.week}
+    case 'all':
+      return {
+        board: demoAllBoard(day, {name: me?.name ?? '', score: me?.week}),
+      }
+    default:
+      throw new HttpError(404, 'No such board on a demo post.')
+  }
+}
+
+const DEMO_TITLES: Record<DemoKind, (day: string) => string> = {
+  daily: day =>
+    `Nonet demo · today's cube with sample players · ${shortDate(day)}`,
+  race: day =>
+    `Nonet demo · weekly top nine · week of ${shortDate(lastWeekFrom(day))}`,
+  replay: () => 'Nonet demo · play of the week',
+}
+
+/**
+ * Posts a demo of one kind of post, full of sample players, for a review or screenshots. It
+ * isn't pinned, flaired or listed as the day's post, and nothing real is written for it.
+ */
+async function routeMenuDemoPost(kind: DemoKind): Promise<UiResponse> {
+  const day = today()
+  if (kind === 'daily') await ensureDay(day)
+  const post = await reddit.submitCustomPost({
+    title: DEMO_TITLES[kind](day),
+    ...(kind === 'daily' ? {} : {entry: kind}),
+    postData: {demo: kind},
+    textFallback: {
+      text: 'A Nonet demo post with sample players. Open it in the Reddit app or on the new site.',
+    },
+  })
+  await noteDemoPost(post.id, kind)
+  return {
+    showToast: {
+      text: 'The demo post is up. "Nonet demo: remove the demo posts" takes it down.',
+      appearance: 'success',
+    },
+    navigateTo: post.url,
+  }
+}
+
+/** Deletes every demo post. One that can't be deleted stays on the list, to try again. */
+async function routeMenuDemoClear(): Promise<UiResponse> {
+  const ids = await demoPosts()
+  if (!ids.length) return {showToast: 'There are no demo posts to remove.'}
+  const gone: string[] = []
+  for (const id of ids) {
+    try {
+      const post = await reddit.getPostById(id as `t3_${string}`)
+      await post.delete()
+      gone.push(id)
+    } catch (err) {
+      console.warn(`demo post ${id} not removed: ${err}`)
+    }
+  }
+  await forgetDemoPosts(gone)
+  const left = ids.length - gone.length
+  return {
+    showToast: {
+      text: `Removed ${gone.length} demo post${gone.length === 1 ? '' : 's'}.${left ? ` ${left} couldn't be removed; try again.` : ''}`,
+      appearance: left ? 'neutral' : 'success',
+    },
+  }
 }
